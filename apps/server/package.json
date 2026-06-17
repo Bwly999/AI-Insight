@@ -1,0 +1,49 @@
+{
+  "name": "@ai-insight/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AI Insight 后端 —— Fastify + Drizzle + BullMQ",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo 'server tests: Phase 0 无业务逻辑测试' && exit 0",
+    "db:gen": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "node scripts/apply-migration.mjs",
+    "db:studio": "drizzle-kit studio",
+    "clean": "rimraf dist .turbo drizzle/*.tmp"
+  },
+  "dependencies": {
+    "@ai-insight/shared-types": "workspace:*",
+    "@fastify/cors": "^9.0.1",
+    "@fastify/helmet": "^11.0.0",
+    "@fastify/rate-limit": "^9.0.1",
+    "ai": "^6.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "bullmq": "^5.21.0",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.36.4",
+    "fastify": "^4.28.1",
+    "fastify-plugin": "^4.5.1",
+    "ioredis": "^5.10.1",
+    "jose": "^5.9.6",
+    "mysql2": "^3.11.4",
+    "undici": "^6.20.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@ai-insight/shared-config": "workspace:*",
+    "@types/node": "^22.9.0",
+    "drizzle-kit": "^0.28.1",
+    "eslint": "^9.15.0",
+    "pino-pretty": "^11.3.0",
+    "rimraf": "^5.0.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

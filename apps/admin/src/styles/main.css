@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 管理端基底：深色，无噪点（见 shared-ui admin.css） */
+body {
+  font-family: var(--font-sans);
+  color: var(--ink);     /* = 纸色（反相 token） */
+  background-color: var(--paper); /* = 暖墨黑（反相 token） */
+}

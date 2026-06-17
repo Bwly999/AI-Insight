@@ -1,0 +1,7 @@
+/**
+ * 字体加载：Fraunces / Inter Tight / JetBrains Mono。
+ * 见 doc/design-doc/15-UIUX设计.md §15.1.2。
+ * Google Fonts @import；内网无外网时替换为本地字体文件即可。
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');

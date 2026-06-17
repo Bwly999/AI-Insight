@@ -1,0 +1,62 @@
+/**
+ * 管理端深色控制台覆写。
+ * 见 doc/design-doc/15-UIUX设计.md §15.3.5。
+ *
+ * 由 [data-theme="admin"] 作用域接管：去噪点、分隔线改纸色低透明。
+ * 组件结构复用 editorial 的工具类，仅调整密度与状态语义。
+ */
+
+[data-theme='admin'] {
+  color-scheme: dark;
+}
+
+[data-theme='admin'] body {
+  background-color: var(--paper); /* = 暖墨黑 */
+  color: var(--ink);              /* = 纸色 */
+}
+
+/* 控制台不要噪点纹理 */
+[data-theme='admin'] .paper-noise::before {
+  display: none;
+}
+
+/* 分隔线：纸色低透明 1px；强调区块保留双线 */
+[data-theme='admin'] .double-rule {
+  border-top: 3px double var(--line-strong, var(--rule));
+}
+[data-theme='admin'] .thick-rule {
+  border-top: 4px solid var(--line-strong, var(--rule));
+}
+
+/* 状态点：森绿=成功/在线、芥末=等待、朱红=失败、钴蓝=信息 */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dot--success { background: var(--forest); }
+.dot--warning { background: var(--mustard); }
+.dot--error   { background: var(--vermillion); }
+.dot--info    { background: var(--cobalt); }
+
+/* 管理端卡片底 */
+.admin-card {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+}
+
+/* 管理端数据/配置等宽展示 */
+.mono-data {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+
+/* 管理端大数字（仪表盘，Fraunces 斜体） */
+.metric-num {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1;
+}

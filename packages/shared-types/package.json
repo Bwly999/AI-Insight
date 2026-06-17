@@ -1,0 +1,41 @@
+{
+  "name": "@ai-insight/shared-types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "前后端共享：DTO / 枚举 / SPI 接口契约（TS 类型）",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./spi": {
+      "types": "./src/spi/index.ts",
+      "default": "./src/spi/index.ts"
+    },
+    "./dto": {
+      "types": "./src/dto/index.ts",
+      "default": "./src/dto/index.ts"
+    },
+    "./enums": {
+      "types": "./src/enums.ts",
+      "default": "./src/enums.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rimraf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@ai-insight/shared-config": "workspace:*",
+    "rimraf": "^5.0.10",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,162 @@
+/**
+ * 编辑风视觉要素工具类（用户端）。
+ * 见 doc/design-doc/15-UIUX设计.md §15.1.3。
+ *
+ * 这些是「印刷质感」的原子能力，配合 token.css 使用。
+ * 管理端在 admin.css 中按需覆写（去噪点、改分隔线透明度）。
+ */
+
+/* ---- 全局基底 ---- */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 纸张噪点纹理：fractalNoise SVG，低透明叠加（印刷质感） */
+.paper-noise::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+/* ---- 分隔线 ---- */
+.double-rule {
+  border-top: 3px double var(--rule);
+}
+.thick-rule {
+  border-top: 4px solid var(--rule);
+}
+
+/* ---- 印章效果 stamp ---- */
+.stamp {
+  display: inline-block;
+  border: 2px solid var(--vermillion);
+  color: var(--vermillion);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.6rem;
+  transform: rotate(-6deg);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+/* ---- 首字下沉 drop-cap ---- */
+.drop-cap::first-letter {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: 4.2rem;
+  line-height: 0.85;
+  float: left;
+  margin: 0.1rem 0.6rem 0 0;
+  color: var(--vermillion);
+}
+
+/* ---- 荧光标记 marker ---- */
+.marker {
+  background: linear-gradient(transparent 55%, color-mix(in srgb, var(--mustard) 60%, transparent) 55%);
+  padding: 0 0.1em;
+}
+
+/* ---- hover 升起 hover-lift ---- */
+.hover-lift {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+}
+
+/* ---- 入场动画 reveal（按 index 错峰） ---- */
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  animation: reveal-in 0.6s ease forwards;
+  animation-delay: calc(var(--reveal-i, 0) * 0.06s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { animation: none; opacity: 1; }
+}
+
+/* ---- 表格数字 tabular ---- */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* ---- 热度条 heat-bar（10 格像素条） ---- */
+.heat-bar {
+  display: inline-flex;
+  gap: 2px;
+}
+.heat-bar__cell {
+  width: 8px;
+  height: 10px;
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.heat-bar__cell--on {
+  background: var(--vermillion);
+}
+
+/* ---- 跑马灯 marquee（墨底纸字，无限滚动） ---- */
+.marquee-ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+@keyframes slide-track {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.slide-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: slide-track 50s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide-track { animation: none; }
+}
+
+/* ---- 焦点态（可访问性，15.4.2） ---- */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--vermillion);
+  outline-offset: 2px;
+}
+
+/* ---- 编辑风按钮 PaperButton（墨底纸字 / 朱红下划线 hover） ---- */
+.paper-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.paper-btn:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--vermillion);
+  text-underline-offset: 4px;
+}
+.paper-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}

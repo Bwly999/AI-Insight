@@ -1,0 +1,67 @@
+/**
+ * 设计 token（CSS 变量）—— 两端共享的设计系统根。
+ * 见 doc/design-doc/15-UIUX设计.md §15.1.1 / §15.3.2。
+ *
+ * :root                     —— 用户端编辑风（暖米白纸 + 暖墨字）
+ * [data-theme="admin"]      —— 管理端深色控制台（反相：暖墨底 + 纸色字）
+ *
+ * 强调色两端完全一致：朱红/芥末/森绿/钴蓝/玫红。
+ */
+
+:root {
+  /* ---- 用户端：纸张 / 墨 ---- */
+  --paper: #f4efe6;       /* 纸张主背景（暖米白） */
+  --paper-2: #ece5d6;     /* 纸张次背景（区块/卡片底） */
+  --ink: #1a1612;         /* 主文字 / 主边线（近黑暖墨） */
+  --ink-2: #4a423a;       /* 次要文字 */
+  --ink-3: #8a8073;       /* 辅助文字 / 标签 */
+  --rule: #1a1612;        /* 分隔线 */
+
+  /* ---- 强调色（两端共用） ---- */
+  --vermillion: #c8341a;  /* 朱红：AI 领域 / 头条 / 印章 / 错误 */
+  --mustard: #d4a017;     /* 芥末黄：数据高亮 / 警告 */
+  --forest: #2d5a3d;      /* 森绿：BIO 领域 / 在线 / 成功 */
+  --cobalt: #1d3b6e;      /* 钴蓝：QUANT 领域 / 信息 */
+  --rose: #a83a5c;        /* 玫红：SOC 领域 */
+
+  /* ---- 领域色映射（便于按 code 取色） ---- */
+  --cat-ai: var(--vermillion);
+  --cat-bio: var(--forest);
+  --cat-quant: var(--cobalt);
+  --cat-climate: var(--mustard);
+  --cat-soc: var(--rose);
+
+  /* ---- 字体族 ---- */
+  --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* ---- 排版基线 ---- */
+  --max-width: 1400px;
+  --gutter: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* ===========================================================================
+ * 管理端深色控制台（反相 token）
+ * 见 doc/design-doc/15-UIUX设计.md §15.3.2。
+ * 关系：bg = 用户端 ink；surface = 用户端 paper。强调色不变。
+ * ========================================================================= */
+[data-theme='admin'] {
+  --paper: #1a1612;       /* 深色主背景（暖墨黑） = 用户端 --ink */
+  --paper-2: #241e18;     /* 卡片/区块底（略亮） */
+  --ink: #f4efe6;         /* 主文字（纸色） = 用户端 --paper */
+  --ink-2: #c8c0b3;       /* 次要文字 */
+  --ink-3: #8a8073;       /* 辅助文字 / 标签 */
+  --rule: rgba(244, 239, 230, 0.12); /* 分隔线（纸色低透明） */
+
+  /* 管理端额外层级（用于 hover/选中底） */
+  --bg-hover: #2e261e;
+  --line-strong: rgba(244, 239, 230, 0.22);
+
+  --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --max-width: 1400px;
+  --gutter: clamp(1.5rem, 4vw, 2.5rem);
+}

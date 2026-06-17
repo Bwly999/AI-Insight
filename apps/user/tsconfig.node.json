@@ -1,0 +1,11 @@
+{
+  "extends": "@ai-insight/shared-config/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "tailwind.config.ts", "postcss.config.cjs"]
+}

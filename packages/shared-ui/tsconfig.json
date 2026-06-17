@@ -1,0 +1,11 @@
+{
+  "extends": "@ai-insight/shared-config/tsconfig/vue.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "noEmit": false,
+    "types": []
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"]
+}
