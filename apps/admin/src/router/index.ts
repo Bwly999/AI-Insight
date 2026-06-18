@@ -25,6 +25,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '采集日志', group: '内容配置' },
   },
   {
+    path: '/articles',
+    name: 'articles',
+    component: () => import('../views/ArticlesView.vue'),
+    meta: { title: '文章管理', group: '内容配置' },
+  },
+  {
+    path: '/process',
+    name: 'process',
+    component: () => import('../views/ProcessMonitorView.vue'),
+    meta: { title: '处理监控', group: '运行监控' },
+  },
+  {
     path: '/categories',
     name: 'categories',
     component: () => import('../views/PlaceholderView.vue'),

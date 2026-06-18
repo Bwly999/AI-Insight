@@ -12,6 +12,9 @@ import adminProxyRoutes from './admin/proxy.js';
 import adminCronRoutes from './admin/cron.js';
 import adminInsightRoutes from './admin/insight.js';
 import adminSkillRoutes from './admin/skills.js';
+import adminLlmRoutes from './admin/llm.js';
+import adminArticleRoutes from './admin/articles.js';
+import adminProcessRoutes from './admin/process.js';
 import insightRoutes from './insight.js';
 
 export default async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -31,6 +34,11 @@ export default async function registerRoutes(app: FastifyInstance): Promise<void
 
   // Phase 1C · Skill 管理
   await app.register(adminSkillRoutes);
+
+  // Phase 2 · AI 处理
+  await app.register(adminLlmRoutes);
+  await app.register(adminArticleRoutes);
+  await app.register(adminProcessRoutes);
 
   // 后续 Phase 路由按需 register：
   //   reportsRoutes / subscriptionsRoutes / feedbackRoutes

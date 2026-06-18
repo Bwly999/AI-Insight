@@ -23,6 +23,8 @@ const navGroups = computed(() => [
     label: '内容配置',
     items: [
       { to: '/sources', label: '数据源' },
+      { to: '/articles', label: '文章管理' },
+      { to: '/process', label: '处理监控' },
       { to: '/categories', label: '领域定义' },
       { to: '/schedules', label: '报告调度' },
       { to: '/reports', label: '报告管理' },
