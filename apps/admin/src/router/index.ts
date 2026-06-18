@@ -67,6 +67,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '通知通道', group: '推送管理' },
   },
   {
+    path: '/insight/audit',
+    name: 'insight-audit',
+    component: () => import('../views/InsightAuditView.vue'),
+    meta: { title: '洞察审计', group: '运行监控' },
+  },
+  {
+    path: '/skills',
+    name: 'skills',
+    component: () => import('../views/SkillsView.vue'),
+    meta: { title: 'Skill 管理', group: '系统' },
+  },
+  {
     path: '/insight/sessions',
     name: 'insight-sessions',
     component: () => import('../views/InsightSessionsView.vue'),

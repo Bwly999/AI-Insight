@@ -5,7 +5,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import { CreateInsightSessionBody, PaginationQuery } from '@ai-insight/shared-types';
-import { insightSessions, agentSteps, agentToolCalls } from '../db/schema';
+import { insightSessions, agentSteps, agentToolCalls, subscriptions, reportSchedules } from '../db/schema';
 import { runInsightSession } from '../insight/orchestrator';
 
 export default async function insightRoutes(app: FastifyInstance): Promise<void> {
@@ -175,5 +175,51 @@ export default async function insightRoutes(app: FastifyInstance): Promise<void>
       }));
 
     return reply.send({ items, total: items.length, page, pageSize });
+  });
+
+  // POST /insight/sessions/:id/to-subscription — 一键转 Mode 1 订阅
+  app.post('/insight/sessions/:id/to-subscription', userGuard, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = (req.body ?? {}) as { scheduleId?: number };
+    const userId = req.user!.id;
+    const sessionId = Number(id);
+
+    const [session] = await app.db
+      .select()
+      .from(insightSessions)
+      .where(eq(insightSessions.id, sessionId))
+      .limit(1);
+    if (!session || session.userId !== userId) {
+      return reply.code(404).send({ error: 'not_found', message: '会话不存在', statusCode: 404 });
+    }
+
+    // 尝试从 session 的 watch-shape 输出解析 categoryCodes 和 keywords
+    let categoryCodes: string[] = [];
+    let keywords: string[] = [];
+    if (session.reportMarkdown) {
+      try {
+        const parsed = JSON.parse(session.reportMarkdown);
+        categoryCodes = parsed.categoryCodes ?? [];
+        keywords = parsed.keywords ?? [];
+      } catch {
+        // 不是 JSON 格式，忽略
+      }
+    }
+
+    const scheduleId = body.scheduleId ?? 1; // 默认第一个 schedule
+
+    const [sub] = await app.db
+      .insert(subscriptions)
+      .values({
+        userId,
+        scheduleId,
+        categoryCodes,
+        keywords,
+        channels: ['CONSOLE'],
+        active: true,
+      })
+      .$returningId();
+
+    return reply.send({ id: sub.id, scheduleId, categoryCodes, keywords });
   });
 }

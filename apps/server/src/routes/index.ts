@@ -11,6 +11,7 @@ import adminCollectRoutes from './admin/collect.js';
 import adminProxyRoutes from './admin/proxy.js';
 import adminCronRoutes from './admin/cron.js';
 import adminInsightRoutes from './admin/insight.js';
+import adminSkillRoutes from './admin/skills.js';
 import insightRoutes from './insight.js';
 
 export default async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -27,6 +28,9 @@ export default async function registerRoutes(app: FastifyInstance): Promise<void
   // Phase 1B · Mode 2 主动洞察
   await app.register(insightRoutes);
   await app.register(adminInsightRoutes);
+
+  // Phase 1C · Skill 管理
+  await app.register(adminSkillRoutes);
 
   // 后续 Phase 路由按需 register：
   //   reportsRoutes / subscriptionsRoutes / feedbackRoutes

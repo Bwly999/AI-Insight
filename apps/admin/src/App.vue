@@ -16,6 +16,7 @@ const navGroups = computed(() => [
     items: [
       { to: '/dashboard', label: '仪表盘' },
       { to: '/insight/sessions', label: '洞察会话' },
+      { to: '/insight/audit', label: '洞察审计' },
     ],
   },
   {
@@ -36,6 +37,7 @@ const navGroups = computed(() => [
     items: [
       { to: '/cron', label: '全局 cron' },
       { to: '/proxy', label: 'HTTP 代理' },
+      { to: '/skills', label: 'Skill 管理' },
       { to: '/users', label: '用户管理' },
     ],
   },
