@@ -11,3 +11,6 @@ export * from './subscription.js';
 export * from './report.js';
 export * from './feedback.js';
 export * from './system.js';
+export * from './insight.js';
+export * from './skill.js';
+export * from './vault.js';

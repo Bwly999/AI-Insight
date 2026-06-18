@@ -14,3 +14,11 @@ export type {
   NotificationResult,
   INotificationChannel,
 } from './notifier.js';
+
+export type {
+  SessionBudget,
+  RunInsightInput,
+  RunInsightResult,
+  AgentStepEvent,
+  IAgentRuntime,
+} from './runtime.js';

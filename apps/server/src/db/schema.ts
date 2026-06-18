@@ -292,6 +292,130 @@ export const feedback = mysqlTable(
 );
 
 /* ===========================================================================
+ * insight_sessions —— Mode 2 Agent 会话（Phase 1B 新增）
+ * ========================================================================= */
+export const insightSessions = mysqlTable(
+  'insight_sessions',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    userId: int('user_id')
+      .notNull()
+      .references(() => users.id),
+    intent: text('intent').notNull(),
+    skillSet: json('skill_set').$type<string[]>(),
+    status: mysqlEnum('status', ['RUNNING', 'SUCCESS', 'FAILED', 'ABORTED']).notNull(),
+    budget: json('budget').$type<{ maxSteps: number; maxToolCalls: number; maxTokens: number }>(),
+    usedTokens: int('used_tokens').default(0),
+    usedSteps: int('used_steps').default(0),
+    usedToolCalls: int('used_tool_calls').default(0),
+    reportMarkdown: text('report_markdown'),
+    sourceArticleIds: json('source_article_ids').$type<number[]>(),
+    startedAt: timestamp('started_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: timestamp('finished_at'),
+    error: text('error'),
+  },
+  (t) => ({
+    userIdx: index('insight_sessions_user_idx').on(t.userId),
+    statusStartedIdx: index('insight_sessions_status_started_idx').on(t.status, t.startedAt),
+  }),
+);
+
+/* ===========================================================================
+ * agent_steps —— Agent 每一步思考（Phase 1B 新增）
+ * ========================================================================= */
+export const agentSteps = mysqlTable(
+  'agent_steps',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    sessionId: int('session_id')
+      .notNull()
+      .references(() => insightSessions.id),
+    stepNo: int('step_no').notNull(),
+    role: mysqlEnum('role', ['ASSISTANT', 'TOOL', 'SYSTEM']).notNull(),
+    content: text('content'),
+    toolCalls: json('tool_calls'),
+    tokens: int('tokens').default(0),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({
+    sessionIdx: index('agent_steps_session_idx').on(t.sessionId),
+    sessionStepIdx: index('agent_steps_session_step_idx').on(t.sessionId, t.stepNo),
+  }),
+);
+
+/* ===========================================================================
+ * agent_tool_calls —— 每次工具调用审计（Phase 1B 新增）
+ * ========================================================================= */
+export const agentToolCalls = mysqlTable(
+  'agent_tool_calls',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    sessionId: int('session_id')
+      .notNull()
+      .references(() => insightSessions.id),
+    stepId: int('step_id').references(() => agentSteps.id),
+    tool: mysqlEnum('tool', [
+      'COLLECT', 'SEARCH', 'EXTRACT',
+      'QUERY_ARTICLES', 'VAULT_READ', 'VAULT_WRITE', 'FINALIZE',
+    ]).notNull(),
+    args: json('args'),
+    result: json('result'),
+    ok: boolean('ok').notNull(),
+    error: text('error'),
+    durationMs: int('duration_ms').default(0),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({
+    sessionIdx: index('agent_tool_calls_session_idx').on(t.sessionId),
+    toolIdx: index('agent_tool_calls_tool_idx').on(t.tool),
+  }),
+);
+
+/* ===========================================================================
+ * skill_revisions —— Skill 版本记录（Phase 1B 新增）
+ * ========================================================================= */
+export const skillRevisions = mysqlTable(
+  'skill_revisions',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    name: varchar('name', { length: 64 }).notNull(),
+    version: varchar('version', { length: 16 }).notNull(),
+    frontmatter: json('frontmatter').$type<Record<string, unknown>>(),
+    bodyMd: text('body_md').notNull(),
+    authorId: int('author_id')
+      .notNull()
+      .references(() => users.id),
+    enabled: boolean('enabled').default(false),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    auditNote: text('audit_note').notNull(),
+  },
+  (t) => ({
+    nameVersionUnique: uniqueIndex('skill_revisions_name_version_unique').on(t.name, t.version),
+    nameEnabledIdx: index('skill_revisions_name_enabled_idx').on(t.name, t.enabled),
+  }),
+);
+
+/* ===========================================================================
+ * vault_entries —— 跨 session 洞察沉淀（Phase 1C 新增，先定义）
+ * ========================================================================= */
+export const vaultEntries = mysqlTable(
+  'vault_entries',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    title: varchar('title', { length: 256 }).notNull(),
+    bodyMd: text('body_md').notNull(),
+    tags: json('tags').$type<string[]>(),
+    sourceSessionId: int('source_session_id').references(() => insightSessions.id),
+    pinned: boolean('pinned').default(false),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => ({
+    sourceSessionIdx: index('vault_entries_session_idx').on(t.sourceSessionId),
+  }),
+);
+
+/* ===========================================================================
  * 类型导出（行类型，供 route/worker 使用）
  * ========================================================================= */
 export type User = typeof users.$inferSelect;
@@ -307,3 +431,11 @@ export type Report = typeof reports.$inferSelect;
 export type ReportItem = typeof reportItems.$inferSelect;
 export type NotificationLog = typeof notificationLogs.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
+export type InsightSession = typeof insightSessions.$inferSelect;
+export type NewInsightSession = typeof insightSessions.$inferInsert;
+export type AgentStep = typeof agentSteps.$inferSelect;
+export type NewAgentStep = typeof agentSteps.$inferInsert;
+export type AgentToolCall = typeof agentToolCalls.$inferSelect;
+export type NewAgentToolCall = typeof agentToolCalls.$inferInsert;
+export type SkillRevision = typeof skillRevisions.$inferSelect;
+export type VaultEntry = typeof vaultEntries.$inferSelect;

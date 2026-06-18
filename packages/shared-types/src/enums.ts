@@ -45,3 +45,21 @@ export type ProxyAuthScheme = 'none' | 'basic' | 'bearer';
 
 /** 全局 cron 任务名（采集 / 处理）。报告 cron 按 ReportSchedule 各自配置。 */
 export type GlobalCronName = 'collect' | 'process';
+
+/** ── Phase 1B 新增 ── */
+
+/** Insight 会话状态。 */
+export type InsightStatus = 'RUNNING' | 'SUCCESS' | 'FAILED' | 'ABORTED';
+
+/** Agent 步骤角色。 */
+export type AgentStepRole = 'ASSISTANT' | 'TOOL' | 'SYSTEM';
+
+/** Agent 工具名。 */
+export type AgentToolName =
+  | 'COLLECT'
+  | 'SEARCH'
+  | 'EXTRACT'
+  | 'QUERY_ARTICLES'
+  | 'VAULT_READ'
+  | 'VAULT_WRITE'
+  | 'FINALIZE';

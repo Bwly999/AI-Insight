@@ -22,3 +22,10 @@ export type {
   NotificationPayload,
   NotificationResult,
 } from './spi/index.js';
+export type {
+  IAgentRuntime,
+  SessionBudget,
+  RunInsightInput,
+  RunInsightResult,
+  AgentStepEvent,
+} from './spi/index.js';
