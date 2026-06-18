@@ -23,6 +23,7 @@ import llmPlugin from './plugins/llm.js';
 import collectorsPlugin from './plugins/collectors.js';
 import notifiersPlugin from './plugins/notifiers.js';
 import schedulerPlugin from './plugins/scheduler.js';
+import agentRuntimePlugin from './plugins/agent-runtime.js';
 import authPlugin from './plugins/auth.js';
 import registerRoutes from './routes/index.js';
 import { startCollectionWorker } from './workers/collection.worker.js';
@@ -61,6 +62,7 @@ async function buildApp(): Promise<FastifyInstance> {
   await app.register(notifiersPlugin);
   await app.register(authPlugin);
   await app.register(schedulerPlugin); // scheduler 在 SPI 之后（可能用 queue）
+  await app.register(agentRuntimePlugin); // Phase 1B Mode 2 Agent
 
   // ---- 路由 ----
   await registerRoutes(app);

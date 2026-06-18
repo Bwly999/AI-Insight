@@ -10,6 +10,7 @@ import type * as schema from './db/schema.js';
 import type { AuthUser } from '@ai-insight/shared-types';
 import type { CryptoUtil } from './utils/crypto.js';
 import type { Scheduler } from './plugins/scheduler.js';
+import type { IAgentRuntime } from '@ai-insight/shared-types';
 
 /** 队列集合（四个 BullMQ 队列）。 */
 export interface QueueSet {
@@ -39,6 +40,7 @@ export interface FastifyDecorates {
   crypto: CryptoUtil;
   rebuildHttpAgent: (proxy?: ProxyConfig) => void;
   scheduler: Scheduler;
+  agentRuntime: IAgentRuntime;
 }
 
 /** 代理配置（用于 http-client 重建）。 */
