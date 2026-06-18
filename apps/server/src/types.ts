@@ -8,6 +8,8 @@ import type { Dispatcher } from 'undici';
 import type { ICollector, INotificationChannel } from '@ai-insight/shared-types';
 import type * as schema from './db/schema.js';
 import type { AuthUser } from '@ai-insight/shared-types';
+import type { CryptoUtil } from './utils/crypto.js';
+import type { Scheduler } from './plugins/scheduler.js';
 
 /** 队列集合（四个 BullMQ 队列）。 */
 export interface QueueSet {
@@ -34,6 +36,17 @@ export interface FastifyDecorates {
   notifiers: Map<string, INotificationChannel>;
   registerCollector: (type: string, impl: ICollector) => void;
   registerNotifier: (channel: string, impl: INotificationChannel) => void;
+  crypto: CryptoUtil;
+  rebuildHttpAgent: (proxy?: ProxyConfig) => void;
+  scheduler: Scheduler;
+}
+
+/** 代理配置（用于 http-client 重建）。 */
+export interface ProxyConfig {
+  enabled: boolean;
+  host?: string;
+  port?: number;
+  auth?: { scheme: 'none' | 'basic' | 'bearer'; token?: string };
 }
 
 /** 请求上的用户（auth preHandler 注入）。 */
