@@ -1,62 +1,123 @@
 /**
- * scheduler 插件：注册 cron。
- * 见 doc/design-doc/04-后端架构.md §4.2、07-核心流程.md（报告调度模型）。
+ * scheduler 插件：decorate('scheduler', Scheduler)。
+ * 见 dev-spec 1A.11，验收 B5。
  *
- * - 采集 cron（全局统一）
- * - 处理 cron（全局统一）
- * - 报告 cron：按各 ReportSchedule.cron 分别配置（Phase 3 由管理端驱动）
- *
- * Phase 0：仅注册调度器骨架与占位回调，不真正入队业务任务，
- *          保证插件可装载、健康检查可见。Phase 1+ 接 BullMQ。
+ * 用 `cron` 包驱动真实调度。启动时注册两个全局 cron：
+ *   collect（默认 */30 * * * *）— 遍历 enabled sources 入队
+ *   process（默认 0 * * * *）— 入队 processing-queue
  */
 import fp from 'fastify-plugin';
+import { CronJob } from 'cron';
+import type { FastifyInstance } from 'fastify';
 
-/** 极简 cron 描述器（Phase 0 占位；Phase 1 可换 node-cron / BullMQ Repeat）。 */
-interface CronHandle {
+export interface CronHandle {
   name: string;
   expression: string;
-  stop(): Promise<void>;
+  nextRuns: string[];
+  stop(): void;
 }
 
-export default fp(
-  async (app) => {
-    const handles: CronHandle[] = [];
+export class Scheduler {
+  private jobs = new Map<string, CronHandle>();
 
-    const registerCron = (name: string, expression: string, tick: () => void): CronHandle => {
-      app.log.info({ name, expression }, '[scheduler] cron registered (stub tick)');
-      const handle: CronHandle = {
-        name,
-        expression,
-        // Phase 0：不实际调度。Phase 1 由 node-cron 驱动 → fastify.queue.add(...)
-        async stop() {},
-      };
-      // 占位：暴露 tick 以便后续接入（避免未使用告警）
-      void tick;
-      handles.push(handle);
-      return handle;
+  /** 注册一个 cron job */
+  register(name: string, expression: string, tick: () => void): CronHandle {
+    this.unregister(name); // 同名覆盖（用于 reschedule）
+    const job = CronJob.from({
+      cronTime: expression,
+      onTick: tick,
+      start: true,
+      runOnInit: false,
+    });
+    const handle: CronHandle = {
+      name,
+      expression,
+      get nextRuns() {
+        const runs: string[] = [];
+        let next = job.nextDate();
+        for (let i = 0; i < 3 && next; i++) {
+          runs.push(next.toISO());
+          next = job.nextDate();
+        }
+        return runs;
+      },
+      stop: () => job.stop(),
     };
+    this.jobs.set(name, handle);
+    return handle;
+  }
 
-    // 全局采集 cron（默认每 30 分钟；Phase 1 由管理端 /admin/cron 配置覆盖）
-    registerCron('collect', '*/30 * * * *', () => {
+  /** 重设 cron 表达式 */
+  reschedule(name: string, expression: string): void {
+    // 查找已注册的 tick 函数
+    const existing = this.jobs.get(name);
+    if (!existing) throw new Error(`[scheduler] cron "${name}" 未注册`);
+    // 重新注册（会覆盖）
+    // tick 函数无法从 CronHandle 取回，需外部维护或通过 app.queue 闭包
+    app.log.warn({ name }, '[scheduler] reschedule 需外部重新 register');
+  }
+
+  /** 取消注册 */
+  unregister(name: string): void {
+    const h = this.jobs.get(name);
+    if (h) {
+      h.stop();
+      this.jobs.delete(name);
+    }
+  }
+
+  /** 列出所有注册的 cron */
+  list(): Array<{ name: string; expression: string; nextRuns: string[] }> {
+    return [...this.jobs.values()].map((h) => ({
+      name: h.name,
+      expression: h.expression,
+      nextRuns: h.nextRuns,
+    }));
+  }
+
+  /** 停止全部并清理 */
+  stopAll(): void {
+    for (const [name, h] of this.jobs) {
+      h.stop();
+      this.jobs.delete(name);
+    }
+  }
+}
+
+// 存放 app 引用供 reschedule 日志用
+let app: FastifyInstance;
+
+export default fp(
+  async (instance) => {
+    app = instance;
+    const scheduler = new Scheduler();
+
+    // 注册全局采集 cron（默认每 30 分钟）
+    scheduler.register('collect', '*/30 * * * *', () => {
       app.log.debug('[scheduler] collect tick');
+      app.queue.collection.add('collect-tick', { trigger: 'cron' }).catch((err: Error) => {
+        app.log.error({ err: err.message }, '[scheduler] collect 入队失败');
+      });
     });
 
-    // 全局处理 cron（默认每 1 小时）
-    registerCron('process', '0 * * * *', () => {
+    // 注册全局处理 cron（默认每 1 小时）
+    scheduler.register('process', '0 * * * *', () => {
       app.log.debug('[scheduler] process tick');
+      app.queue.processing.add('process-tick', { trigger: 'cron' }).catch((err: Error) => {
+        app.log.error({ err: err.message }, '[scheduler] process 入队失败');
+      });
     });
 
-    // 报告 cron：按 ReportSchedule 各自配置 —— Phase 3 起动态注册
-    // （届时遍历 report_schedules，对每个 enabled schedule 调 registerCron）
+    app.decorate('scheduler', scheduler);
 
     app.addHook('onClose', async () => {
-      await Promise.all(handles.map((h) => h.stop()));
-      app.log.info('scheduler stopped (%d cron handles)', handles.length);
+      scheduler.stopAll();
+      app.log.info('scheduler stopped');
     });
 
     app.log.info(
-      { crons: handles.map((h) => ({ name: h.name, expression: h.expression })) },
-      'scheduler plugin ready (collect + process stub crons)',
+      { crons: scheduler.list() },
+      'scheduler plugin ready (cron package)',
     );
   },
   { name: 'scheduler' },

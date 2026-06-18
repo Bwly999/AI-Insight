@@ -25,6 +25,7 @@ import notifiersPlugin from './plugins/notifiers.js';
 import schedulerPlugin from './plugins/scheduler.js';
 import authPlugin from './plugins/auth.js';
 import registerRoutes from './routes/index.js';
+import { startCollectionWorker } from './workers/collection.worker.js';
 
 async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -63,6 +64,9 @@ async function buildApp(): Promise<FastifyInstance> {
 
   // ---- 路由 ----
   await registerRoutes(app);
+
+  // ---- Worker（开发模式同进程；生产可独立进程） ----
+  await startCollectionWorker(app);
 
   // ---- 统一错误处理 ----
   app.setErrorHandler((err, req, reply) => {
