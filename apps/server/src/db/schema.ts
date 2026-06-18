@@ -260,6 +260,16 @@ export const notificationLogs = mysqlTable(
 );
 
 /* ===========================================================================
+ * system_config —— 系统配置 KV 表（代理 / cron / …）
+ * Phase 1A 新增，见 dev-spec 1A.16。
+ * ========================================================================= */
+export const systemConfig = mysqlTable('system_config', {
+  key: varchar('key', { length: 64 }).notNull().unique(),
+  value: text('value').notNull(), // JSON
+  updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+/* ===========================================================================
  * feedback —— 用户反馈/收藏（反馈数据回流可优化推荐 v2）
  * ========================================================================= */
 export const feedback = mysqlTable(
