@@ -18,6 +18,7 @@ import { config } from './config.js';
 import dbPlugin from './plugins/db.js';
 import queuePlugin from './plugins/queue.js';
 import httpClientPlugin from './plugins/http-client.js';
+import cryptoPlugin from './plugins/crypto.js';
 import llmPlugin from './plugins/llm.js';
 import collectorsPlugin from './plugins/collectors.js';
 import notifiersPlugin from './plugins/notifiers.js';
@@ -53,6 +54,7 @@ async function buildApp(): Promise<FastifyInstance> {
   await app.register(dbPlugin);
   await app.register(queuePlugin);
   await app.register(httpClientPlugin);
+  await app.register(cryptoPlugin);
   await app.register(llmPlugin);
   await app.register(collectorsPlugin);
   await app.register(notifiersPlugin);

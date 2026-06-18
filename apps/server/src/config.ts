@@ -23,6 +23,7 @@ export interface AppConfig {
   port: number;
   databaseUrl: string;
   redisUrl: string;
+  cryptoSecret: string;
   llm: {
     baseUrl: string;
     apiKey: string;
@@ -42,6 +43,7 @@ function load(): AppConfig {
     nodeEnv: optional('NODE_ENV', 'development'),
     port,
     databaseUrl: required('DATABASE_URL', 'mysql://root:aiinsight@localhost:3306/ai_insight'),
+    cryptoSecret: required('CRYPTO_SECRET', 'dev-insecure-crypto-secret'),
     redisUrl: required('REDIS_URL', 'redis://localhost:6379'),
     llm: {
       // 留白：内网 LLM 地址/key/模型名（见 14-留白）
