@@ -38,6 +38,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/PlaceholderView.vue'),
     meta: { title: '我的反馈' },
   },
+  {
+    path: '/insight',
+    name: 'insight',
+    component: () => import('../views/InsightView.vue'),
+    meta: { title: '主动洞察' },
+  },
 ];
 
 const router = createRouter({

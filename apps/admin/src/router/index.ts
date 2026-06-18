@@ -66,6 +66,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/PlaceholderView.vue'),
     meta: { title: '通知通道', group: '推送管理' },
   },
+  {
+    path: '/insight/sessions',
+    name: 'insight-sessions',
+    component: () => import('../views/InsightSessionsView.vue'),
+    meta: { title: '洞察会话', group: '运行监控' },
+  },
+  {
+    path: '/insight/sessions/:id/trace',
+    name: 'insight-trace',
+    component: () => import('../views/InsightTraceView.vue'),
+    meta: { title: 'Trace 回放', group: '运行监控' },
+  },
   { path: '/', redirect: '/dashboard' },
 ];
 

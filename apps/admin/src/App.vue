@@ -13,7 +13,10 @@ const auth = useAuthStore();
 const navGroups = computed(() => [
   {
     label: '运行监控',
-    items: [{ to: '/dashboard', label: '仪表盘' }],
+    items: [
+      { to: '/dashboard', label: '仪表盘' },
+      { to: '/insight/sessions', label: '洞察会话' },
+    ],
   },
   {
     label: '内容配置',

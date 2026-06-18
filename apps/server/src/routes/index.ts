@@ -10,6 +10,8 @@ import adminSourceRoutes from './admin/sources.js';
 import adminCollectRoutes from './admin/collect.js';
 import adminProxyRoutes from './admin/proxy.js';
 import adminCronRoutes from './admin/cron.js';
+import adminInsightRoutes from './admin/insight.js';
+import insightRoutes from './insight.js';
 
 export default async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(healthRoutes);
@@ -22,7 +24,11 @@ export default async function registerRoutes(app: FastifyInstance): Promise<void
   await app.register(adminProxyRoutes);
   await app.register(adminCronRoutes);
 
+  // Phase 1B · Mode 2 主动洞察
+  await app.register(insightRoutes);
+  await app.register(adminInsightRoutes);
+
   // 后续 Phase 路由按需 register：
   //   reportsRoutes / subscriptionsRoutes / feedbackRoutes
-  //   admin/schedules / categories / reports / users / channels / insight / skills
+  //   admin/schedules / categories / reports / users / channels / skills
 }
