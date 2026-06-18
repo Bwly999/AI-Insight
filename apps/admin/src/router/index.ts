@@ -4,8 +4,6 @@ import { useAuthStore } from '../stores/auth';
 /**
  * 管理端路由表 + 管理员守卫。
  * 见 doc/design-doc/08-前端架构.md §8.3 / §8.4。
- *
- * 全局前置守卫：未登录 → 重定向首页拉取用户；role !== ADMIN → 提示无权限。
  */
 const routes: RouteRecordRaw[] = [
   {
@@ -17,8 +15,14 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/sources',
     name: 'sources',
-    component: () => import('../views/PlaceholderView.vue'),
+    component: () => import('../views/SourcesView.vue'),
     meta: { title: '数据源', group: '内容配置' },
+  },
+  {
+    path: '/sources/logs',
+    name: 'collect-logs',
+    component: () => import('../views/CollectLogsView.vue'),
+    meta: { title: '采集日志', group: '内容配置' },
   },
   {
     path: '/categories',
@@ -35,13 +39,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cron',
     name: 'cron',
-    component: () => import('../views/PlaceholderView.vue'),
+    component: () => import('../views/CronView.vue'),
     meta: { title: '全局 cron', group: '系统' },
   },
   {
     path: '/proxy',
     name: 'proxy',
-    component: () => import('../views/PlaceholderView.vue'),
+    component: () => import('../views/ProxyView.vue'),
     meta: { title: 'HTTP 代理', group: '系统' },
   },
   {
@@ -75,10 +79,8 @@ router.beforeEach(async (to) => {
   if (!auth.user && !auth.loading) {
     await auth.fetchMe();
   }
-  // 守卫：非 ADMIN 不可进入（见 08-前端架构 §8.4）
   if (auth.user && auth.user.role !== 'ADMIN') {
     if (to.name !== 'forbidden') {
-      // 提示无权限（占位：可单独做 forbidden 页）
       console.warn('[admin] 该账号无管理员权限，访问被拒');
     }
     return false;
