@@ -43,7 +43,7 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
     const saved: { id: string; title: string }[] = [];
     const saveReport = async (data: { title: string; markdown: string }) => {
       const standfirst = extractStandfirst(data.markdown);
-      const html = renderReportHtml({
+      const html = await renderReportHtml({
         title: data.title,
         markdown: data.markdown,
         standfirst,
