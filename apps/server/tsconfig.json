@@ -8,11 +8,5 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../../packages/shared-types" },
-    { "path": "../../packages/datasources" },
-    { "path": "../../packages/agent" },
-    { "path": "../../packages/shared-ui" }
-  ]
+  "include": ["src"]
 }

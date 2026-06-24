@@ -7,10 +7,5 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts"],
-  "references": [
-    { "path": "../../packages/shared-types" },
-    { "path": "../../packages/api-client" },
-    { "path": "../../packages/shared-ui" }
-  ]
+  "include": ["src", "vite.config.ts"]
 }
