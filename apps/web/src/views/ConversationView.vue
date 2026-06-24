@@ -154,6 +154,16 @@ function selectConversation(c: Conversation) {
 }
 
 onMounted(() => {
+  if (isUxMode()) {
+    messages.value.push({
+      id: `temp_${Date.now()}`,
+      conversationId: "ux-conv",
+      role: "user",
+      content: { kind: "text", text: "Tell me about AI trends in 2024" },
+      createdAt: new Date().toISOString(),
+    });
+    run.subscribe("ux-run");
+  }
   loadConversations();
   loadConversation(props.id);
 });
