@@ -1,0 +1,23 @@
+{
+  "name": "ai-insight",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI For 洞察 — 全栈系统（用户端 MVP 闭环）",
+  "packageManager": "pnpm@9.15.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:push": "pnpm --filter @ai-insight/server db:push",
+    "db:seed": "pnpm --filter @ai-insight/server db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}

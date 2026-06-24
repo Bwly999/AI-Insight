@@ -1,0 +1,41 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# build outputs
+dist
+build
+.vite
+*.tsbuildinfo
+
+# turbo
+.turbo
+
+# env (keep secrets local; ship a .env.example template)
+.env
+.env.local
+.env.*.local
+
+# data / db
+data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.idea
+.vscode/*
+!.vscode/settings.json
+
+# pi agent runtime home (local)
+.pi-home

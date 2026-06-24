@@ -1,0 +1,28 @@
+{
+  "name": "@ai-insight/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-insight/datasources": "workspace:*",
+    "@ai-insight/shared-types": "workspace:*",
+    "@earendil-works/pi-ai": "latest",
+    "@earendil-works/pi-coding-agent": "latest",
+    "@sinclair/typebox": "^0.34.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2"
+  }
+}
