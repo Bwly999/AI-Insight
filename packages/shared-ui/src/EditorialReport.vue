@@ -64,7 +64,7 @@ const pubDate = computed(() => {
         由 AI-Insight Agent 自主采集数据源并综合生成
       </span>
     </footer>
-  </div>
+  </article>
 </template>
 
 <style scoped>
