@@ -39,3 +39,4 @@ Thumbs.db
 
 # pi agent runtime home (local)
 .pi-home
+.playwright-cli/
