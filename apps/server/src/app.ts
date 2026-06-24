@@ -25,11 +25,8 @@ export interface BuildAppOptions {
 
 export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: {
-      level: process.env.LOG_LEVEL ?? "warn",
-      // dev 下只打印非 2xx 请求，减少噪音
-      ...(process.env.LOG_LEVEL === undefined && { serializers: { req: () => undefined, res: () => undefined } }),
-    },
+    // dev 下降低日志级别减少噪音（可通过 LOG_LEVEL 覆盖）
+    logger: { level: process.env.LOG_LEVEL ?? "warn" },
   });
 
   // CORS（dev 允许 web 5173 跨域）

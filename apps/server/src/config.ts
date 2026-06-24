@@ -6,9 +6,34 @@
  */
 import dotenv from "dotenv";
 import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 
-// 加载 .env.local（dev）；不存在的字段不报错
-dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+/**
+ * 定位 .env.local：从 cwd 向上逐级查找直到仓库根（含 pnpm-workspace.yaml）。
+ * 因为 server 可能在 apps/server 或仓库根启动。
+ */
+function findEnvLocal(startDir: string): string | undefined {
+  let dir = startDir;
+  for (let i = 0; i < 6; i++) {
+    const candidate = resolve(dir, ".env.local");
+    if (existsSync(candidate)) return candidate;
+    // 仓库根标志：含 pnpm-workspace.yaml
+    if (existsSync(resolve(dir, "pnpm-workspace.yaml"))) {
+      return existsSync(candidate) ? candidate : undefined;
+    }
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return undefined;
+}
+
+const envLocal = findEnvLocal(process.cwd());
+if (envLocal) {
+  dotenv.config({ path: envLocal });
+} else {
+  dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+}
 dotenv.config(); // 兜底 .env
 
 function required(key: string, fallback?: string): string {

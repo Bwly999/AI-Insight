@@ -8,6 +8,7 @@
  * 注入到 conversations（enqueue）和 runs（subscribe/abort）路由。
  */
 import { EventEmitter } from "node:events";
+import type { AgentEvent } from "@ai-insight/shared-types";
 
 /** 事件推送回调（SSE 路由提供）。 */
 export type PushEvent = (event: string, data: unknown) => void;
@@ -27,7 +28,7 @@ export interface RunnerOptions {
 /** 单次 run 执行器（Phase 3 的 agent 执行注入此）。 */
 export type RunExecutor = (
   ctx: RunContext,
-  emit: (event: string, data: unknown) => void,
+  emit: (agentEvent: AgentEvent) => void,
 ) => Promise<void>;
 
 export interface RunContext {
@@ -39,9 +40,9 @@ export interface RunContext {
 const bus = new EventEmitter();
 bus.setMaxListeners(0);
 
-/** 按 runId 发事件（Runner 执行器 + 工具调用通过此推送）。 */
-export function emitRunEvent(runId: string, event: string, data: unknown): void {
-  bus.emit(runId, { event, data });
+/** 按 runId 发 AgentEvent（Runner 执行器通过此推送）。 */
+export function emitRunEvent(runId: string, agentEvent: AgentEvent): void {
+  bus.emit(runId, agentEvent);
 }
 
 /** 启动 Runner。 */
@@ -63,12 +64,11 @@ export function startRunner(opts: RunnerOptions): RunnerHandles {
     job: { runId: string; conversationId: string },
     signal: AbortSignal,
   ) => {
-    const emit = (event: string, data: unknown) =>
-      emitRunEvent(job.runId, event, data);
+    const emit = (agentEvent: AgentEvent) => emitRunEvent(job.runId, agentEvent);
     try {
       await execute({ ...job, signal }, emit);
     } catch (e) {
-      emit("run_failed", { runId: job.runId, error: (e as Error).message });
+      emit({ type: "run_failed", runId: job.runId, error: (e as Error).message });
     } finally {
       active.delete(job.runId);
       pump();
@@ -81,9 +81,10 @@ export function startRunner(opts: RunnerOptions): RunnerHandles {
       pump();
     },
     subscribe(runId, push, onClose) {
-      const listener = ({ event, data }: { event: string; data: unknown }) => {
-        push(event, data);
-        if (event === "run_completed" || event === "run_failed") {
+      const listener = (agentEvent: AgentEvent) => {
+        // SSE: event 名 = agentEvent.type，data = 整个 agentEvent
+        push(agentEvent.type, agentEvent);
+        if (agentEvent.type === "run_completed" || agentEvent.type === "run_failed") {
           onClose();
         }
       };
@@ -98,7 +99,8 @@ export function startRunner(opts: RunnerOptions): RunnerHandles {
 
 /** 默认占位执行器（Phase 3 替换为真实 agent 执行）。 */
 const defaultExecutor: RunExecutor = async (ctx, emit) => {
-  emit("run_failed", {
+  emit({
+    type: "run_failed",
     runId: ctx.runId,
     error: "Runner 执行器未配置（Phase 3 待接入 Agent）",
   });

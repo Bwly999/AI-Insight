@@ -14,6 +14,7 @@ import { reportRoutes } from "./routes/reports.js";
 import { dataSourceRoutes } from "./routes/datasources.js";
 import { scheduleRoutes } from "./routes/schedules.js";
 import { startRunner, type RunnerHandles } from "./runner/index.js";
+import { createAgentExecutor, providerFromConfig } from "./runner/executor.js";
 
 async function main() {
   // 1. DB
@@ -27,9 +28,12 @@ async function main() {
   configureProxy(config.proxyUrl || null);
   if (config.proxyUrl) app_log(`proxy enabled: ${config.proxyUrl}`);
 
-  // 3. Runner（Phase 3 完整实现；此处 start 返回钩子并注入路由）
+  // 3. Runner（Agent 执行器注入）
+  const provider = providerFromConfig();
+  app_log(`LLM provider: ${provider.providerName} / ${provider.model} @ ${provider.baseUrl || "(empty)"}`);
   const runner: RunnerHandles = startRunner({
     concurrency: config.runConcurrency,
+    execute: createAgentExecutor({ provider }),
   });
   setEnqueueRun((runId, conversationId) => runner.enqueue(runId, conversationId));
   registerRunStreamProvider((runId, push, onClose) =>
