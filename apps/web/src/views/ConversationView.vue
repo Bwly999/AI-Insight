@@ -15,6 +15,7 @@ import {
   listConversations, createConversation, getConversation, sendMessage,
 } from "@ai-insight/api-client";
 import { useInsightRun } from "../composables/useInsightRun.js";
+import { isUxMode } from "../utils";
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
@@ -50,6 +51,17 @@ const toggleTag = (t: DataSourceTag) => {
 
 async function loadConversation(id: string) {
   if (id === "new") {
+    if (isUxMode()) {
+      currentConv.value = {
+        id: "ux-conv",
+        userId: "ux-user",
+        title: "UX Mode Conversation",
+        config: { ...config },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      return;
+    }
     // 新建：先建会话再跳转
     const c = await createConversation({ title: "新洞察", config: { ...config } });
     router.replace(`/c/${c.id}`);
@@ -110,6 +122,12 @@ async function send() {
   draft.value = "";
   autoGrow();
   await scrollToBottom();
+
+  if (isUxMode()) {
+    run.subscribe("ux-run");
+    return;
+  }
+
   try {
     const r = await sendMessage(currentConv.value.id, text, { ...config, lens: lens.value.key });
     run.subscribe(r.run.id);
