@@ -1,0 +1,62 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 洞
+      - generic [ref=e7]: AI-Insight
+    - generic [ref=e8]: /
+    - generic [ref=e9]: 会话
+    - generic [ref=e10]: /
+    - generic [ref=e11]: 新洞察
+    - generic "WL" [ref=e13]
+  - generic [ref=e14]:
+    - complementary [ref=e15]:
+      - button "发起新洞察" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+        - text: 发起新洞察
+      - generic [ref=e19]:
+        - generic [ref=e20]: 最近会话
+        - generic [ref=e21]: "0"
+      - generic [ref=e24] [cursor=pointer]:
+        - img [ref=e25]
+        - text: 我的报告
+    - main [ref=e28]
+    - complementary [ref=e31]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: 证据
+        - generic [ref=e35]: "0"
+      - generic [ref=e36]:
+        - generic [ref=e37]: 搜索
+        - generic [ref=e39]: RSS
+        - generic [ref=e41]: 爬虫
+      - paragraph [ref=e45]: 工具调用的证据将在此展示
+  - generic [ref=e47]:
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - textbox "发起一次洞察，描述你想了解的赛道或问题…" [ref=e50]
+        - button "发送 (Enter)" [disabled] [ref=e51]:
+          - img [ref=e52]
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - generic [ref=e56]: 时间窗
+          - button "当天" [ref=e57] [cursor=pointer]
+          - button "三日" [ref=e58] [cursor=pointer]
+          - button "一周" [ref=e59] [cursor=pointer]
+          - button "一月" [ref=e60] [cursor=pointer]
+          - button "半年" [ref=e61] [cursor=pointer]
+          - button "一年" [ref=e62] [cursor=pointer]
+          - button "全部" [ref=e63] [cursor=pointer]
+        - generic [ref=e65]:
+          - generic [ref=e66]: 标签
+          - button "通用" [ref=e67] [cursor=pointer]
+          - button "新闻" [ref=e68] [cursor=pointer]
+          - button "学术" [ref=e69] [cursor=pointer]
+          - button "技术" [ref=e70] [cursor=pointer]
+          - button "产品" [ref=e71] [cursor=pointer]
+          - button "商业" [ref=e72] [cursor=pointer]
+          - button "社交" [ref=e73] [cursor=pointer]
+        - button "视角 综合" [ref=e76] [cursor=pointer]:
+          - text: 视角
+          - generic [ref=e77]: 综合
+    - generic [ref=e78]:
+      - generic [ref=e79]: 洞察由 Agent 自主调度数据源（搜索 · RSS · 爬虫）并综合成报告。
+      - generic [ref=e80]: Enter 发送 · Shift+Enter 换行
