@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — throwaway. Question: 用户端（对话式洞察 app）该长什么样？
+  4 个结构/审美都截然不同的变体，同一份 mock 对话（一次关于「AI 编程工具赛道」的洞察运行，
+  含工具调用 / 数据源 / 报告卡），用 ?variant=a|b|c|d 切换，底部浮动条 + ←/→ 键循环。
+  选定后删除其余变体与 switcher，把胜出者折进真实 apps/web。不要直接拿去上线。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>用户端 · 原型 · AI-Insight</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;0,9..144,900;1,9..144,400;1,9..144,600&family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Unbounded:wght@400;600;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --serif-a:'Instrument Serif',serif; --sans-a:'Hanken Grotesk',sans-serif;
+    --plex:'IBM Plex Sans',sans-serif; --mono-b:'IBM Plex Mono',monospace;
+    --unb:'Unbounded',sans-serif; --jbm:'JetBrains Mono',monospace;
+    --frau:'Fraunces',serif; --it:'Inter Tight',sans-serif;
+  }
+  html,body{margin:0;height:100%;}
+  [v-cloak]{display:none;}
+
+  /* ===== shared motion ===== */
+  @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .reveal{opacity:0;animation:up .6s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+  /* =========================================================
+     A · ATELIER — refined minimal, warm paper
+  ========================================================= */
+  .v-atelier{--bg:#faf7f1;--ink:#1c1a17;--ink2:#6b655c;--line:#e7e0d3;--accent:#b5563b;--accent2:#7c8a5e;
+    background:var(--bg);color:var(--ink);font-family:var(--sans-a);}
+  .v-atelier .display{font-family:var(--serif-a);}
+  .v-atelier .rail a{color:var(--ink2);}
+  .v-atelier .rail a.on{color:var(--ink);border-bottom:1.5px solid var(--accent);}
+  .v-atelier .chip{border:1px solid var(--line);background:#fff;}
+  .v-atelier .chip.on{border-color:var(--ink);background:var(--ink);color:var(--bg);}
+  .v-atelier .src-row{border-top:1px solid var(--line);}
+  .v-atelier .report{border:1px solid var(--line);background:#fff;}
+  .v-atelier .report-title{font-family:var(--serif-a);font-size:2.1rem;line-height:1.05;}
+  .v-atelier .input-line{border-bottom:1.5px solid var(--ink);}
+  .v-atelier .caret{background:var(--accent);}
+
+  /* =========================================================
+     B · WORKSTATION — dense 3-pane, utilitarian
+  ========================================================= */
+  .v-workstation{--bg:#f2f3f5;--ink:#0f1722;--ink2:#5b6675;--line:#dde1e7;--panel:#fbfbfc;
+    --accent:#1d4ed8;--amber:#b45309;--ok:#15803d;
+    background:var(--bg);color:var(--ink);font-family:var(--plex);font-size:13px;}
+  .v-workstation .mono{font-family:var(--mono-b);}
+  .v-workstation .panel{background:var(--panel);border:1px solid var(--line);}
+  .v-workstation .seg{border:1px solid var(--line);}
+  .v-workstation .seg button{border-right:1px solid var(--line);color:var(--ink2);}
+  .v-workstation .seg button.on{background:var(--ink);color:#fff;}
+  .v-workstation .tag{border:1px solid var(--line);}
+  .v-workstation .tag.on{background:#e8efff;color:var(--accent);border-color:#c3d4f8;}
+  .v-workstation .session.on{background:#eef2ff;border-left:3px solid var(--accent);}
+  .v-workstation .badge{background:#eef1f5;color:var(--ink2);}
+  .v-workstation th{color:var(--ink2);font-weight:500;text-align:left;}
+  .v-workstation .ev-card{border:1px solid var(--line);background:#fff;}
+
+  /* =========================================================
+     C · CONSOLE — dark mission control (free design)
+  ========================================================= */
+  .v-console{--bg:#07090c;--ink:#e6edf3;--ink2:#8b97a7;--line:#1b2330;--panel:#0d1117;
+    --cyan:#22d3ee;--mag:#e879f9;--acid:#a3e635;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(34,211,238,.08), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(232,121,249,.07), transparent 60%),
+      var(--bg);
+    color:var(--ink);font-family:var(--jbm);font-size:13px;position:relative;}
+  .v-console::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:42px 42px;mask-image:radial-gradient(circle at 50% 40%,#000,transparent 80%);}
+  .v-console .display{font-family:var(--unb);letter-spacing:-.01em;}
+  .v-console .layer{position:relative;z-index:1;}
+  .v-console .panel{background:var(--panel);border:1px solid var(--line);}
+  .v-console .glow-c{box-shadow:0 0 0 1px rgba(34,211,238,.4),0 0 22px rgba(34,211,238,.18);}
+  .v-console .neon-c{color:var(--cyan);} .v-console .neon-m{color:var(--mag);} .v-console .neon-a{color:var(--acid);}
+  .v-console .seg button{color:var(--ink2);border:1px solid var(--line);}
+  .v-console .seg button.on{color:var(--cyan);border-color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.3);}
+  .v-console .ticker{background:#000;border-bottom:1px solid var(--line);overflow:hidden;}
+  .v-console .ticker .track{display:inline-flex;white-space:nowrap;animation:slide 28s linear infinite;}
+  @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .v-console .sig{display:inline-block;width:3px;background:var(--ink2);margin-right:1px;}
+  .v-console .caret{display:inline-block;width:8px;height:15px;background:var(--cyan);animation:blink 1s steps(1) infinite;vertical-align:-2px;}
+
+  /* =========================================================
+     D · DISPATCH — editorial newspaper (from v2-editorial.html)
+  ========================================================= */
+  .v-dispatch{--paper:#f4efe6;--paper2:#ece5d6;--ink:#1a1612;--ink2:#4a423a;--ink3:#8a8073;
+    --rule:#1a1612;--vermillion:#c8341a;--mustard:#d4a017;--forest:#2d5a3d;--cobalt:#1d3b6e;
+    background:var(--paper);color:var(--ink);font-family:var(--it);}
+  .v-dispatch::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.4  0 0 0 0 0.35  0 0 0 0 0.28  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
+  .v-dispatch .layer{position:relative;z-index:1;}
+  .v-dispatch .serif{font-family:var(--frau);}
+  .v-dispatch .mono{font-family:var(--jbm);}
+  .v-dispatch .ink-border{border-color:var(--rule);}
+  .v-dispatch .double-rule{border-top:3px double var(--rule);}
+  .v-dispatch .thick-rule{border-top:4px solid var(--rule);}
+  .v-dispatch .stamp{border:2px solid var(--vermillion);color:var(--vermillion);font-family:var(--jbm);font-weight:600;transform:rotate(-4deg);letter-spacing:.1em;}
+  .v-dispatch .drop-cap::first-letter{font-family:var(--frau);font-weight:900;float:left;font-size:3.6rem;line-height:.82;margin:.1rem .5rem 0 0;color:var(--vermillion);}
+  .v-dispatch .range-btn{transition:all .2s;}
+  .v-dispatch .range-btn.on{background:var(--ink);color:var(--paper);}
+  .v-dispatch .marker{background:linear-gradient(180deg,transparent 60%,rgba(212,160,23,.45) 60%);}
+  .v-dispatch .num-display{font-family:var(--frau);font-weight:300;font-style:italic;line-height:.9;}
+
+  /* ===== switcher ===== */
+  #switcher{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:50;
+    display:flex;align-items:center;gap:2px;background:#0b0b0c;color:#fff;
+    border-radius:999px;padding:6px 6px 6px 10px;box-shadow:0 12px 40px rgba(0,0,0,.35);
+    font-family:var(--jbm);font-size:12px;border:1px solid rgba(255,255,255,.12);}
+  #switcher button{background:transparent;color:#fff;border:0;padding:6px 10px;border-radius:999px;cursor:pointer;font-size:14px;line-height:1;}
+  #switcher button:hover{background:rgba(255,255,255,.12);}
+  #switcher .label{padding:0 8px;letter-spacing:.04em;min-width:200px;text-align:center;}
+  #switcher .k{color:#22d3ee;}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+  <component :is="currentComp" :insight="insight"></component>
+
+  <div id="switcher">
+    <button @click="cycle(-1)" title="上一个 (←)">‹</button>
+    <span class="label"><span class="k">{{ current.toUpperCase() }}</span> · {{ currentName }}</span>
+    <button @click="cycle(1)" title="下一个 (→)">›</button>
+  </div>
+</div>
+
+<script>
+const { createApp, computed, ref } = Vue;
+
+// ---- shared mock data: one insight run, same across all variants ----
+const insight = {
+  prompt: "帮我洞察最近一周 AI 编程工具赛道的动态，重点看 agent 化趋势和开源生态",
+  config: { range: "一周", tags: ["AI", "开源"] },
+  ranges: ["当天", "三日", "一周", "一月", "半年", "全部"],
+  toolCalls: [
+    { tool: "search",   arg: "AI coding agent 2026",          found: 18 },
+    { tool: "crawl",    arg: "Hacker News · 微博热点",         found: 12 },
+    { tool: "fetch_rss",arg: "Anthropic Blog · GitHub Blog",  found: 6  },
+  ],
+  sources: [
+    { src:"Anthropic Blog",  t:"Claude Code 推出 Background Agent，长任务可异步执行", rel:"2 小时前", heat:94, tag:"AI" },
+    { src:"arXiv Daily",     t:"SWE-Bench Multirepo：多仓库 agent 评测基准发布",      rel:"5 小时前", heat:88, tag:"AI" },
+    { src:"Hacker News",     t:"Show HN: 开源版 Cursor 替代，本地优先的 agent IDE",   rel:"9 小时前", heat:91, tag:"开源" },
+    { src:"GitHub Trending", t:"DeepSeek-Max-67B 上架，激活参数 37B 成本骤降",        rel:"1 天前",  heat:86, tag:"开源" },
+    { src:"微博热点",        t:"国产 AI 编程助手集体上架 agentic 模式",              rel:"1 天前",  heat:79, tag:"AI" },
+    { src:"Stratechery",     t:"Agent 经济：B2B 函数调用 token 同比增 740%",          rel:"3 天前",  heat:75, tag:"AI" },
+  ],
+  report: {
+    issueNo:"047",
+    title:"AI 编程工具赛道·周报",
+    standfirst:"Agent 化正从「功能」变为「底座」——本周三条主线：异步长任务、多仓库评测基准、开源平价模型。",
+    sections:["01 · 异步 Background Agent 成为主流","02 · 评测基准进入多仓库时代","03 · 开源旗舰下探到 $0.07 / 百万 token"],
+    stat:{ items:36, sources:9, readMin:8 },
+  },
+  note:"本周共收录 36 条相关信号，来自 9 个数据源。三条主线已整理进报告，建议先读第 01 条。",
+};
+
+/* =====================================================================
+   A · ATELIER — refined minimal
+===================================================================== */
+const VariantA = {
+  props:['insight'],
+  template:`
+  <div class="v-atelier h-screen flex">
+    <!-- rail -->
+    <aside class="rail w-[224px] shrink-0 border-r flex flex-col" style="border-color:var(--line)">
+      <div class="p-6">
+        <div class="display text-2xl" style="font-style:italic">Insight</div>
+        <div class="text-[11px] tracking-[.2em] uppercase mt-1" style="color:var(--ink2)">AI For 洞察</div>
+      </div>
+      <nav class="px-6 flex-1 text-[14px] space-y-3">
+        <a class="on inline-block pb-0.5">+ 新对话</a>
+        <div class="space-y-2.5 pt-2">
+          <a class="block">AI 编程工具赛道</a>
+          <a class="block">端侧推理进展</a>
+          <a class="block" style="color:var(--ink3)">mRNA 肿瘤疫苗…</a>
+        </div>
+      </nav>
+      <div class="px-6 py-5 text-[12px] space-y-2 border-t" style="border-color:var(--line);color:var(--ink2)">
+        <a>报告档案</a><a>定时任务</a>
+      </div>
+    </aside>
+
+    <!-- main -->
+    <main class="flex-1 flex flex-col">
+      <!-- config strip -->
+      <div class="flex items-center gap-2 px-10 py-4 border-b" style="border-color:var(--line)">
+        <span class="text-[11px] tracking-[.2em] uppercase mr-2" style="color:var(--ink2)">时间窗</span>
+        <button v-for="r in insight.ranges" :key="r" class="chip px-3 py-1 text-[12px] rounded-full"
+          :class="{on: r===insight.config.range}">{{ r }}</button>
+        <span class="mx-3" style="color:var(--line)">·</span>
+        <span v-for="t in ['AI','开源','学术']" :key="t" class="chip px-3 py-1 text-[12px] rounded-full"
+          :class="{on: insight.config.tags.includes(t)}">{{ t }}</span>
+      </div>
+
+      <!-- conversation -->
+      <div class="flex-1 overflow-auto px-10 py-8">
+        <div class="max-w-[720px] mx-auto space-y-8">
+          <!-- user -->
+          <div class="reveal flex justify-end" style="animation-delay:.05s">
+            <p class="max-w-[80%] text-[15px] leading-relaxed" style="color:var(--ink2)">{{ insight.prompt }}</p>
+          </div>
+          <!-- assistant -->
+          <div class="reveal space-y-5" style="animation-delay:.15s">
+            <p class="text-[15px] leading-relaxed">{{ insight.note }}</p>
+            <!-- tool chips -->
+            <div class="flex flex-wrap gap-x-5 gap-y-1 text-[12px]" style="color:var(--ink2)">
+              <span v-for="c in insight.toolCalls" :key="c.tool">
+                <span style="color:var(--accent)">↳</span> {{ c.tool }}(“{{ c.arg }}”) · {{ c.found }} 条
+              </span>
+            </div>
+            <!-- sources -->
+            <div>
+              <div class="text-[11px] tracking-[.2em] uppercase mb-2" style="color:var(--ink2)">数据源</div>
+              <div v-for="(s,i) in insight.sources" :key="i" class="src-row py-2.5 flex items-baseline gap-4">
+                <span class="text-[11px] w-24 shrink-0" style="color:var(--ink2)">{{ s.src }}</span>
+                <span class="flex-1 text-[14px]">{{ s.t }}</span>
+                <span class="text-[11px]" style="color:var(--ink3)">{{ s.rel }}</span>
+              </div>
+            </div>
+            <!-- report card -->
+            <div class="report mt-8 p-7 reveal" style="animation-delay:.3s">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-[11px] tracking-[.2em] uppercase" style="color:var(--accent)">报告 №{{ insight.report.issueNo }}</span>
+                <span class="text-[11px]" style="color:var(--ink2)">{{ insight.report.stat.items }} 条 · {{ insight.report.stat.readMin }}′ 阅读</span>
+              </div>
+              <h2 class="report-title">{{ insight.report.title }}</h2>
+              <p class="mt-3 text-[15px] leading-relaxed" style="color:var(--ink2);font-style:italic" >{{ insight.report.standfirst }}</p>
+              <ul class="mt-4 space-y-1.5 text-[14px]">
+                <li v-for="s in insight.report.sections" :key="s" style="color:var(--ink)">{{ s }}</li>
+              </ul>
+              <div class="mt-5 flex gap-5 text-[13px]">
+                <a class="underline underline-offset-4" style="text-decoration-color:var(--accent)">查看完整报告 →</a>
+                <a style="color:var(--ink2)">下载 HTML</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- input -->
+      <div class="px-10 py-6">
+        <div class="max-w-[720px] mx-auto flex items-center gap-3 input-line pb-2">
+          <span class="text-[14px]" style="color:var(--ink2)">发起一次洞察…</span>
+          <span class="caret inline-block w-1.5 h-4"></span>
+          <button class="ml-auto text-[13px]" style="color:var(--accent)">发送 →</button>
+        </div>
+      </div>
+    </main>
+  </div>`
+};
+
+/* =====================================================================
+   B · WORKSTATION — dense 3-pane analyst desk
+===================================================================== */
+const VariantB = {
+  props:['insight'],
+  template:`
+  <div class="v-workstation h-screen flex flex-col">
+    <!-- toolbar -->
+    <header class="flex items-center gap-4 px-4 h-12 border-b" style="border-color:var(--line);background:var(--panel)">
+      <span class="mono text-[12px]" style="color:var(--ink2)">Sessions / <span style="color:var(--ink)">ai-coding-tools</span></span>
+      <div class="seg flex ml-2">
+        <button v-for="r in insight.ranges" :key="r" class="px-2.5 py-1 mono text-[11px]"
+          :class="{on:r===insight.config.range}">{{ r }}</button>
+      </div>
+      <div class="flex gap-1.5">
+        <span v-for="t in ['AI','开源','学术']" :key="t" class="tag px-2 py-1 mono text-[11px]"
+          :class="{on:insight.config.tags.includes(t)}">{{ t }}</span>
+      </div>
+      <div class="ml-auto flex items-center gap-3 mono text-[11px]" style="color:var(--ink2)">
+        <span>RUN #{{ insight.report.issueNo }}</span>
+        <span class="px-1.5 py-0.5" style="background:#dcfce7;color:var(--ok)">completed</span>
+        <span>{{ insight.report.stat.items }} items</span>
+        <span>{{ insight.report.stat.readMin }}′</span>
+      </div>
+    </header>
+
+    <div class="flex-1 grid grid-cols-[230px_1fr_320px] min-h-0">
+      <!-- sessions -->
+      <aside class="panel border-r overflow-auto" style="border-color:var(--line)">
+        <div class="px-3 py-2 mono text-[10px] uppercase tracking-wider border-b" style="color:var(--ink2);border-color:var(--line)">Recent</div>
+        <div class="session on px-3 py-2 text-[12px]">
+          <div>AI 编程工具赛道</div><div class="mono text-[10px]" style="color:var(--ink2)">today · 36 items</div>
+        </div>
+        <div class="px-3 py-2 text-[12px]"><div>端侧推理进展</div><div class="mono text-[10px]" style="color:var(--ink2)">yesterday</div></div>
+        <div class="px-3 py-2 text-[12px]" style="color:var(--ink2)"><div>mRNA 肿瘤疫苗</div><div class="mono text-[10px]">3 days ago</div></div>
+      </aside>
+
+      <!-- chat -->
+      <section class="flex flex-col min-w-0">
+        <div class="flex-1 overflow-auto px-6 py-5 space-y-5">
+          <div class="reveal" style="animation-delay:.05s">
+            <div class="mono text-[10px] uppercase tracking-wider mb-1" style="color:var(--ink2)">User · prompt</div>
+            <p class="text-[13px] leading-relaxed border-l-2 pl-3" style="border-color:var(--amber)">{{ insight.prompt }}</p>
+          </div>
+          <div class="reveal space-y-4" style="animation-delay:.12s">
+            <div class="mono text-[10px] uppercase tracking-wider" style="color:var(--ink2)">Assistant · insight run #{{ insight.report.issueNo }}</div>
+            <p class="text-[13px] leading-relaxed">{{ insight.note }}</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="c in insight.toolCalls" :key="c.tool" class="badge mono text-[10px] px-1.5 py-0.5 rounded-sm">
+                {{ c.tool }}({{ c.found }})
+              </span>
+            </div>
+            <table class="w-full text-[12px]">
+              <thead><tr><th class="py-1 pr-2 w-28">SOURCE</th><th>ITEM</th><th class="w-16 text-right">HEAT</th></tr></thead>
+              <tbody>
+                <tr v-for="(s,i) in insight.sources" :key="i" class="border-t" style="border-color:var(--line)">
+                  <td class="py-1.5 pr-2 mono text-[11px]" style="color:var(--ink2)">{{ s.src }}</td>
+                  <td class="py-1.5">{{ s.t }} <span class="mono text-[10px]" style="color:var(--ink3)">· {{ s.rel }}</span></td>
+                  <td class="py-1.5 text-right mono">{{ s.heat }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="ev-card p-4 reveal" style="animation-delay:.25s">
+              <div class="flex items-center justify-between mb-2">
+                <span class="mono text-[10px] uppercase tracking-wider" style="color:var(--accent)">Report #{{ insight.report.issueNo }}</span>
+                <span class="mono text-[10px]" style="color:var(--ink2)">artifact · html+md</span>
+              </div>
+              <div class="text-[15px] font-semibold">{{ insight.report.title }}</div>
+              <p class="text-[12px] mt-1" style="color:var(--ink2)">{{ insight.report.standfirst }}</p>
+              <div class="mt-3 flex gap-3"><button class="mono text-[11px] px-2 py-1 text-white" style="background:var(--ink)">Open report</button><button class="mono text-[11px] px-2 py-1 tag">Export HTML</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="border-t px-5 py-3 flex items-end gap-3" style="border-color:var(--line);background:var(--panel)">
+          <textarea rows="1" class="flex-1 mono text-[12px] bg-transparent outline-none resize-none" placeholder="dispatch a new insight…"></textarea>
+          <button class="mono text-[11px] px-3 py-1.5 text-white" style="background:var(--accent)">Dispatch ▸</button>
+        </div>
+      </section>
+
+      <!-- evidence -->
+      <aside class="panel border-l overflow-auto" style="border-color:var(--line)">
+        <div class="px-3 py-2 mono text-[10px] uppercase tracking-wider border-b flex justify-between" style="color:var(--ink2);border-color:var(--line)">
+          <span>Evidence · {{ insight.sources.length }}</span><span>dedup on</span>
+        </div>
+        <div v-for="(s,i) in insight.sources" :key="i" class="ev-card m-2.5 p-2.5">
+          <div class="flex items-center justify-between mb-1">
+            <span class="mono text-[10px]" style="color:var(--accent)">{{ s.src }}</span>
+            <span class="mono text-[10px]" style="color:var(--ink2)">{{ s.rel }}</span>
+          </div>
+          <div class="text-[12px] leading-snug">{{ s.t }}</div>
+          <div class="mt-2 flex items-center gap-2">
+            <div class="flex gap-px h-1.5">
+              <span v-for="n in 10" :key="n" class="w-1" :style="{background: n<=Math.round(s.heat/10)?'var(--amber)':'var(--line)'}"></span>
+            </div>
+            <span class="mono text-[10px]" style="color:var(--ink2)">{{ s.heat }}</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>`
+};
+
+/* =====================================================================
+   C · CONSOLE — dark mission control (free design)
+===================================================================== */
+const VariantC = {
+  props:['insight'],
+  template:`
+  <div class="v-console h-screen flex flex-col">
+    <!-- ticker -->
+    <div class="ticker layer text-[11px] py-1">
+      <div class="track">
+        <span v-for="n in 2" :key="n" class="inline-flex">
+          <span class="mx-6 neon-c">◉ LIVE FEED</span>
+          <span class="mx-6" style="color:var(--ink2)">SIGNALS: {{ insight.report.stat.items }}</span>
+          <span class="mx-6 neon-m">⚠ AGENT-MODE SURGE +740%</span>
+          <span class="mx-6" style="color:var(--ink2)">RUN #{{ insight.report.issueNo }} · COMPLETED</span>
+          <span class="mx-6 neon-a">◎ 9 SOURCES ONLINE</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="layer flex-1 grid grid-cols-[200px_1fr] min-h-0">
+      <!-- rail -->
+      <aside class="panel border-r flex flex-col" style="border-color:var(--line)">
+        <div class="p-4 border-b" style="border-color:var(--line)">
+          <div class="display text-[15px]">INSIGHT<span class="neon-c">//</span>CONSOLE</div>
+          <div class="text-[10px] mt-1" style="color:var(--ink2)">operator · WL</div>
+        </div>
+        <div class="p-3 space-y-1 text-[12px] flex-1">
+          <div class="neon-c">▸ ai-coding-tools</div>
+          <div style="color:var(--ink2)">▸ edge-inference</div>
+          <div style="color:var(--ink2)">▸ mrna-vaccines</div>
+        </div>
+        <div class="p-3 text-[11px] border-t space-y-1" style="border-color:var(--line);color:var(--ink2)">
+          <div>⌖ reports</div><div>◴ schedules</div>
+        </div>
+      </aside>
+
+      <!-- main -->
+      <main class="flex flex-col min-w-0">
+        <!-- config -->
+        <div class="flex items-center gap-3 px-5 py-3 border-b" style="border-color:var(--line)">
+          <span class="text-[10px] tracking-[.2em]" style="color:var(--ink2)">WINDOW</span>
+          <div class="seg flex gap-1.5">
+            <button v-for="r in insight.ranges" :key="r" class="px-2.5 py-1 text-[11px]"
+              :class="{on:r===insight.config.range}">{{ r }}</button>
+          </div>
+          <div class="ml-auto flex gap-1.5">
+            <span v-for="t in ['AI','开源','学术']" :key="t" class="seg px-2 py-1 text-[11px]"
+              :class="{on:insight.config.tags.includes(t)}">{{ t }}</span>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-auto px-6 py-5 space-y-6">
+          <!-- user -->
+          <div class="reveal" style="animation-delay:.05s">
+            <div class="text-[10px] mb-1" style="color:var(--ink2)">> INCOMING REQUEST</div>
+            <div class="panel glow-c px-4 py-3 text-[13px]" style="border-color:var(--cyan)">{{ insight.prompt }}</div>
+          </div>
+          <!-- assistant -->
+          <div class="reveal space-y-4" style="animation-delay:.15s">
+            <div class="text-[10px] neon-c">◇ AGENT RESPONSE</div>
+            <p class="text-[13px] leading-relaxed">{{ insight.note }}</p>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="c in insight.toolCalls" :key="c.tool" class="panel px-2 py-1 text-[11px]">
+                <span :class="c.tool==='crawl'?'neon-m':'neon-c'">⟐</span> {{ c.tool }} · <span class="neon-a">{{ c.found }}</span>
+              </span>
+            </div>
+            <div class="space-y-1.5">
+              <div v-for="(s,i) in insight.sources" :key="i" class="flex items-center gap-3 text-[12px]">
+                <span class="flex gap-px">
+                  <span v-for="n in 5" :key="n" class="sig" :style="{height:(6+n*3)+'px',background:n<=Math.round(s.heat/20)?'var(--cyan)':'var(--line)'}"></span>
+                </span>
+                <span class="w-32 shrink-0" style="color:var(--ink2)">{{ s.src }}</span>
+                <span class="flex-1">{{ s.t }}</span>
+                <span class="neon-m text-[10px]">{{ s.heat }}</span>
+              </div>
+            </div>
+            <!-- briefing -->
+            <div class="panel glow-c p-5 reveal" style="animation-delay:.3s;border-color:var(--cyan)">
+              <div class="flex items-center justify-between mb-2">
+                <span class="display text-[13px] neon-c">▣ BRIEFING #{{ insight.report.issueNo }}</span>
+                <span class="text-[10px]" style="color:var(--ink2)">artifact · ready</span>
+              </div>
+              <div class="display text-[20px]">{{ insight.report.title }}</div>
+              <p class="text-[12px] mt-2" style="color:var(--ink2)">{{ insight.report.standfirst }}</p>
+              <div class="mt-3 grid grid-cols-3 gap-3 text-center">
+                <div><div class="display text-2xl neon-a">{{ insight.report.stat.items }}</div><div class="text-[9px]" style="color:var(--ink2)">SIGNALS</div></div>
+                <div><div class="display text-2xl neon-c">{{ insight.report.stat.sources }}</div><div class="text-[9px]" style="color:var(--ink2)">SOURCES</div></div>
+                <div><div class="display text-2xl neon-m">{{ insight.report.stat.readMin }}′</div><div class="text-[9px]" style="color:var(--ink2)">READ</div></div>
+              </div>
+              <div class="mt-4 flex gap-3">
+                <button class="text-[11px] px-3 py-1.5 text-black" style="background:var(--cyan)">OPEN BRIEFING ▸</button>
+                <button class="text-[11px] px-3 py-1.5" style="border:1px solid var(--line)">DL .HTML</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t" style="border-color:var(--line)">
+          <div class="flex items-center gap-2 text-[13px]"><span class="neon-c">❯</span><span>transmit insight</span><span class="caret"></span></div>
+        </div>
+      </main>
+    </div>
+  </div>`
+};
+
+/* =====================================================================
+   D · DISPATCH — editorial newspaper (from v2-editorial.html)
+===================================================================== */
+const VariantD = {
+  props:['insight'],
+  template:`
+  <div class="v-dispatch min-h-screen">
+    <div class="layer max-w-[1200px] mx-auto px-6 md:px-10">
+      <!-- masthead -->
+      <header class="border-b-[3px] ink-border pb-3">
+        <div class="flex items-center justify-between text-[10px] mono uppercase tracking-[.2em] py-2" style="color:var(--ink2)">
+          <span>Est. MMXXVI</span><span class="serif italic" style="color:var(--vermillion)">№ {{ insight.report.issueNo }}</span><span>Operator · WL</span>
+        </div>
+        <div class="thick-rule pt-3 flex items-end justify-between">
+          <h1 class="serif font-black leading-[.85] tracking-tight" style="font-size:clamp(2.4rem,5vw,4rem)">The Insight <span class="italic font-light">Dispatch</span></h1>
+          <span class="stamp text-[9px] px-2 py-1 hidden md:inline">已审定 · APPROVED</span>
+        </div>
+      </header>
+
+      <!-- time window -->
+      <section class="border-b ink-border py-3 flex items-center gap-3" style="background:var(--paper2)">
+        <span class="mono text-[10px] uppercase tracking-[.25em]" style="color:var(--ink3)">时间窗</span>
+        <div class="flex border-2 ink-border">
+          <button v-for="r in insight.ranges" :key="r" @click.prevent class="range-btn px-3 py-1 text-[11px] mono uppercase tracking-wider"
+            :class="{on:r===insight.config.range}">{{ r }}</button>
+        </div>
+        <div class="ml-auto flex gap-1.5">
+          <span v-for="t in insight.config.tags" :key="t" class="mono text-[10px] uppercase tracking-widest px-2 py-0.5 border ink-border">{{ t }}</span>
+        </div>
+      </section>
+
+      <!-- wire (user prompt) -->
+      <div class="flex items-center gap-3 py-5">
+        <span class="stamp text-[9px] px-2 py-1">来电 · WIRE</span>
+        <p class="serif italic text-lg" style="color:var(--ink2)">“{{ insight.prompt }}”</p>
+      </div>
+
+      <!-- editorial response -->
+      <section class="grid lg:grid-cols-12 gap-8 pb-8 border-b-[3px] ink-border">
+        <article class="lg:col-span-8 reveal">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-[10px] uppercase tracking-widest" style="color:var(--ink3)">情报员手记 · ANALYST NOTE</span>
+          </div>
+          <p class="serif text-lg md:text-xl leading-relaxed drop-cap" style="color:var(--ink)">{{ insight.note }}</p>
+
+          <!-- tool footnotes -->
+          <div class="mt-5 pt-3 border-t border-dotted ink-border flex flex-wrap gap-x-5 gap-y-1 mono text-[10px] uppercase tracking-widest" style="color:var(--ink3)">
+            <span v-for="c in insight.toolCalls" :key="c.tool">† {{ c.tool }} — {{ c.found }} 则</span>
+          </div>
+
+          <!-- report = top story -->
+          <div class="mt-8">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="stamp text-[9px] px-2 py-1" style="border-color:var(--vermillion);color:var(--vermillion)">头版 · REPORT</span>
+              <span class="mono text-[10px] uppercase tracking-widest" style="color:var(--vermillion)">即日付印</span>
+            </div>
+            <h2 class="serif font-black leading-[.95] tracking-tight" style="font-size:clamp(2rem,4vw,3.2rem)">{{ insight.report.title }}</h2>
+            <p class="mt-4 serif italic text-lg" style="color:var(--ink2)">{{ insight.report.standfirst }}</p>
+            <ul class="mt-4 space-y-1 serif text-lg">
+              <li v-for="s in insight.report.sections" :key="s">{{ s }}</li>
+            </ul>
+            <div class="mt-5 flex gap-5 mono text-[11px] uppercase tracking-widest">
+              <a class="underline underline-offset-4" style="text-decoration-color:var(--vermillion);text-decoration-thickness:2px">继续阅读 →</a>
+              <a style="color:var(--ink3)">下载 HTML</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- by the numbers + 供稿榜 -->
+        <div class="lg:col-span-4 space-y-6">
+          <div class="p-5" style="background:var(--ink);color:var(--paper)">
+            <div class="flex items-center justify-between mb-3">
+              <span class="mono text-[10px] uppercase tracking-[.25em]" style="color:var(--mustard)">本期统计</span>
+              <span class="serif italic text-sm">By the Numbers</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><div class="num-display text-4xl" style="color:var(--mustard)">{{ insight.report.stat.items }}</div><div class="mono text-[9px] uppercase tracking-widest opacity-60">收录信号</div></div>
+              <div><div class="num-display text-4xl">{{ insight.report.stat.sources }}</div><div class="mono text-[9px] uppercase tracking-widest opacity-60">数据源</div></div>
+              <div><div class="num-display text-4xl" style="color:var(--mustard)">{{ insight.sources.length }}</div><div class="mono text-[9px] uppercase tracking-widest opacity-60">头条推荐</div></div>
+              <div><div class="num-display text-4xl">{{ insight.report.stat.readMin }}<span class="text-xl">′</span></div><div class="mono text-[9px] uppercase tracking-widest opacity-60">阅读分钟</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-2"><span class="serif italic text-xl" style="color:var(--vermillion)">¶</span><span class="mono text-[10px] uppercase tracking-[.25em]" style="color:var(--ink3)">供稿榜</span></div>
+            <div class="divide-y" style="--tw-divide-opacity:1;">
+              <div v-for="(s,i) in insight.sources.slice(0,5)" :key="i" class="py-2 flex items-baseline gap-3 border-b border-dotted ink-border">
+                <span class="num-display text-2xl w-7">{{ String(i+1).padStart(2,'0') }}</span>
+                <div class="flex-1">
+                  <div class="serif font-semibold text-[15px]">{{ s.src }}</div>
+                  <div class="h-1 mt-1" style="background:rgba(26,22,18,.1)"><div class="h-full" :style="{width:s.heat+'%',background:'var(--vermillion)'}"></div></div>
+                </div>
+                <span class="mono text-[10px]" style="color:var(--ink3)">{{ s.heat }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- dispatch input -->
+      <div class="py-6 flex items-center gap-3 border-b ink-border">
+        <span class="mono text-[10px] uppercase tracking-[.25em]" style="color:var(--ink3)">致编辑</span>
+        <span class="serif italic text-lg flex-1" style="color:var(--ink2)">发起一次新的洞察…</span>
+        <span class="serif italic" style="color:var(--vermillion)">寄出 →</span>
+      </div>
+      <footer class="py-6 text-center serif italic text-lg" style="color:var(--ink3)">— END OF DISPATCH —</footer>
+    </div>
+  </div>`
+};
+
+/* ===== switcher / app ===== */
+const VARIANTS = [
+  { key:'a', name:'Atelier · 极简雅致', comp:VariantA },
+  { key:'b', name:'Workstation · 三栏分析台', comp:VariantB },
+  { key:'c', name:'Console · 暗色情报台', comp:VariantC },
+  { key:'d', name:'Dispatch · 报刊编辑', comp:VariantD },
+];
+
+createApp({
+  setup(){
+    const insightRef = insight;
+    const readVariant = () => new URLSearchParams(location.search).get('variant') || 'a';
+    const current = ref(readVariant());
+    const idx = computed(()=> {
+      const i = VARIANTS.findIndex(v=>v.key===current.value);
+      return i<0?0:i;
+    });
+    const currentComp = computed(()=> VARIANTS[idx.value].comp);
+    const currentName = computed(()=> VARIANTS[idx.value].name);
+    const setVariant = (k)=>{
+      current.value = k;
+      const u = new URL(location.href); u.searchParams.set('variant',k);
+      history.replaceState(null,'',u);
+    };
+    const cycle = (dir)=>{
+      const n = (idx.value + dir + VARIANTS.length) % VARIANTS.length;
+      setVariant(VARIANTS[n].key);
+    };
+    window.addEventListener('keydown',(e)=>{
+      const tag = (e.target && e.target.tagName) || '';
+      if (/INPUT|TEXTAREA/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if(e.key==='ArrowLeft') cycle(-1);
+      if(e.key==='ArrowRight') cycle(1);
+    });
+    return { insight:insightRef, current, currentComp, currentName, cycle };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
