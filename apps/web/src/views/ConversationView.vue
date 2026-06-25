@@ -207,29 +207,29 @@ watch(
               @download="(id: string) => { /* 默认 href 行为即可 */ }" />
           </div>
         </div>
+
+        <Composer
+          :status="run.status.value"
+          :time-range="config.timeRange"
+          :tag-prefs="config.tagPrefs"
+          :lens="config.lens ?? 'deep'"
+          @send="onSend"
+          @abort="run.abort()"
+          @update:time-range="(v: TimeRange) => (config.timeRange = v)"
+          @toggle-tag="onToggleTag"
+          @cycle-lens="onCycleLens" />
       </main>
 
       <EvidencePanel :tool-calls="toolCalls" />
     </div>
-
-    <Composer
-      :status="run.status.value"
-      :time-range="config.timeRange"
-      :tag-prefs="config.tagPrefs"
-      :lens="config.lens ?? 'deep'"
-      @send="onSend"
-      @abort="run.abort()"
-      @update:time-range="(v: TimeRange) => (config.timeRange = v)"
-      @toggle-tag="onToggleTag"
-      @cycle-lens="onCycleLens" />
   </div>
 </template>
 
 <style>
-/* 容器布局：三行(topbar/panes/dock) + panes 三栏 */
+/* 容器布局：两行(topbar/panes)；panes 三栏，composer 内嵌于主列底部 */
 .shell {
   display: grid;
-  grid-template-rows: 56px 1fr auto;
+  grid-template-rows: 56px 1fr;
   height: 100vh;
 }
 .panes {

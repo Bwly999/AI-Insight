@@ -33,7 +33,7 @@ async function autoGrow() {
   const el = ta.value;
   if (!el) return;
   el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, 160) + "px";
+  el.style.height = Math.min(el.scrollHeight, 220) + "px";
 }
 function onKey(e: KeyboardEvent) {
   if (e.key === "Enter" && !e.shiftKey) {
@@ -55,7 +55,7 @@ function submit() {
     <div class="dock-inner">
       <form class="composer" :class="{ running: status === 'running' }" @submit.prevent="submit">
         <div class="comp-area">
-          <textarea ref="ta" v-model="draft" rows="1"
+          <textarea ref="ta" v-model="draft" rows="3"
             :placeholder="status === 'running' ? '洞察运行中…可继续追问' : '发起一次洞察，描述你想了解的赛道或问题…'"
             @input="autoGrow" @keydown="onKey"></textarea>
           <button v-if="status === 'running'" type="button" class="stop-btn" @click="emit('abort')" title="中止运行">
@@ -108,7 +108,8 @@ function submit() {
 .comp-area { padding: 14px 16px 5px; display: flex; gap: 10px; align-items: flex-end; }
 .comp-area textarea {
   flex: 1; border: 0; outline: 0; resize: none; background: transparent;
-  font-family: var(--sans); font-size: 14.5px; line-height: 1.55; color: var(--ink); max-height: 160px;
+  font-family: var(--sans); font-size: 14.5px; line-height: 1.55; color: var(--ink);
+  min-height: 76px; max-height: 220px;
 }
 .comp-area textarea::placeholder { color: var(--ink-3); }
 
