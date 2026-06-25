@@ -9,6 +9,16 @@ import { isUxMode } from "../utils";
 import { subscribeRunStream, abortRun } from "@ai-insight/api-client";
 import type { AgentEvent, Report, RunStep } from "@ai-insight/shared-types";
 
+/** 工具调用态（reactive 数组元素，UI 共享类型）。 */
+export interface ToolCallState {
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  found?: number;
+  ok?: boolean;
+  durationMs?: number;
+}
+
 function useMockInsightRun() {
   const runId = ref<string | null>(null);
   const status = ref<"idle" | "running" | "completed" | "failed">("idle");
