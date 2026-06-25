@@ -17,7 +17,7 @@ function readInitial(): Theme {
   } catch {
     /* localStorage 不可用时忽略 */
   }
-  return "dark";
+  return "light";
 }
 
 const theme = ref<Theme>(readInitial());
