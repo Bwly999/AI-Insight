@@ -45,7 +45,7 @@ function required(key: string, fallback?: string): string {
 }
 
 export const config = {
-  port: parseInt(process.env.PORT ?? "3000", 10),
+  port: parseInt(process.env.PORT ?? "4000", 10),
   databaseUrl: process.env.DATABASE_URL ?? "./data/insight.db",
 
   // LLM（兼容 .env.local 的 OPENAI_* 命名 + 设计的 LLM_* 命名）

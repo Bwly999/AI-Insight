@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:server": "pnpm --filter @ai-insight/server dev",
+    "dev:clean": "node scripts/dev-clean.cjs",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
