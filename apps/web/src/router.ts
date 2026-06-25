@@ -19,6 +19,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("./views/ReportView.vue"),
     props: true,
   },
+  {
+    path: "/schedules",
+    name: "schedules",
+    component: () => import("./views/SchedulesView.vue"),
+  },
 ];
 
 export const router = createRouter({

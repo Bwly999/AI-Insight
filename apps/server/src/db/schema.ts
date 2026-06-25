@@ -26,6 +26,8 @@ export const conversations = sqliteTable("conversations", {
   config: text("config").notNull().default("{}"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  // 软删标记（null=未删）；list/get 过滤 deleted_at IS NULL
+  deletedAt: text("deleted_at"),
 });
 
 // ─── messages（对话历史，真相源）────────────────────────────────────────
@@ -69,6 +71,22 @@ export const reports = sqliteTable("reports", {
   markdown: text("markdown").notNull(),
   // standalone HTML（editorial 版式）
   html: text("html").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+// ─── run_items（本轮工具命中的信号条目，供证据面板/统计）──────────────────
+export const runItems = sqliteTable("run_items", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull().references(() => insightRuns.id, { onDelete: "cascade" }),
+  toolName: text("tool_name").notNull(),
+  sourceType: text("source_type", { enum: ["search", "rss", "crawler"] }).notNull(),
+  sourceName: text("source_name").notNull(),
+  sourceId: text("source_id").notNull(),
+  title: text("title").notNull(),
+  url: text("url").notNull(),
+  summary: text("summary"),
+  publishedAt: text("published_at"),
+  fetchedAt: text("fetched_at").notNull(),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
@@ -133,4 +151,6 @@ export type DbConversation = typeof conversations.$inferSelect;
 export type DbMessage = typeof messages.$inferSelect;
 export type DbInsightRun = typeof insightRuns.$inferSelect;
 export type DbReport = typeof reports.$inferSelect;
+export type DbRunItem = typeof runItems.$inferSelect;
 export type DbDataSource = typeof dataSources.$inferSelect;
+export type DbSchedule = typeof schedules.$inferSelect;

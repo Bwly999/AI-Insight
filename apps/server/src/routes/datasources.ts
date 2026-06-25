@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import type { DataSourceTag } from "@ai-insight/shared-types";
 import * as repo from "../repo.js";
 import { randomId } from "../util.js";
+import { pollOneFeed } from "../jobs/rss-poller.js";
 
 export async function dataSourceRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/datasources", { preHandler: app.authenticate }, async (req) => {
@@ -19,6 +20,8 @@ export async function dataSourceRoutes(app: FastifyInstance): Promise<void> {
     const body = (req.body ?? {}) as { enabled?: boolean; tags?: DataSourceTag[]; name?: string };
     const ds = repo.patchDataSource(id, body);
     if (!ds) return reply.code(404).send({ error: "not_found" });
+    // 启用 RSS feed 时即时首拉（消除 30min 盲区）
+    if (body.enabled === true && ds.type === "rss") void pollOneFeed(id);
     return ds;
   });
 
@@ -38,6 +41,8 @@ export async function dataSourceRoutes(app: FastifyInstance): Promise<void> {
       enabled: true,
       config: { feedUrl: body.feedUrl },
     });
+    // 新建 RSS feed 即时首拉建索引
+    void pollOneFeed(ds.id);
     return reply.code(201).send(ds);
   });
 

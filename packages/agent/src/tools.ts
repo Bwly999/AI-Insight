@@ -16,8 +16,12 @@ import {
   type SearchEngine,
   type CrawlerAdapter,
 } from "@ai-insight/datasources";
-import type { ConversationConfig } from "@ai-insight/shared-types";
-import type { DataSourceItem } from "@ai-insight/shared-types";
+import type {
+  ConversationConfig,
+  DataSourceItem,
+  DataSourceTag,
+  TimeRange,
+} from "@ai-insight/shared-types";
 
 /** 工具上下文（绑定到一次 Run）。 */
 export interface ToolContext {
@@ -28,11 +32,18 @@ export interface ToolContext {
   /** 爬虫适配器实例。 */
   crawlers?: CrawlerAdapter[];
   /** RSS 源：feedUrl → { sourceName, tags }。MVP 从 data_sources 取。 */
-  rssFeeds: { feedUrl: string; sourceName: string; tags: import("@ai-insight/shared-types").DataSourceTag[] }[];
+  rssFeeds: { feedUrl: string; sourceName: string; tags: DataSourceTag[] }[];
   /** 启用的爬虫平台 id 列表。 */
   enabledPlatforms?: string[];
   /** save_report 回调：把报告落库（由 server 注入）。 */
   saveReport: (data: { title: string; markdown: string }) => Promise<void>;
+  /** RSS 索引检索（FTS5 优先 + 即时 fetch 回退），由 server 注入；不注入则工具内回退即时 fetch。 */
+  searchRssIndex?: (opts: {
+    keywords?: string[];
+    tags?: DataSourceTag[];
+    timeRange?: TimeRange;
+    limit?: number;
+  }) => Promise<DataSourceItem[]>;
   /** 工具命中信号收集（供证据面板/统计）。 */
   onItems?: (items: DataSourceItem[], toolName: string) => void;
 }
@@ -133,25 +144,38 @@ export function createInsightTools(ctx: ToolContext) {
     parameters: rssParams,
     async execute(_id, params) {
       const limit = params.limit ?? 10;
-      const all: DataSourceItem[] = [];
-      await Promise.all(
-        ctx.rssFeeds.map((f) =>
-          fetchRss(f.feedUrl, {
-            sourceName: f.sourceName,
-            tags: (params.tags ?? ctx.config.tagPrefs) as never,
-            timeRange: ctx.config.timeRange,
-            keywords: params.keywords,
-            limit,
-          })
-            .then((items) => all.push(...items))
-            .catch(() => {}),
-        ),
-      );
-      ctx.onItems?.(all, "fetch_rss");
-      const summary = `RSS 检索命中 ${all.length} 条（${ctx.rssFeeds.length} 源）`;
+      const tags = (params.tags ?? ctx.config.tagPrefs) as never;
+      let items: DataSourceItem[];
+      if (ctx.searchRssIndex) {
+        // server 注入：FTS5 索引优先，零结果回退即时 fetch 并写回索引
+        items = await ctx.searchRssIndex({
+          keywords: params.keywords,
+          tags,
+          timeRange: ctx.config.timeRange,
+          limit,
+        });
+      } else {
+        // 无注入（测试/独立运行）：回退即时 fetch
+        items = [];
+        await Promise.all(
+          ctx.rssFeeds.map((f) =>
+            fetchRss(f.feedUrl, {
+              sourceName: f.sourceName,
+              tags,
+              timeRange: ctx.config.timeRange,
+              keywords: params.keywords,
+              limit,
+            })
+              .then((its) => items.push(...its))
+              .catch(() => {}),
+          ),
+        );
+      }
+      ctx.onItems?.(items, "fetch_rss");
+      const summary = `RSS 检索命中 ${items.length} 条（${ctx.rssFeeds.length} 源）`;
       return {
-        content: [{ type: "text" as const, text: formatItems("rss", summary, all) }],
-        details: { found: all.length, sourceCount: ctx.rssFeeds.length },
+        content: [{ type: "text" as const, text: formatItems("rss", summary, items) }],
+        details: { found: items.length, sourceCount: ctx.rssFeeds.length },
       };
     },
   });

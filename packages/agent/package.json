@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ai-insight/datasources": "workspace:*",
@@ -23,6 +24,7 @@
     "@sinclair/typebox": "^0.34.14"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "vitest": "^2.1.8"
   }
 }

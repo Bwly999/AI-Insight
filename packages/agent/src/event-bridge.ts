@@ -21,6 +21,8 @@ export function bridgeSessionEvents(
   runId: string,
   emit: EmitFn,
 ): () => void {
+  // toolCallId → 开始时间戳；闭包级，随 unsubscribe 自动释放（Pi 不直接给 duration）
+  const toolStarts = new Map<string, number>();
   return session.subscribe((ev: AgentSessionEvent) => {
     switch (ev.type) {
       case "message_update": {
@@ -34,6 +36,7 @@ export function bridgeSessionEvents(
         break;
       }
       case "tool_execution_start": {
+        toolStarts.set(ev.toolCallId, Date.now());
         emit({
           type: "tool_call_start",
           runId,
@@ -45,6 +48,8 @@ export function bridgeSessionEvents(
       }
       case "tool_execution_end": {
         const found = extractFound(ev.result);
+        const startedAt = toolStarts.get(ev.toolCallId);
+        toolStarts.delete(ev.toolCallId);
         emit({
           type: "tool_call_end",
           runId,
@@ -52,7 +57,7 @@ export function bridgeSessionEvents(
           toolCallId: ev.toolCallId,
           found,
           ok: !ev.isError,
-          durationMs: 0, // Pi 不直接给；由 Runner 包外计时
+          durationMs: startedAt != null ? Date.now() - startedAt : 0,
         });
         break;
       }

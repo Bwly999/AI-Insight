@@ -5,7 +5,8 @@
  * prod：留给内网 JWT 校验实现。dev：DevTokenVerifier（不验签，任意 token 通过，
  * 或用共享 secret 签发/解析；这里 dev 模式直接放行并返回 dev-user）。
  */
-import { isDevAuthMode } from "./config.js";
+import { jwtVerify } from "jose";
+import { config, isDevAuthMode } from "./config.js";
 
 export interface AuthPrincipal {
   userId: string;
@@ -35,20 +36,22 @@ export class DevTokenVerifier implements TokenVerifier {
 }
 
 /**
- * prod 校验器（占位）：当配置了 JWT_SECRET 时启用。
- * MVP 用极简的 base64 解码（不验签，仅解析 payload）——供内网集成时替换为真实验签。
+ * prod 校验器：配置 JWT_SECRET 时启用。jose HS256 真验签（iss/aud 可选校验）。
+ * 失败返 null → 401。仅 HS256；RS256/JWKS 留待内网集成时扩展。
  */
 export class ProdTokenVerifier implements TokenVerifier {
   async verify(token: string): Promise<AuthPrincipal | null> {
-    if (!token) return null;
+    if (!token || !config.jwtSecret) return null;
     try {
-      const parts = token.split(".");
-      if (parts.length < 2) return null;
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64url").toString("utf-8"),
-      ) as { sub?: string; role?: "user" | "admin" };
-      if (!payload.sub) return null;
-      return { userId: payload.sub, role: payload.role ?? "user" };
+      const secret = new TextEncoder().encode(config.jwtSecret);
+      const { payload } = await jwtVerify(token, secret, {
+        algorithms: ["HS256"],
+        ...(config.jwtIssuer ? { issuer: config.jwtIssuer } : {}),
+        ...(config.jwtAudience ? { audience: config.jwtAudience } : {}),
+      });
+      const p = payload as { sub?: string; role?: "user" | "admin" };
+      if (!p.sub) return null;
+      return { userId: p.sub, role: p.role ?? "user" };
     } catch {
       return null;
     }

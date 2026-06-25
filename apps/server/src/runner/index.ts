@@ -1,11 +1,9 @@
 /**
  * Runner — 并发受限的 in-process 运行器 + 事件总线（EventEmitter by runId）→ SSE 透传。
  *
- * Phase 3 完整实现：注入 agent 执行 + 事件桥接。
- * 当前为接口 + 占位实现，保证 Phase 2（路由）可编译运行。
- *
- * main.ts 启动时 startRunner({concurrency}) → 返回 { enqueue, subscribe, abort }，
- * 注入到 conversations（enqueue）和 runs（subscribe/abort）路由。
+ * main.ts 启动时 startRunner({concurrency, execute}) → 返回 { enqueue, subscribe, abort }，
+ * 注入到 conversations（enqueue）与 runs（subscribe/abort）路由。
+ * execute 由 main.ts 注入真实 agent 执行器（runner/executor.ts）。
  */
 import { EventEmitter } from "node:events";
 import type { AgentEvent } from "@ai-insight/shared-types";
@@ -21,11 +19,11 @@ export interface RunnerHandles {
 
 export interface RunnerOptions {
   concurrency: number;
-  /** 执行器（Phase 3 注入；默认用占位执行器）。 */
+  /** 执行器（main.ts 注入；缺省时用占位执行器报错）。 */
   execute?: RunExecutor;
 }
 
-/** 单次 run 执行器（Phase 3 的 agent 执行注入此）。 */
+/** 单次 run 执行器（agent 执行注入此）。 */
 export type RunExecutor = (
   ctx: RunContext,
   emit: (agentEvent: AgentEvent) => void,
@@ -97,11 +95,11 @@ export function startRunner(opts: RunnerOptions): RunnerHandles {
   };
 }
 
-/** 默认占位执行器（Phase 3 替换为真实 agent 执行）。 */
+/** 占位执行器：opts.execute 未注入时兜底报错（正常启动 main.ts 注入真实执行器，不会命中）。 */
 const defaultExecutor: RunExecutor = async (ctx, emit) => {
   emit({
     type: "run_failed",
     runId: ctx.runId,
-    error: "Runner 执行器未配置（Phase 3 待接入 Agent）",
+    error: "Runner 执行器未配置（main.ts 未注入 agent executor）",
   });
 };

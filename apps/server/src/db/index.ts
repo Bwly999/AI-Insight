@@ -21,10 +21,10 @@ let _sqlite: Database.Database | null = null;
  */
 export function getDb(dbPath?: string): DB {
   if (_db) return _db;
-  const path = resolve(
-    dbPath ?? process.env.DATABASE_URL ?? "./data/insight.db",
-  );
-  mkdirSync(dirname(path), { recursive: true });
+  const raw = dbPath ?? process.env.DATABASE_URL ?? "./data/insight.db";
+  // :memory: 不能 resolve（Windows 上冒号会被当盘符），better-sqlite3 原样识别
+  const path = raw === ":memory:" ? raw : resolve(raw);
+  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
 
   const sqlite = new Database(path);
   sqlite.pragma("journal_mode = WAL");
@@ -48,6 +48,8 @@ export function getRawSqlite(): Database.Database {
 export function initSchema(): void {
   const sqlite = getRawSqlite();
   sqlite.exec(SCHEMA_SQL);
+  // 既有库补列（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列）
+  ensureColumn("conversations", "deleted_at", "TEXT");
   // FTS5 虚表（data_source_items 的全文索引）
   sqlite.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS data_source_items_fts USING fts5(
@@ -55,6 +57,43 @@ export function initSchema(): void {
       content='data_source_items', content_rowid='rowid', tokenize='unicode61'
     );
   `);
+  // FTS5 external-content 同步触发器：主表增改删时自动同步索引
+  sqlite.exec(`
+    CREATE TRIGGER IF NOT EXISTS data_source_items_ai AFTER INSERT ON data_source_items BEGIN
+      INSERT INTO data_source_items_fts(rowid, title, summary, content, author)
+      VALUES (new.rowid, new.title, new.summary, new.content, new.author);
+    END;
+    CREATE TRIGGER IF NOT EXISTS data_source_items_ad AFTER DELETE ON data_source_items BEGIN
+      INSERT INTO data_source_items_fts(data_source_items_fts, rowid, title, summary, content, author)
+      VALUES ('delete', old.rowid, old.title, old.summary, old.content, old.author);
+    END;
+    CREATE TRIGGER IF NOT EXISTS data_source_items_au AFTER UPDATE ON data_source_items BEGIN
+      INSERT INTO data_source_items_fts(data_source_items_fts, rowid, title, summary, content, author)
+      VALUES ('delete', old.rowid, old.title, old.summary, old.content, old.author);
+      INSERT INTO data_source_items_fts(rowid, title, summary, content, author)
+      VALUES (new.rowid, new.title, new.summary, new.content, new.author);
+    END;
+  `);
+}
+
+/** 幂等加列：表已存在但缺该列时 ALTER ADD COLUMN。 */
+function ensureColumn(table: string, column: string, ddl: string): void {
+  const sqlite = getRawSqlite();
+  const cols = sqlite.pragma(`table_info(${table})`) as { name: string }[];
+  if (cols.length > 0 && !cols.some((c) => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl};`);
+  }
+}
+
+/** 测试用：重置单例，使下一轮 getDb 重新打开（如 :memory: 新库）。 */
+export function resetDbForTest(): void {
+  try {
+    _sqlite?.close();
+  } catch {
+    // 忽略：可能已关闭
+  }
+  _db = null;
+  _sqlite = null;
 }
 
 /** 全部建表 SQL（与 Drizzle schema 对齐）。 */
@@ -72,7 +111,8 @@ CREATE TABLE IF NOT EXISTS conversations (
   title TEXT NOT NULL,
   config TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-  updated_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+  updated_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  deleted_at TEXT
 );
 CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
@@ -110,6 +150,21 @@ CREATE TABLE IF NOT EXISTS reports (
   html TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
+CREATE TABLE IF NOT EXISTS run_items (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL REFERENCES insight_runs(id) ON DELETE CASCADE,
+  tool_name TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  summary TEXT,
+  published_at TEXT,
+  fetched_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+);
+CREATE INDEX IF NOT EXISTS idx_run_items_run ON run_items(run_id);
 CREATE TABLE IF NOT EXISTS data_sources (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,

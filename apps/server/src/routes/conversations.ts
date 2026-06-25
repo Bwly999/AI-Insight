@@ -2,18 +2,18 @@
  * 会话路由 — CRUD + 发消息触发 Run。
  *
  * POST /api/conversations/:id/messages 是洞察入口：建 user msg + run(queued) → 入队 Runner。
- * Runner 接入在 Phase 3；此文件暴露 enqueueRun 钩子供 Runner 注册。
+ * 此文件暴露 enqueueRun 钩子，由 main.ts 启动 Runner 后注册。
  */
 import type { FastifyInstance } from "fastify";
 import type { ConversationConfig, TimeRange } from "@ai-insight/shared-types";
 import * as repo from "../repo.js";
 import { deriveTitle } from "../util.js";
 
-/** 发消息后触发 Run 的钩子（由 Runner 在 Phase 3 注册）。 */
+/** 发消息后触发 Run 的钩子（由 main.ts 注册 Runner 后注入）。 */
 export type EnqueueRunFn = (runId: string, conversationId: string) => void;
 let _enqueueRun: EnqueueRunFn | null = null;
 
-/** 注册「发消息 → 入队 Run」钩子（Phase 3 的 Runner 调用）。 */
+/** 注册「发消息 → 入队 Run」钩子（main.ts 启动 Runner 时调用）。 */
 export function setEnqueueRun(fn: EnqueueRunFn): void {
   _enqueueRun = fn;
 }
@@ -65,7 +65,9 @@ export async function conversationRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete("/api/conversations/:id", { preHandler: app.authenticate }, async (req, reply) => {
-    // MVP：软删（标记），实际保留数据；这里简化为不真删
+    const id = (req.params as { id: string }).id;
+    const ok = repo.softDeleteConversation(id);
+    if (!ok) return reply.code(404).send({ error: "not_found" });
     return reply.code(204).send();
   });
 
@@ -97,7 +99,7 @@ export async function conversationRoutes(app: FastifyInstance): Promise<void> {
     // 建 run(queued)
     const run = repo.createRun(id, userMsg.id, prompt, config, config.lens);
 
-    // 入队（Runner 在 Phase 3 注册；未注册时 run 停在 queued，不阻塞路由）
+    // 入队（main.ts 注册 Runner 后注入；未注册时 run 停在 queued，不阻塞路由）
     if (_enqueueRun) _enqueueRun(run.id, id);
 
     return reply.code(201).send({ run, message: userMsg });

@@ -8,23 +8,20 @@
  *  - save_report 工具回调 → 渲染 standalone HTML → 写 reports 行。
  */
 import type { RunExecutor, RunContext } from "./index.js";
-import type { AgentEvent, DataSourceItem } from "@ai-insight/shared-types";
+import type { AgentEvent, DataSourceItem, DataSourceTag, TimeRange } from "@ai-insight/shared-types";
 import {
   createInsightSession,
   createInsightTools,
   bridgeSessionEvents,
   type AgentProviderConfig,
 } from "@ai-insight/agent";
-import {
-  createDefaultEngines,
-  createDefaultCrawlers,
-} from "@ai-insight/datasources";
+import { createDefaultEngines, createDefaultCrawlers, fetchRss } from "@ai-insight/datasources";
 import * as repo from "../repo.js";
-import { config } from "../config.js";
 import { renderReportHtml, extractStandfirst } from "../report-renderer.js";
 
 export interface ExecutorDeps {
-  provider: AgentProviderConfig;
+  /** 惰性取 provider（每 run 调用，支持 settings 热切换；apiKey 仍 env-only）。 */
+  getProvider: () => AgentProviderConfig;
 }
 
 /** 创建注入到 Runner 的执行器。 */
@@ -36,8 +33,8 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
     repo.updateRun(ctx.runId, { status: "running", startedAt: new Date().toISOString() });
     emit({ type: "run_started", runId: ctx.runId, prompt: run.prompt });
 
-    // 收集本轮工具命中的信号（供统计；MVP 暂不落库，只 log）
-    const collectedItems: DataSourceItem[] = [];
+    // 收集本轮工具命中的信号（带 toolName；run 结束持久化为 run_items）
+    const collectedItems: { item: DataSourceItem; toolName: string }[] = [];
 
     // save_report 回调：渲染 HTML + 落库 + emit report_created
     const saved: { id: string; title: string }[] = [];
@@ -80,6 +77,39 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       }))
       .filter((f) => f.feedUrl);
 
+    // RSS 索引检索：FTS5 优先；零结果且有关键词 → 回退即时 fetch 并写回索引（自愈）
+    const searchRssIndex = async (opts: {
+      keywords?: string[];
+      tags?: DataSourceTag[];
+      timeRange?: TimeRange;
+      limit?: number;
+    }): Promise<DataSourceItem[]> => {
+      const ftsItems = repo.searchDataSourceItemsFts({
+        keywords: opts.keywords,
+        timeRange: opts.timeRange,
+        tags: opts.tags,
+        limit: opts.limit,
+      });
+      if (ftsItems.length) return ftsItems;
+      if (!opts.keywords?.length) return [];
+      const all: DataSourceItem[] = [];
+      await Promise.all(
+        rssFeeds.map((f) =>
+          fetchRss(f.feedUrl, {
+            sourceName: f.sourceName,
+            tags: (opts.tags ?? []) as never,
+            timeRange: opts.timeRange,
+            keywords: opts.keywords,
+            limit: opts.limit,
+          })
+            .then((its) => all.push(...its))
+            .catch(() => {}),
+        ),
+      );
+      if (all.length) repo.upsertDataSourceItems(all);
+      return all;
+    };
+
     // 自定义工具
     const tools = createInsightTools({
       config: run.config,
@@ -88,11 +118,13 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       rssFeeds,
       enabledPlatforms,
       saveReport,
-      onItems: (items) => collectedItems.push(...items),
+      searchRssIndex,
+      onItems: (items, toolName) =>
+        collectedItems.push(...items.map((item) => ({ item, toolName }))),
     });
 
-    // 建 session（缓存复用）
-    const session = await createInsightSession(deps.provider, tools);
+    // 建 session（每 run 独立；provider 惰性读取支持热切换）
+    const session = await createInsightSession(deps.getProvider(), tools);
 
     // 事件桥接 → emit AgentEvent
     const unsubscribe = bridgeSessionEvents(session, ctx.runId, (ev: AgentEvent) => {
@@ -120,6 +152,15 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       await session.prompt(fullPrompt);
       unsubscribe();
 
+      // token 用量（Pi 的 getSessionStats；不可用则留空，不造假）
+      let tokens: number | undefined;
+      try {
+        const stats = session.getSessionStats();
+        if (typeof stats?.tokens?.total === "number") tokens = stats.tokens.total;
+      } catch {
+        // getSessionStats 不可用则跳过
+      }
+
       // 提取 agent 本轮的对话文本（非工具调用的 assistant text）
       const convoText = extractAssistantText(session.messages);
       const lastSaved = saved[saved.length - 1];
@@ -134,6 +175,7 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       repo.updateRun(ctx.runId, {
         status: "completed",
         endedAt: new Date().toISOString(),
+        ...(tokens != null && { tokens }),
       });
       emit({ type: "run_completed", runId: ctx.runId });
     } catch (e) {
@@ -149,17 +191,16 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
         text: `洞察运行失败：${msg}`,
       });
       emit({ type: "run_failed", runId: ctx.runId, error: msg });
+    } finally {
+      // 持久化本轮采集的信号条目（无论成败，供证据面板/调试；上限 50）
+      if (collectedItems.length) {
+        try {
+          repo.recordRunItems(ctx.runId, collectedItems.slice(0, 50));
+        } catch {
+          // 落库失败不阻断 run 结束流程
+        }
+      }
     }
-  };
-}
-
-/** 从 config 构造 provider 配置。 */
-export function providerFromConfig(): AgentProviderConfig {
-  return {
-    providerName: config.llm.providerName,
-    baseUrl: config.llm.baseUrl,
-    apiKey: config.llm.apiKey,
-    model: config.llm.model,
   };
 }
 

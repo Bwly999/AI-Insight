@@ -71,6 +71,7 @@ export const config = {
   proxyUrl: process.env.PROXY_URL ?? "",
   runConcurrency: parseInt(process.env.RUN_CONCURRENCY ?? "3", 10),
   rssPollCron: process.env.RSS_POLL_CRON ?? "*/30 * * * *",
+  rssRetentionDays: parseInt(process.env.RSS_RETENTION_DAYS ?? "90", 10),
 };
 
 export type AppConfig = typeof config;

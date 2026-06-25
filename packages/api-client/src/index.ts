@@ -11,8 +11,10 @@ import type {
   ConversationWithMessages,
   DataSource,
   InsightRun,
+  LensKey,
   Message,
   Report,
+  Schedule,
   AgentEvent,
 } from "@ai-insight/shared-types";
 
@@ -111,6 +113,38 @@ export function reportHtmlUrl(id: string): string {
 
 // ─── DataSources ──────────────────────────────────────────────────────────
 export const listDataSources = () => req<{ items: DataSource[] }>("/api/datasources");
+
+// ─── Schedules ────────────────────────────────────────────────────────────
+export const listSchedules = () => req<{ items: Schedule[] }>("/api/schedules");
+export const createSchedule = (data: {
+  prompt: string;
+  config?: ConversationConfig;
+  cron: string;
+  lens?: LensKey;
+}) => req<Schedule>("/api/schedules", { method: "POST", body: JSON.stringify(data) });
+export const patchSchedule = (
+  id: string,
+  patch: { enabled?: boolean; cron?: string; prompt?: string },
+) => req<Schedule>(`/api/schedules/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+export const deleteSchedule = (id: string) =>
+  req<void>(`/api/schedules/${id}`, { method: "DELETE" });
+
+// ─── Admin（admin 角色）──────────────────────────────────────────────────
+export const listAllRuns = () =>
+  req<{ items: (InsightRun & { conversationTitle?: string; reportTitle?: string })[] }>(
+    "/api/admin/runs",
+  );
+export const listAllSchedules = () => req<{ items: Schedule[] }>("/api/admin/schedules");
+export const getSettings = () => req<{ settings: Record<string, string> }>("/api/admin/settings");
+export const updateSettings = (data: {
+  proxy?: string;
+  llm?: { providerName?: string; baseUrl?: string; model?: string };
+  rssCadence?: string;
+}) =>
+  req<{ ok: boolean; settings: Record<string, string> }>("/api/admin/settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 
 // ─── SSE run stream ───────────────────────────────────────────────────────
 /**

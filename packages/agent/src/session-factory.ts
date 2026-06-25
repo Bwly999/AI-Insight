@@ -32,27 +32,37 @@ export interface AgentProviderConfig {
   model: string;
 }
 
-let _cachedSession: AgentSession | null = null;
-let _cachedKey = "";
+/**
+ * 共享临时目录：无工作区（read/bash/edit/write 全禁），cwd 仅占位。
+ * 单例避免每 run 泄漏一个临时目录；并发 session 不写盘，共享安全。
+ */
+let _sharedCwd: string | null = null;
+function sharedCwd(): string {
+  if (!_sharedCwd) _sharedCwd = mkdtempSync(join(tmpdir(), "aiinsight-"));
+  return _sharedCwd;
+}
+let _sharedAgentDir: string | null = null;
+function sharedAgentDir(): string {
+  if (!_sharedAgentDir) _sharedAgentDir = mkdtempSync(join(tmpdir(), "pi-agent-"));
+  return _sharedAgentDir;
+}
 
 /**
- * 创建（或复用）一个 headless AgentSession。
+ * 创建一个 headless AgentSession。
+ *
+ * **每次调用都新建**：customTools 是按 run 绑定的闭包（saveReport/onItems 绑定该 run 的
+ * runId/conversationId），且单个 AgentSession 不能并发处理多个 prompt。缓存会引发
+ * 「工具错绑 + already processing」并发 bug，故不缓存——每 run 一个独立 session。
  *
  * @param provider  LLM provider 配置
- * @param customTools  自定义工具（数据源工具）
- * @param agentDir  pi agent 配置目录（默认空临时目录）
+ * @param customTools  自定义工具（数据源工具，按 run 绑定）
  */
 export async function createInsightSession(
   provider: AgentProviderConfig,
   customTools: ToolDefinition[],
-  agentDir?: string,
 ): Promise<AgentSession> {
-  const key = JSON.stringify(provider);
-  if (_cachedSession && key === _cachedKey) return _cachedSession;
-
-  // 无工作区：空临时目录（ADR-0003 风险项兜底）
-  const cwd = mkdtempSync(join(tmpdir(), "aiinsight-"));
-  const aDir = agentDir ?? mkdtempSync(join(tmpdir(), "pi-agent-"));
+  const cwd = sharedCwd();
+  const aDir = sharedAgentDir();
 
   const authStorage = AuthStorage.inMemory();
   const modelRegistry = ModelRegistry.create(authStorage, undefined as never);
@@ -106,14 +116,13 @@ export async function createInsightSession(
     noTools: "builtin", // 禁全部内置 read/bash/edit/write
     customTools,
   });
-
-  _cachedSession = session;
-  _cachedKey = key;
   return session;
 }
 
-/** 重置缓存（测试 / provider 变更时）。 */
+/**
+ * 不再缓存 session（每 run 独立），故此函数为 no-op。
+ * 保留导出供 settings 热切换调用点（Phase D）兼容；provider 变更后下一 run 自然用新配置。
+ */
 export function resetSessionCache(): void {
-  _cachedSession = null;
-  _cachedKey = "";
+  /* no-op: sessions are per-run */
 }

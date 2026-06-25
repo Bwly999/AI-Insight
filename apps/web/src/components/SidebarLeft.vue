@@ -2,6 +2,7 @@
 /**
  * SidebarLeft — 会话列表（深面板 + 发光 active）。
  */
+import { useRouter } from "vue-router";
 import type { Conversation } from "@ai-insight/shared-types";
 
 defineProps<{
@@ -10,6 +11,10 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{ newInsight: []; select: [c: Conversation]; goReports: [] }>();
+const router = useRouter();
+function goSchedules() {
+  router.push("/schedules");
+}
 
 function relTime(iso: string): string {
   const d = new Date(iso).getTime();
@@ -52,6 +57,10 @@ function relTime(iso: string): string {
       <div class="nav-link" @click="emit('goReports')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
         我的报告
+      </div>
+      <div class="nav-link" @click="goSchedules">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>
+        我的定时
       </div>
     </div>
   </aside>

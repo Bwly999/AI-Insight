@@ -14,7 +14,11 @@ import { reportRoutes } from "./routes/reports.js";
 import { dataSourceRoutes } from "./routes/datasources.js";
 import { scheduleRoutes } from "./routes/schedules.js";
 import { startRunner, type RunnerHandles } from "./runner/index.js";
-import { createAgentExecutor, providerFromConfig } from "./runner/executor.js";
+import { createAgentExecutor } from "./runner/executor.js";
+import { startScheduler } from "./jobs/scheduler.js";
+import { startRssPoller } from "./jobs/rss-poller.js";
+import { getProviderConfig, getProxyUrl } from "./runtime-config.js";
+import { adminRoutes } from "./routes/admin.js";
 
 async function main() {
   // 1. DB
@@ -24,16 +28,17 @@ async function main() {
   const interrupted = reconcileInterruptedRuns();
   if (interrupted) app_log(`reconciled ${interrupted} interrupted runs`);
 
-  // 2. 代理（全局出站）
-  configureProxy(config.proxyUrl || null);
-  if (config.proxyUrl) app_log(`proxy enabled: ${config.proxyUrl}`);
+  // 2. 代理（全局出站；settings.proxy 优先于 env）
+  const proxyUrl = getProxyUrl();
+  configureProxy(proxyUrl || null);
+  if (proxyUrl) app_log(`proxy enabled: ${proxyUrl}`);
 
-  // 3. Runner（Agent 执行器注入）
-  const provider = providerFromConfig();
+  // 3. Runner（Agent 执行器注入；provider 惰性读取支持 settings 热切换）
+  const provider = getProviderConfig();
   app_log(`LLM provider: ${provider.providerName} / ${provider.model} @ ${provider.baseUrl || "(empty)"}`);
   const runner: RunnerHandles = startRunner({
     concurrency: config.runConcurrency,
-    execute: createAgentExecutor({ provider }),
+    execute: createAgentExecutor({ getProvider: getProviderConfig }),
   });
   setEnqueueRun((runId, conversationId) => runner.enqueue(runId, conversationId));
   registerRunStreamProvider((runId, push, onClose) =>
@@ -41,7 +46,11 @@ async function main() {
   );
   setAbortHandler((runId) => runner.abort(runId));
 
-  // 4. Fastify
+  // 4. 定时洞察调度器（node-cron；复用 enqueue 路径触发 run）
+  startScheduler((runId, conversationId) => runner.enqueue(runId, conversationId));
+  app_log("scheduler started (node-cron)");
+
+  // 5. Fastify
   const app = await buildApp();
   await app.register(authRoutes);
   await app.register(conversationRoutes);
@@ -49,10 +58,15 @@ async function main() {
   await app.register(reportRoutes);
   await app.register(dataSourceRoutes);
   await app.register(scheduleRoutes);
+  await app.register(adminRoutes);
 
   await app.listen({ host: "0.0.0.0", port: config.port });
   app_log(`AI-Insight server listening on :${config.port}`);
   app_log(`auth mode: ${config.jwtSecret ? "JWT(prod)" : "dev-降级"}`);
+
+  // 6. RSS 后台轮询（首拉立即执行，不阻塞 listen）
+  startRssPoller();
+  app_log(`rss poller started (${config.rssPollCron}, retain ${config.rssRetentionDays}d)`);
 }
 
 function app_log(msg: string) {
