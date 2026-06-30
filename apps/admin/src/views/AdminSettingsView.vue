@@ -2,9 +2,10 @@
 /**
  * AdminSettingsView — 代理 / LLM / RSS 周期 设置（热切换）。
  * apiKey 不经此 UI（env-only）。
+ * 代理：URL 校验 + 连通性测试 + 当前生效来源回显。
  */
-import { ref, onMounted } from "vue";
-import { getSettings, updateSettings } from "@ai-insight/api-client";
+import { ref, computed, onMounted } from "vue";
+import { getSettings, updateSettings, testProxy, type ProxySource } from "@ai-insight/api-client";
 import { useTheme } from "../composables/useTheme";
 
 const { theme, toggle } = useTheme();
@@ -18,6 +19,31 @@ const loading = ref(true);
 const saving = ref(false);
 const msg = ref("");
 const msgOk = ref(false);
+
+// 当前生效代理来源（来自后端，非本地表单值）
+const proxySource = ref<{ value: string; source: ProxySource }>({ value: "", source: null });
+
+// 代理测试
+const testing = ref(false);
+const proxyTest = ref<{ ok: boolean; status: number; latencyMs: number; testedProxy: string; error?: string } | null>(null);
+
+/** 校验代理 URL：合法 http(s) 或空（=直连）。 */
+function isValidProxyUrl(u: string): boolean {
+  const v = u.trim();
+  if (!v) return true;
+  try {
+    const p = new URL(v);
+    return p.protocol === "http:" || p.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+const proxyValid = computed(() => isValidProxyUrl(proxy.value));
+
+const SOURCE_LABELS: Record<NonNullable<ProxySource>, string> = {
+  settings: "管理端设置",
+  env: "环境变量 PROXY_URL",
+};
 
 onMounted(async () => {
   try {
@@ -33,6 +59,7 @@ onMounted(async () => {
         llmProviderName.value = llm.providerName ?? "";
       } catch { /* ignore */ }
     }
+    if (r.proxySource) proxySource.value = r.proxySource;
   } finally {
     loading.value = false;
   }
@@ -55,11 +82,24 @@ async function save() {
     msgOk.value = true;
     const s = r.settings;
     if (s.rssCadence) rssCadence.value = s.rssCadence;
+    if (r.proxySource) proxySource.value = r.proxySource;
   } catch (e) {
     msg.value = (e as Error).message;
     msgOk.value = false;
   } finally {
     saving.value = false;
+  }
+}
+
+async function testConn() {
+  testing.value = true;
+  proxyTest.value = null;
+  try {
+    proxyTest.value = await testProxy({ proxy: proxy.value });
+  } catch (e) {
+    proxyTest.value = { ok: false, status: 0, latencyMs: 0, testedProxy: proxy.value, error: (e as Error).message };
+  } finally {
+    testing.value = false;
   }
 }
 </script>
@@ -83,6 +123,8 @@ async function save() {
         <div class="double-rule"></div>
         <nav class="tabs">
           <a class="tab" href="#/runs">运行监控</a>
+          <a class="tab" href="#/schedules">定时任务</a>
+          <a class="tab" href="#/datasources">数据源</a>
           <span class="tab on">设置</span>
         </nav>
       </header>
@@ -92,7 +134,25 @@ async function save() {
         <section class="card">
           <div class="card-head">代理（出站）</div>
           <p class="card-hint">留空 = 不用代理；即时生效。例 <code class="mono">http://host:port</code></p>
-          <input v-model="proxy" class="f-input mono" placeholder="http://proxy.example.com:7890" />
+          <div class="src-line">
+            <span class="src-label">当前生效：</span>
+            <span v-if="proxySource.source" class="src-val">
+              <span class="src-tag" :class="proxySource.source">{{ SOURCE_LABELS[proxySource.source] }}</span>
+              <code class="mono">{{ proxySource.value }}</code>
+            </span>
+            <span v-else class="src-val muted">未配置（直连）</span>
+          </div>
+          <input v-model="proxy" class="f-input mono" :class="{ invalid: !proxyValid }" placeholder="http://proxy.example.com:7890" />
+          <div v-if="!proxyValid" class="f-hint err">URL 不合法：需 http:// 或 https://</div>
+          <div class="proxy-actions">
+            <button class="test-btn" :disabled="testing || !proxyValid" @click="testConn">
+              {{ testing ? "测试中…" : "测试连通性" }}
+            </button>
+            <div v-if="proxyTest" class="test-result" :class="{ ok: proxyTest.ok, err: !proxyTest.ok }">
+              <span v-if="proxyTest.ok">✓ 通 · {{ proxyTest.status }} · {{ proxyTest.latencyMs }}ms</span>
+              <span v-else>✗ 不通 · {{ proxyTest.error }}</span>
+            </div>
+          </div>
         </section>
 
         <section class="card">
@@ -151,4 +211,28 @@ async function save() {
 .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .theme-toggle { color: var(--ink-2); }
 .theme-toggle:hover { color: var(--brand); background: var(--brand-soft); }
+
+/* 代理卡片增强 */
+.src-line { display: flex; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap; }
+.src-label { color: var(--ink-3); }
+.src-val { display: inline-flex; align-items: center; gap: 6px; }
+.src-val.muted { color: var(--ink-3); }
+.src-val code { font-size: 11px; background: var(--surface-3); padding: 1px 5px; border-radius: var(--r-xs); color: var(--ink-2); }
+.src-tag { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: var(--r-pill); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.src-tag.settings { background: var(--brand-soft); color: var(--brand); }
+.src-tag.env { background: var(--surface-3); color: var(--ink-2); }
+.f-input.invalid { border-color: #e74c3c; }
+.f-hint { font-size: 11.5px; color: var(--ink-3); }
+.f-hint.err { color: #e74c3c; }
+.proxy-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 2px; }
+.test-btn {
+  padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid var(--brand-line);
+  background: var(--brand-soft); color: var(--brand); cursor: pointer; font-size: 12.5px; font-weight: 600;
+  transition: var(--t-fast);
+}
+.test-btn:hover:not(:disabled) { background: var(--brand); color: #04111a; }
+.test-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.test-result { font-family: var(--mono); font-size: 12px; padding: 5px 10px; border-radius: var(--r-sm); }
+.test-result.ok { color: #2ecc71; background: rgba(46,204,113,0.1); }
+.test-result.err { color: #e74c3c; background: rgba(231,76,60,0.1); }
 </style>

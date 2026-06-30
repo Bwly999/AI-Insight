@@ -135,16 +135,47 @@ export const listAllRuns = () =>
     "/api/admin/runs",
   );
 export const listAllSchedules = () => req<{ items: Schedule[] }>("/api/admin/schedules");
-export const getSettings = () => req<{ settings: Record<string, string> }>("/api/admin/settings");
+
+/** 当前生效代理来源（settings=管理端热切换 / env=PROXY_URL / null=直连）。 */
+export type ProxySource = "settings" | "env" | null;
+
+export interface SettingsResponse {
+  settings: Record<string, string>;
+  proxySource?: { value: string; source: ProxySource };
+}
+
+export const getSettings = () => req<SettingsResponse>("/api/admin/settings");
 export const updateSettings = (data: {
   proxy?: string;
   llm?: { providerName?: string; baseUrl?: string; model?: string };
   rssCadence?: string;
 }) =>
-  req<{ ok: boolean; settings: Record<string, string> }>("/api/admin/settings", {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  req<{ ok: boolean; settings: Record<string, string>; proxySource?: { value: string; source: ProxySource } }>(
+    "/api/admin/settings",
+    { method: "PUT", body: JSON.stringify(data) },
+  );
+
+/** 测试代理连通性（不写库）。proxy 省略则测当前生效代理。 */
+export const testProxy = (data: { proxy?: string }) =>
+  req<{ ok: boolean; status: number; latencyMs: number; testedProxy: string; error?: string }>(
+    "/api/admin/proxy/test",
+    { method: "POST", body: JSON.stringify(data) },
+  );
+
+// admin 数据源管理（admin 门禁封装；数据源为全局实体）
+export const listAllDataSources = (type?: "search" | "rss" | "crawler") =>
+  req<{ items: DataSource[] }>(`/api/admin/datasources${type ? `?type=${type}` : ""}`);
+export const patchAdminDataSource = (
+  id: string,
+  patch: { enabled?: boolean; tags?: import("@ai-insight/shared-types").DataSourceTag[]; name?: string },
+) => req<DataSource>(`/api/admin/datasources/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+export const createAdminDataSource = (data: {
+  name: string;
+  feedUrl: string;
+  tags?: import("@ai-insight/shared-types").DataSourceTag[];
+}) => req<DataSource>("/api/admin/datasources", { method: "POST", body: JSON.stringify(data) });
+export const deleteAdminDataSource = (id: string) =>
+  req<void>(`/api/admin/datasources/${id}`, { method: "DELETE" });
 
 // ─── SSE run stream ───────────────────────────────────────────────────────
 /**

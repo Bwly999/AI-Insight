@@ -44,5 +44,7 @@ pnpm dev
 ✅ 用户端：对话发起洞察 → Agent 调数据源 → 流式回传 → 报告查看
 ✅ 数据源：搜索(DDG/Exa/Firecrawl) + 爬虫(HN/GitHub/微博/知乎/少数派/腾讯) + 正文提取
 ✅ 报告：markdown + 独立 HTML 网页版本（EditorialReport）
+✅ 管理端：运行监控 / 定时任务 / 数据源 / 设置（含代理连通性测试）
+✅ RSS 后台轮询建索引（FTS5）· Schedule 定时触发 · 代理热切换
 
-🚧 范围外（留 stub/最小）：管理端 · RSS 后台轮询建索引 · Schedule 定时触发 · 代理设置 UI · PDF 导出
+🚧 范围外（留 stub/最小）：PDF 导出

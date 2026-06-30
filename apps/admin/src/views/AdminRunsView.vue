@@ -70,6 +70,8 @@ function dur(startedAt?: string, endedAt?: string): string {
         <div class="double-rule"></div>
         <nav class="tabs">
           <span class="tab on">运行监控</span>
+          <a class="tab" href="#/schedules">定时任务</a>
+          <a class="tab" href="#/datasources">数据源</a>
           <a class="tab" href="#/settings">设置</a>
         </nav>
       </header>
