@@ -24,11 +24,6 @@ packages/
 ## 快速开始
 
 ```bash
-# 0. 启用 Corepack（按 package.json 的 packageManager 字段锁定 pnpm 版本）
-corepack enable
-corepack prepare pnpm@11.9.0 --activate   # 与 package.json 中 packageManager 保持一致
-pnpm --version                              # 验证：应输出 11.9.0
-
 # 1. 安装依赖
 pnpm install
 
