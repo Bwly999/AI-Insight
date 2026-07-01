@@ -38,6 +38,7 @@ export type MessageRole = "user" | "assistant" | "tool";
 export type RunStatus =
   | "queued"
   | "running"
+  | "awaiting_input" // Agent 反问用户，暂停等待回复（Claude-Code 式暂停/恢复）
   | "completed"
   | "failed"
   | "interrupted";
@@ -121,7 +122,9 @@ export interface Message {
 export type MessageContent =
   | { kind: "text"; text: string }
   | { kind: "thinking"; text: string }
-  | { kind: "tool_result"; toolName: string; summary: string; found: number };
+  | { kind: "tool_result"; toolName: string; summary: string; found: number }
+  // Agent 反问用户（落库以便历史回看；回复作为普通 user msg 落库）
+  | { kind: "clarification"; inputId: string; question: string; options?: string[] };
 
 /** 工具调用记录（落 message 行）。 */
 export interface ToolCallRecord {
@@ -188,6 +191,22 @@ export interface DataSourceItem {
   fetchedAt: string; // ISO
 }
 
+/** RunItem（本轮工具命中的来源条目，落 run_items 表）：供证据面板展开展示。 */
+export interface RunItem {
+  id: string;
+  runId: string;
+  toolName: string;
+  sourceType: ItemSourceType;
+  sourceName: string;
+  sourceId: string;
+  title: string;
+  url: string;
+  summary?: string;
+  publishedAt?: string;
+  fetchedAt: string;
+  createdAt: string;
+}
+
 /** Schedule（定时任务）：把一个 Insight 配置为定时重复执行。 */
 export interface Schedule {
   id: string;
@@ -224,17 +243,13 @@ export type AgentEvent =
   | { type: "text_delta"; runId: string; text: string }
   | { type: "tool_call_start"; runId: string; toolName: string; toolCallId: string; args: Record<string, unknown> }
   | { type: "tool_call_end"; runId: string; toolName: string; toolCallId: string; found?: number; durationMs: number; ok: boolean }
-  | { type: "step_update"; runId: string; steps: RunStep[] }
+  // Agent 通过 read 打开某 Lens 的 reference 文件时触发（暴露 Agent 实际选用的视角）
+  | { type: "lens_selected"; runId: string; lens: LensKey }
+  // Agent 用 ask 工具反问用户：run 进入 awaiting_input，前端渲染澄清卡，回复走 POST /api/runs/:id/input
+  | { type: "clarification_needed"; runId: string; inputId: string; question: string; options?: string[] }
   | { type: "report_created"; runId: string; report: Report }
   | { type: "run_completed"; runId: string; tokens?: number }
   | { type: "run_failed"; runId: string; error: string };
-
-/** 运行步骤（UI 渲染进度时间线）。 */
-export interface RunStep {
-  label: string;
-  state: "todo" | "active" | "done";
-  dur?: string;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API 响应封装

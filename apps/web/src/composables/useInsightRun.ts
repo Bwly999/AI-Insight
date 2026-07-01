@@ -4,10 +4,10 @@
  * 响应式状态：assistant 文本缓冲、thinking、工具调用卡、运行步骤、报告。
  * 支持 abort、自动重连。
  */
-import { ref, reactive, computed, onUnmounted, type Ref } from "vue";
+import { ref, reactive, onUnmounted } from "vue";
 import { isUxMode } from "../utils";
-import { subscribeRunStream, abortRun } from "@ai-insight/api-client";
-import type { AgentEvent, Report, RunStep } from "@ai-insight/shared-types";
+import { subscribeRunStream, abortRun, submitRunInput } from "@ai-insight/api-client";
+import type { AgentEvent, LensKey, Report } from "@ai-insight/shared-types";
 
 /** 工具调用态（reactive 数组元素，UI 共享类型）。 */
 export interface ToolCallState {
@@ -19,13 +19,21 @@ export interface ToolCallState {
   durationMs?: number;
 }
 
+/** Agent 反问用户的澄清态（暂停/恢复会话）。 */
+export interface ClarificationState {
+  inputId: string;
+  question: string;
+  options?: string[];
+}
+
 function useMockInsightRun() {
   const runId = ref<string | null>(null);
   const status = ref<"idle" | "running" | "completed" | "failed">("idle");
   const assistantText = ref("");
   const thinking = ref<string[]>([]);
   const toolCalls = reactive<ToolCallState[]>([]);
-  const steps = ref<RunStep[]>([]);
+  const lens = ref<LensKey | null>(null);
+  const clarification = ref<ClarificationState | null>(null);
   const report = ref<Report | null>(null);
   const error = ref<string | null>(null);
   const elapsed = ref("");
@@ -56,6 +64,8 @@ function useMockInsightRun() {
     assistantText.value = "";
     thinking.value = [];
     toolCalls.splice(0, toolCalls.length);
+    lens.value = null;
+    clarification.value = null;
     report.value = null;
     error.value = null;
     startTimer();
@@ -64,6 +74,7 @@ function useMockInsightRun() {
       { type: "run_started", runId: id, prompt: "Mock prompt" },
       { type: "thinking_delta", runId: id, text: "正在分析需求...\n" },
       { type: "thinking_delta", runId: id, text: "构建报告框架...\n" },
+      { type: "lens_selected", runId: id, lens: "deep" },
       {
         type: "tool_call_start",
         runId: id,
@@ -124,6 +135,13 @@ function useMockInsightRun() {
       case "text_delta":
         assistantText.value += ev.text;
         break;
+      case "lens_selected":
+        lens.value = ev.lens;
+        break;
+      case "clarification_needed":
+        clarification.value = { inputId: ev.inputId, question: ev.question, ...(ev.options ? { options: ev.options } : {}) };
+        status.value = "running"; // mock 无真实暂停态，保持 running 以维持 UI
+        break;
       case "tool_call_start":
         toolCalls.push({
           toolCallId: ev.toolCallId,
@@ -145,18 +163,31 @@ function useMockInsightRun() {
         break;
       case "run_completed":
         status.value = "completed";
+        clarification.value = null;
         stopTimer();
         break;
       case "run_failed":
         status.value = "failed";
         error.value = ev.error;
+        clarification.value = null;
         stopTimer();
         break;
     }
   }
 
+  async function reply(text: string) {
+    if (!clarification.value || !runId.value) return;
+    try {
+      await submitRunInput(runId.value, text);
+    } catch {
+      /* 忽略：真实运行由 SSE 推进 */
+    }
+    clarification.value = null;
+  }
+
   async function abort() {
     status.value = "completed";
+    clarification.value = null;
     stopTimer();
   }
 
@@ -170,11 +201,13 @@ function useMockInsightRun() {
     assistantText,
     thinking,
     toolCalls,
-    steps,
+    lens,
+    clarification,
     report,
     error,
     elapsed,
     subscribe,
+    reply,
     abort,
   };
 }
@@ -185,11 +218,12 @@ export function useInsightRun() {
   }
 
   const runId = ref<string | null>(null);
-  const status = ref<"idle" | "running" | "completed" | "failed">("idle");
+  const status = ref<"idle" | "running" | "completed" | "failed" | "awaiting_input">("idle");
   const assistantText = ref("");
   const thinking = ref<string[]>([]);
   const toolCalls = reactive<ToolCallState[]>([]);
-  const steps = ref<RunStep[]>([]);
+  const lens = ref<LensKey | null>(null);
+  const clarification = ref<ClarificationState | null>(null);
   const report = ref<Report | null>(null);
   const error = ref<string | null>(null);
   const elapsed = ref("");
@@ -221,15 +255,17 @@ export function useInsightRun() {
     assistantText.value = "";
     thinking.value = [];
     toolCalls.splice(0, toolCalls.length);
+    lens.value = null;
+    clarification.value = null;
     report.value = null;
     error.value = null;
     startTimer();
 
     close?.();
     close = subscribeRunStream(id, handleEvent, () => {
-      // 自动重连（简化：5s 后重试一次）
+      // 自动重连（简化：5s 后重试一次；awaiting_input 视为运行中需维持）
       setTimeout(() => {
-        if (status.value === "running" && runId.value) subscribe(runId.value);
+        if ((status.value === "running" || status.value === "awaiting_input") && runId.value) subscribe(runId.value);
       }, 5000);
     });
   }
@@ -246,6 +282,13 @@ export function useInsightRun() {
         break;
       case "text_delta":
         assistantText.value += ev.text;
+        break;
+      case "lens_selected":
+        lens.value = ev.lens;
+        break;
+      case "clarification_needed":
+        clarification.value = { inputId: ev.inputId, question: ev.question, ...(ev.options ? { options: ev.options } : {}) };
+        status.value = "awaiting_input";
         break;
       case "tool_call_start":
         toolCalls.push({
@@ -268,6 +311,7 @@ export function useInsightRun() {
         break;
       case "run_completed":
         status.value = "completed";
+        clarification.value = null;
         stopTimer();
         close?.();
         close = null;
@@ -275,6 +319,7 @@ export function useInsightRun() {
       case "run_failed":
         status.value = "failed";
         error.value = ev.error;
+        clarification.value = null;
         stopTimer();
         close?.();
         close = null;
@@ -282,10 +327,26 @@ export function useInsightRun() {
     }
   }
 
+  /** 回复 Agent 的澄清请求（暂停/恢复）。 */
+  async function reply(text: string) {
+    if (!clarification.value || !runId.value) return;
+    const inputId = clarification.value.inputId;
+    clarification.value = null;
+    status.value = "running";
+    try {
+      await submitRunInput(runId.value, text);
+    } catch (e) {
+      // 回复失败：恢复澄清态提示用户重试
+      console.error("submit run input failed", e);
+    }
+    void inputId; // 当前轮 inputId 已随请求提交
+  }
+
   async function abort() {
     if (runId.value) {
       await abortRun(runId.value).catch(() => {});
       status.value = "completed";
+      clarification.value = null;
       stopTimer();
     }
   }
@@ -301,11 +362,13 @@ export function useInsightRun() {
     assistantText,
     thinking,
     toolCalls,
-    steps,
+    lens,
+    clarification,
     report,
     error,
     elapsed,
     subscribe,
+    reply,
     abort,
   };
 }

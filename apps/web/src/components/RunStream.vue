@@ -1,30 +1,39 @@
 <script setup lang="ts">
 /**
- * RunStream — 运行中实时流：工具调用 timeline + 思考卡(扫描线) + 实时文本(光标)。
+ * RunStream — 运行中实时流：视角徽章 + 工具调用 timeline + 思考卡(扫描线) + 实时文本(光标)。
  * 深色情报台发光质感的重点载体。
  */
 import { computed } from "vue";
+import { LENS_OPTIONS, type LensKey } from "@ai-insight/shared-types";
 import type { ToolCallState, } from "./types";
 import { toolColor, toolLabel, toolArgsPreview } from "./types";
 
 const props = defineProps<{
-  status: "idle" | "running" | "completed" | "failed";
+  status: "idle" | "running" | "completed" | "failed" | "awaiting_input";
   assistantText: string;
   thinking: string[];
   toolCalls: ToolCallState[];
+  lens: LensKey | null;
 }>();
 
-const show = computed(() => props.status === "running" || props.assistantText || props.toolCalls.length);
+const show = computed(() => props.status === "running" || props.status === "awaiting_input" || props.assistantText || props.toolCalls.length);
 const thinkingTail = computed(() => props.thinking.slice(-1)[0]?.slice(-220) ?? "");
+const lensLabel = computed(() => (props.lens ? LENS_OPTIONS.find((l) => l.key === props.lens)?.label : undefined));
 </script>
 
 <template>
   <div v-if="show" class="msg-ai reveal">
     <div class="ai-ava">
-      <span v-if="status === 'running'" class="ring" style="width: 15px; height: 15px"></span>
+      <span v-if="status === 'running' || status === 'awaiting_input'" class="ring" style="width: 15px; height: 15px"></span>
       <template v-else>洞</template>
     </div>
     <div class="ai-body">
+      <!-- Agent 选用的视角徽章 -->
+      <div v-if="lens" class="lens-badge">
+        <span class="lens-dot"></span>
+        视角 · {{ lensLabel }}<span class="lens-key mono">{{ lens }}</span>
+      </div>
+
       <!-- 工具调用 timeline -->
       <div v-if="toolCalls.length">
         <div class="section-label"><span class="label">工具调用</span><span class="ln"></span></div>
@@ -73,6 +82,15 @@ const thinkingTail = computed(() => props.thinking.slice(-1)[0]?.slice(-220) ?? 
   box-shadow: 0 0 14px -2px var(--brand-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .ai-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.lens-badge {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+  font-size: 11.5px; color: var(--ink-2);
+  background: var(--brand-soft); border: 1px solid var(--brand-line);
+  border-radius: var(--r-pill); padding: 4px 11px;
+}
+.lens-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 8px var(--brand-glow); }
+.lens-key { margin-left: 4px; color: var(--ink-3); font-size: 10px; }
 
 .section-label { display: flex; align-items: center; gap: 8px; margin: 0 0 9px; }
 .section-label .ln { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }

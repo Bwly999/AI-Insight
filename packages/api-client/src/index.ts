@@ -14,6 +14,7 @@ import type {
   LensKey,
   Message,
   Report,
+  RunItem,
   Schedule,
   AgentEvent,
 } from "@ai-insight/shared-types";
@@ -102,6 +103,14 @@ export const sendMessage = (conversationId: string, text: string, config?: Parti
 // ─── Runs ─────────────────────────────────────────────────────────────────
 export const getRun = (id: string) => req<InsightRun>(`/api/runs/${id}`);
 export const abortRun = (id: string) => req<{ ok: boolean }>(`/api/runs/${id}/abort`, { method: "POST" });
+
+/** 回复 Agent 的澄清请求（暂停/恢复会话）。 */
+export const submitRunInput = (runId: string, text: string) =>
+  req<{ ok: boolean }>(`/api/runs/${runId}/input`, { method: "POST", body: JSON.stringify({ text }) });
+
+/** 本轮采集的来源条目（证据面板展开）。 */
+export const listRunItems = (runId: string) =>
+  req<{ items: RunItem[] }>(`/api/runs/${runId}/items`);
 
 // ─── Reports ──────────────────────────────────────────────────────────────
 export const listReports = (conversationId?: string) =>
@@ -195,7 +204,8 @@ export function subscribeRunStream(
   // SSE event 名 = AgentEvent.type
   const types = [
     "run_started", "thinking_delta", "text_delta", "tool_call_start",
-    "tool_call_end", "step_update", "report_created", "run_completed", "run_failed",
+    "tool_call_end", "lens_selected", "clarification_needed",
+    "report_created", "run_completed", "run_failed",
   ];
   for (const t of types) {
     es.addEventListener(t, (e) => {

@@ -9,7 +9,7 @@ import { useTheme } from "../composables/useTheme";
 
 defineProps<{
   currentConv: Conversation | null;
-  status: "idle" | "running" | "completed" | "failed";
+  status: "idle" | "running" | "completed" | "failed" | "awaiting_input";
   elapsed: string;
 }>();
 
@@ -34,6 +34,9 @@ const { theme, toggle } = useTheme();
       <span v-if="status === 'running'" class="run-pill running">
         <span class="dot pulse"></span>RUNNING<span class="mono dim">· {{ elapsed }}</span>
       </span>
+      <span v-else-if="status === 'awaiting_input'" class="run-pill awaiting">
+        <span class="dot pulse"></span>等待回复<span class="mono dim">· {{ elapsed }}</span>
+      </span>
       <span v-else-if="status === 'completed'" class="run-pill done">
         <span class="dot"></span>COMPLETED
       </span>
@@ -43,7 +46,7 @@ const { theme, toggle } = useTheme();
     </div>
 
     <div class="right">
-      <button class="ghost-btn abort" v-if="status === 'running'" @click="emit('abort')">
+      <button class="ghost-btn abort" v-if="status === 'running' || status === 'awaiting_input'" @click="emit('abort')">
         <span class="dot" style="background: var(--rose)"></span>中止运行
       </button>
 
@@ -101,6 +104,11 @@ const { theme, toggle } = useTheme();
   box-shadow: 0 0 14px -4px var(--brand-glow);
 }
 .run-pill.running .dot { background: var(--brand); box-shadow: 0 0 8px var(--brand-glow); }
+.run-pill.awaiting {
+  background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber-line);
+  box-shadow: 0 0 14px -4px var(--amber);
+}
+.run-pill.awaiting .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 .run-pill.done { background: var(--green-soft); color: var(--green); border: 1px solid var(--green-line); }
 .run-pill.done .dot { background: var(--green); }
 .run-pill.failed { background: var(--rose-soft); color: var(--rose); border: 1px solid var(--rose); }

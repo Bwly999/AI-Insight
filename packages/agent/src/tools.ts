@@ -46,6 +46,12 @@ export interface ToolContext {
   }) => Promise<DataSourceItem[]>;
   /** 工具命中信号收集（供证据面板/统计）。 */
   onItems?: (items: DataSourceItem[], toolName: string) => void;
+  /**
+   * 暂停运行以向用户请求澄清（Claude-Code 式暂停/恢复）。
+   * server 注入：emit clarification_needed + 进 awaiting_input，返回用户回复文本。
+   * 未注入时（测试/独立运行）ask 工具退化为「不阻塞」并提示模型自行假设。
+   */
+  awaitInput?: (inputId: string, question: string, options?: string[]) => Promise<string>;
 }
 
 // ─── 工具参数 schema ──────────────────────────────────────────────────────
@@ -78,6 +84,13 @@ const listDatasourcesParams = Type.Object({
 const saveReportParams = Type.Object({
   title: Type.String({ description: "报告标题" }),
   markdown: Type.String({ description: "报告 markdown 全文（结构化、含数据来源）" }),
+});
+
+const askParams = Type.Object({
+  question: Type.String({ description: "向用户提出的问题（如澄清意图、选择视角候选）。务必清晰、给出必要的上下文。" }),
+  options: Type.Optional(
+    Type.Array(Type.String(), { description: "可选的候选答案（2–3 个，附一句话理由更佳）。不传则为开放式提问。" }),
+  ),
 });
 
 // ─── 工具工厂 ─────────────────────────────────────────────────────────────
@@ -229,7 +242,39 @@ export function createInsightTools(ctx: ToolContext) {
     },
   });
 
-  return [searchTool, crawlTool, rssTool, extractTool, listTool, saveReportTool];
+  const askTool = defineTool({
+    name: "ask",
+    label: "向用户提问",
+    description:
+      "向用户请求澄清。当意图同时匹配多个 Lens、或信息不足以判断时，用此工具反问用户（给 2–3 个候选 + 各一句话理由让用户选）。调用后会暂停运行等待用户回复，回复文本作为本工具结果返回，你据此继续。仅在真正需要澄清时用，能合理推断时不要滥用。",
+    promptSnippet: "ask({question,options?}): 反问用户澄清意图（会暂停等待回复）",
+    parameters: askParams,
+    async execute(_id, params): Promise<{
+      content: { type: "text"; text: string }[];
+      details: { awaiting: boolean; inputId?: string };
+    }> {
+      if (!ctx.awaitInput) {
+        // 无注入（测试/独立运行）：退化为不阻塞，提示模型自行合理假设
+        return {
+          content: [
+            {
+              type: "text",
+              text: "(当前运行环境不支持向用户提问。请基于已给信息做最合理推断，并在报告中标注假设。)",
+            },
+          ],
+          details: { awaiting: false },
+        };
+      }
+      const inputId = `ask_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const reply = await ctx.awaitInput(inputId, params.question, params.options);
+      return {
+        content: [{ type: "text", text: `用户回复：${reply}` }],
+        details: { awaiting: true, inputId },
+      };
+    },
+  });
+
+  return [searchTool, crawlTool, rssTool, extractTool, listTool, saveReportTool, askTool];
 }
 
 /** 把 DataSourceItem[] 格式化为给 LLM 看的紧凑文本。 */

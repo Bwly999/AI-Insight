@@ -49,7 +49,7 @@ async function callTool(
 }
 
 describe("createInsightTools", () => {
-  it("返回 6 个工具，名字正确", () => {
+  it("返回 7 个工具，名字正确", () => {
     const tools = createInsightTools({
       config: CFG,
       rssFeeds: [],
@@ -57,6 +57,7 @@ describe("createInsightTools", () => {
     });
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
+      "ask",
       "crawl",
       "extract_content",
       "fetch_rss",

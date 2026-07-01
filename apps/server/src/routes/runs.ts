@@ -6,6 +6,7 @@
  */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import * as repo from "../repo.js";
+import { submitRunInput, currentInputId, isAwaiting } from "../runner/pending-inputs.js";
 
 /** SSE 事件流提供者（Phase 3 Runner 注册）：订阅 runId 事件，push 到 reply.raw。 */
 export type RunStreamProvider = (
@@ -89,6 +90,36 @@ export async function runRoutes(app: FastifyInstance): Promise<void> {
     if (_abortHandler) _abortHandler(id);
     repo.updateRun(id, { status: "interrupted", endedAt: new Date().toISOString() });
     return { ok: true };
+  });
+
+  // 回复 Agent 的澄清请求（暂停/恢复会话：把用户回复送回阻塞中的 ask 工具）
+  app.post("/api/runs/:id/input", { preHandler: app.authenticate }, async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    const run = repo.getRun(id);
+    if (!run) return reply.code(404).send({ error: "not_found" });
+    const body = (req.body ?? {}) as { text?: string };
+    const text = (body.text ?? "").trim();
+    if (!text) return reply.code(400).send({ error: "empty_input" });
+
+    if (!isAwaiting(id)) return reply.code(409).send({ error: "not_awaiting_input" });
+    const inputId = currentInputId(id);
+    if (!inputId) return reply.code(409).send({ error: "not_awaiting_input" });
+
+    const delivered = submitRunInput(id, inputId, text);
+    if (!delivered) return reply.code(409).send({ error: "input_mismatch" });
+
+    // 恢复运行态；用户回复作为普通 user 消息落库（历史回看 + 下一轮注水）
+    repo.updateRun(id, { status: "running" });
+    repo.addMessage(run.conversationId, "user", { kind: "text", text });
+    return { ok: true };
+  });
+
+  // 本轮采集的来源条目（证据面板展开用）
+  app.get("/api/runs/:id/items", { preHandler: app.authenticate }, async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    const run = repo.getRun(id);
+    if (!run) return reply.code(404).send({ error: "not_found" });
+    return { items: repo.listRunItems(id) };
   });
 }
 

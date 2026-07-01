@@ -24,6 +24,18 @@ import {
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { INSIGHT_SYSTEM_PROMPT } from "./system-prompt.js";
+import type { LensKey } from "@ai-insight/shared-types";
+
+/**
+ * Lens reference 文件名 → LensKey 映射。
+ * 当模型 read 某个 Lens 的 reference 时，据此推断它选用了哪个视角。
+ */
+const LENS_REF_FILES: Record<string, LensKey> = {
+  "deep-insight.md": "deep",
+  "dual-take.md": "dual",
+  "flash-brief.md": "flash",
+  "timeline-trace.md": "timeline",
+};
 
 export interface AgentProviderConfig {
   /** provider 名（如 deepseek） */
@@ -44,25 +56,50 @@ export interface InsightSessionOptions {
    * 不提供则退化为旧行为（无 skill、无 read）。
    */
   skillDir?: string;
+  /**
+   * 当模型 read 某个 Lens 的 reference 文件时触发（推断 Agent 实际选用的视角）。
+   * 每个 Lens 在一次 session 内只触发一次（避免重复）。server 据此 emit lens_selected。
+   */
+  onLensSelected?: (lens: LensKey) => void;
 }
 
 /**
  * 构造沙箱 read 工具：只允许读 skillDir 子树内的文件。
  * 用 ReadOperations 钩子在 filesystem 级拦截越界路径——不靠 prompt 约束。
  * 该工具名 "read"，使 buildSystemPrompt 的 customPromptHasRead 闸门通过 → skill 元数据进 prompt。
+ *
+ * 副作用：当读到 `references/<lens>.md` 时触发 onLensSelected（每 Lens 一次），据此暴露 Agent 选用的视角。
  */
-function createSandboxedReadTool(skillDir: string): ToolDefinition {
+function createSandboxedReadTool(
+  skillDir: string,
+  onLensSelected?: (lens: LensKey) => void,
+): ToolDefinition {
   const root = resolve(skillDir);
+  const fired = new Set<LensKey>();
   const assertWithin = (absolutePath: string) => {
     // relative(root, abs)：同根下返回相对路径（不以 .. 开头）；越界返回 ../... 或绝对路径
     const rel = relative(root, resolve(absolutePath));
     if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
       throw new Error(`Permission denied: read 沙箱仅限 skill 目录（${absolutePath}）`);
     }
+    return rel;
+  };
+  const maybeNotifyLens = (absolutePath: string) => {
+    if (!onLensSelected) return;
+    const rel = relative(root, resolve(absolutePath)).replace(/\\/g, "/");
+    // 形如 "references/dual-take.md"
+    const m = rel.match(/^references\/([^/]+\.md)$/);
+    if (!m) return;
+    const lens = LENS_REF_FILES[m[1]];
+    if (lens && !fired.has(lens)) {
+      fired.add(lens);
+      onLensSelected(lens);
+    }
   };
   const operations: ReadOperations = {
     readFile: async (p) => {
       assertWithin(p);
+      maybeNotifyLens(p);
       return await fsReadFile(p);
     },
     access: async (p) => {
@@ -112,7 +149,7 @@ export async function createInsightSession(
   //  - additionalSkillPaths + noSkills:true → loader 只加载该 skill，不扫 ~/.agents/skills/
   const skillDir = opts?.skillDir;
   const tools = skillDir
-    ? [...customTools, createSandboxedReadTool(skillDir)]
+    ? [...customTools, createSandboxedReadTool(skillDir, opts?.onLensSelected)]
     : customTools;
 
   const authStorage = AuthStorage.inMemory();

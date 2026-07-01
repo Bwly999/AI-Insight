@@ -48,7 +48,7 @@ export const insightRuns = sqliteTable("insight_runs", {
   id: text("id").primaryKey(),
   conversationId: text("conversation_id").notNull().references(() => conversations.id),
   triggerMessageId: text("trigger_message_id").notNull().references(() => messages.id),
-  status: text("status", { enum: ["queued", "running", "completed", "failed", "interrupted"] }).notNull().default("queued"),
+  status: text("status", { enum: ["queued", "running", "awaiting_input", "completed", "failed", "interrupted"] }).notNull().default("queued"),
   lens: text("lens", { enum: ["deep", "dual", "flash", "timeline"] }),
   // run 级配置快照（继承自 conversation）
   config: text("config").notNull().default("{}"),

@@ -4,15 +4,14 @@
  */
 import { ref, nextTick } from "vue";
 import {
-  TIME_RANGE_OPTIONS, LENS_OPTIONS, ALL_TAGS, TAG_LABELS,
-  type TimeRange, type DataSourceTag, type LensKey,
+  TIME_RANGE_OPTIONS, ALL_TAGS, TAG_LABELS,
+  type TimeRange, type DataSourceTag,
 } from "@ai-insight/shared-types";
 
 const props = defineProps<{
-  status: "idle" | "running" | "completed" | "failed";
+  status: "idle" | "running" | "completed" | "failed" | "awaiting_input";
   timeRange: TimeRange;
   tagPrefs: DataSourceTag[];
-  lens: LensKey;
 }>();
 
 const emit = defineEmits<{
@@ -20,13 +19,10 @@ const emit = defineEmits<{
   abort: [];
   "update:timeRange": [v: TimeRange];
   toggleTag: [t: DataSourceTag];
-  cycleLens: [];
 }>();
 
 const draft = ref("");
 const ta = ref<HTMLTextAreaElement | null>(null);
-
-const lensLabel = () => LENS_OPTIONS.find((l) => l.key === props.lens)?.label ?? "综合";
 
 async function autoGrow() {
   await nextTick();
@@ -43,6 +39,7 @@ function onKey(e: KeyboardEvent) {
 }
 function submit() {
   const text = draft.value.trim();
+  // awaiting_input 时由父组件把 send 路由到 reply；running 时禁用
   if (!text || props.status === "running") return;
   emit("send", text);
   draft.value = "";
@@ -53,12 +50,12 @@ function submit() {
 <template>
   <div class="dock">
     <div class="dock-inner">
-      <form class="composer" :class="{ running: status === 'running' }" @submit.prevent="submit">
+      <form class="composer" :class="{ running: status === 'running' || status === 'awaiting_input' }" @submit.prevent="submit">
         <div class="comp-area">
           <textarea ref="ta" v-model="draft" rows="3"
-            :placeholder="status === 'running' ? '洞察运行中…可继续追问' : '发起一次洞察，描述你想了解的赛道或问题…'"
+            :placeholder="status === 'awaiting_input' ? 'Agent 在等你的回复…' : status === 'running' ? '洞察运行中…可继续追问' : '发起一次洞察，描述你想了解的赛道或问题…'"
             @input="autoGrow" @keydown="onKey"></textarea>
-          <button v-if="status === 'running'" type="button" class="stop-btn" @click="emit('abort')" title="中止运行">
+          <button v-if="status === 'running' || status === 'awaiting_input'" type="button" class="stop-btn" @click="emit('abort')" title="中止运行">
             <span style="display: block; width: 11px; height: 11px; background: currentColor; border-radius: 2px"></span>
           </button>
           <button v-else type="submit" class="send-btn" :class="draft.trim() ? 'on' : 'off'" :disabled="!draft.trim()" title="发送 (Enter)">
@@ -66,7 +63,7 @@ function submit() {
           </button>
         </div>
 
-        <div class="comp-tools">
+        <div v-if="status !== 'awaiting_input'" class="comp-tools">
           <div class="tool-group">
             <span class="tool-group-label">时间窗</span>
             <button type="button" v-for="r in TIME_RANGE_OPTIONS" :key="r.value" class="rchip"
@@ -78,16 +75,10 @@ function submit() {
             <button type="button" v-for="t in ALL_TAGS" :key="t" class="tchip"
               :class="{ on: tagPrefs.includes(t) }" @click="emit('toggleTag', t)">{{ TAG_LABELS[t] }}</button>
           </div>
-          <div class="v-divider"></div>
-          <div class="tool-group">
-            <button type="button" class="lens" @click="emit('cycleLens')">
-              视角<span class="v mono">{{ lensLabel() }}</span>
-            </button>
-          </div>
         </div>
       </form>
       <div class="comp-hint">
-        <span>洞察由 Agent 自主调度数据源（搜索 · RSS · 爬虫）并综合成报告。</span>
+        <span>Agent 按意图自主选择视角并调度数据源（搜索 · RSS · 爬虫），综合成报告。</span>
         <span><span class="kbd">Enter</span> 发送 · <span class="kbd">Shift</span>+<span class="kbd">Enter</span> 换行</span>
       </div>
     </div>
@@ -124,9 +115,6 @@ function submit() {
 .tool-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tool-group-label { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); margin-right: 3px; }
 .v-divider { width: 1px; height: 18px; background: var(--line); }
-.lens { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 10px; cursor: pointer; transition: var(--t-fast); height: 26px; }
-.lens:hover { border-color: var(--brand-line); color: var(--ink); }
-.lens .v { color: var(--brand); font-weight: 600; font-size: 11px; }
 
 .comp-hint { display: flex; align-items: center; justify-content: space-between; padding: 7px 6px 0; font-size: 11px; color: var(--ink-3); }
 </style>

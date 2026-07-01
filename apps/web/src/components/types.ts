@@ -9,6 +9,8 @@ export function toolColor(toolName: string): { bg: string; fg: string; varName: 
   if (toolName === "search") return { bg: "color-mix(in srgb, var(--src-search) 18%, transparent)", fg: "var(--src-search)", varName: "--src-search" };
   if (toolName === "fetch_rss" || toolName === "rss") return { bg: "color-mix(in srgb, var(--src-rss) 18%, transparent)", fg: "var(--src-rss)", varName: "--src-rss" };
   if (toolName === "crawl") return { bg: "color-mix(in srgb, var(--src-crawl) 18%, transparent)", fg: "var(--src-crawl)", varName: "--src-crawl" };
+  if (toolName === "read") return { bg: "color-mix(in srgb, var(--ink-3) 22%, transparent)", fg: "var(--ink-2)", varName: "--ink-2" };
+  if (toolName === "ask") return { bg: "color-mix(in srgb, var(--amber, #d97706) 22%, transparent)", fg: "var(--amber, #d97706)", varName: "--amber" };
   return { bg: "color-mix(in srgb, var(--brand) 18%, transparent)", fg: "var(--brand)", varName: "--brand" };
 }
 
@@ -22,6 +24,8 @@ export function toolLabel(t: string): string {
       extract_content: "提取",
       list_datasources: "数据源",
       save_report: "报告",
+      read: "读取",
+      ask: "澄清",
     } as Record<string, string>
   )[t] ?? t;
 }

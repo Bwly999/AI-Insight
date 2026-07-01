@@ -19,6 +19,7 @@ import { createDefaultEngines, createDefaultCrawlers, fetchRss, type EngineConfi
 import { config } from "../config.js";
 import * as repo from "../repo.js";
 import { renderReportHtml, extractStandfirst } from "../report-renderer.js";
+import { resolveAwaiting, rejectPending } from "./pending-inputs.js";
 
 export interface ExecutorDeps {
   /** 惰性取 provider（每 run 调用，支持 settings 热切换；apiKey 仍 env-only）。 */
@@ -131,12 +132,31 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       searchRssIndex,
       onItems: (items, toolName) =>
         collectedItems.push(...items.map((item) => ({ item, toolName }))),
+      // ask 工具：暂停运行等待用户澄清（Claude-Code 式）。回复经 pending-inputs 传递。
+      awaitInput: (inputId, question, options) => {
+        // 落一条 clarification 消息（历史回看）+ 进 awaiting_input + emit 事件
+        repo.addMessage(run.conversationId, "assistant", {
+          kind: "clarification",
+          inputId,
+          question,
+          ...(options ? { options } : {}),
+        });
+        repo.updateRun(ctx.runId, { status: "awaiting_input" });
+        emit({ type: "clarification_needed", runId: ctx.runId, inputId, question, ...(options ? { options } : {}) });
+        return resolveAwaiting(ctx.runId, inputId);
+      },
     });
 
     // 建 session（每 run 独立；provider 惰性读取支持热切换）
     // skillDir：让 ai-insight skill 经 loader 渐进披露（见 ADR-0006）
+    // onLensSelected：模型 read 某 Lens 的 reference 时触发，暴露 Agent 实际选用的视角
     const session = await createInsightSession(deps.getProvider(), tools, {
       skillDir: config.skillDir,
+      onLensSelected: (lens) => {
+        // 回写 DB（让后续历史/lastRun 反映 Agent 实际选择）+ emit 事件
+        repo.updateRun(ctx.runId, { lens });
+        emit({ type: "lens_selected", runId: ctx.runId, lens });
+      },
     });
 
     // 事件桥接 → emit AgentEvent
@@ -155,11 +175,19 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       .filter(Boolean);
 
     // 构造本轮 prompt：历史 + 当前洞察请求 + 配置提示
-    const configHint = `（本轮洞察配置：时间窗=${run.config.timeRange}，标签偏好=${run.config.tagPrefs.join("/")}，视角=${run.lens ?? "deep"}）`;
+    const configHint = `（本轮洞察配置：时间窗=${run.config.timeRange}，标签偏好=${run.config.tagPrefs.join("/")}，视角=${run.lens ?? "智能路由（由 Agent 按意图判定）"}）`;
     const fullPrompt =
       history.length > 1
         ? `## 此前对话\n${history.slice(0, -1).join("\n")}\n\n## 本次洞察请求\n${run.prompt}\n${configHint}`
         : `${run.prompt}\n${configHint}`;
+
+    // abort：中止 session（让 prompt() 抛出）+ 释放可能挂起的 awaiting
+    const onAbort = () => {
+      rejectPending(ctx.runId, new Error("运行已中止"));
+      session.abort().catch(() => {});
+    };
+    if (ctx.signal.aborted) onAbort();
+    else ctx.signal.addEventListener("abort", onAbort, { once: true });
 
     try {
       await session.prompt(fullPrompt);
@@ -193,7 +221,11 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       emit({ type: "run_completed", runId: ctx.runId });
     } catch (e) {
       unsubscribe();
+      // 若是中止/超时导致 ask 阻塞被 reject，这里统一兜底清理 pending
+      rejectPending(ctx.runId, new Error("运行失败"));
       const msg = (e as Error).message;
+      // 中止：status/endedAt 由 abort 路由置 interrupted；此处仅清理，不再 emit（SSE 由路由收尾）
+      if (ctx.signal.aborted) return;
       repo.updateRun(ctx.runId, {
         status: "failed",
         endedAt: new Date().toISOString(),
@@ -205,6 +237,7 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       });
       emit({ type: "run_failed", runId: ctx.runId, error: msg });
     } finally {
+      ctx.signal.removeEventListener("abort", onAbort);
       // 持久化本轮采集的信号条目（无论成败，供证据面板/调试；上限 50）
       if (collectedItems.length) {
         try {

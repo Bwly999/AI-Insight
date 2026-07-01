@@ -27,6 +27,7 @@ import type {
   DataSourceItem,
   DataSourceTag,
   InsightRun,
+  LensKey,
   Message,
   MessageContent,
   Report,
@@ -176,6 +177,7 @@ export function updateRun(
   id: string,
   patch: Partial<{
     status: RunStatus;
+    lens: LensKey;
     startedAt: string;
     endedAt: string;
     tokens: number;
@@ -196,12 +198,13 @@ export function getLastRun(conversationId: string): InsightRun | undefined {
   return row ? toRunDto(row) : undefined;
 }
 
-/** 启动 reconcile：把 running 标记为 interrupted（设计 §3.4）。 */
+/** 启动 reconcile：把 running / awaiting_input 标记为 interrupted（设计 §3.4）。
+ *  awaiting_input 的 session 在重启后已失活（内存态不可恢复），无法继续等待。 */
 export function reconcileInterruptedRuns(): number {
   const res = db()
     .update(insightRuns)
     .set({ status: "interrupted", endedAt: new Date().toISOString() })
-    .where(eq(insightRuns.status, "running"))
+    .where(sql`${insightRuns.status} in ('running', 'awaiting_input')`)
     .run();
   return res.changes;
 }
