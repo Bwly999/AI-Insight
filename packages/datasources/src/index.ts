@@ -6,6 +6,7 @@
 // http & 代理
 export {
   configureProxy,
+  shutdownHttp,
   rawFetch,
   fetchJson,
   fetchText,

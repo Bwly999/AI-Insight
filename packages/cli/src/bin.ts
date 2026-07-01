@@ -7,7 +7,7 @@
  *
  * 接入系统（模型 B）：server 不走此入口，进程内直接用 datasources 注册表。
  */
-import { configureProxy } from "@ai-insight/datasources";
+import { configureProxy, shutdownHttp } from "@ai-insight/datasources";
 import { readConfig, toEngineConfig } from "./config-store.js";
 import { searchCommand } from "./commands/search.js";
 import { extractCommand } from "./commands/extract.js";
@@ -69,7 +69,18 @@ function printRootHelp(): void {
 运行 \`aiinsight <command> --help\` 查看命令详情。`);
 }
 
-main().then((code) => process.exit(code)).catch((e) => {
-  console.error(`error: ${(e as Error).message}`);
-  process.exit(1);
-});
+main()
+  .then(async (code) => {
+    // 退出前释放 dispatcher 连接，让事件循环尽快排空。
+    await shutdownHttp();
+    // 用 exitCode 而非 process.exit()：强制退出会在 undici 残留的
+    // uv_async 句柄正在关闭时再次 uv_async_send，触发 Windows libuv
+    // 的 UV_HANDLE_CLOSING 断言。设 exitCode 让循环自然排空、句柄
+    // 走正常关闭路径，零断言退出。
+    process.exitCode = code;
+  })
+  .catch(async (e) => {
+    console.error(`error: ${(e as Error).message}`);
+    await shutdownHttp().catch(() => {});
+    process.exitCode = 1;
+  });

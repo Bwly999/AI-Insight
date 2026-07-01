@@ -9,6 +9,8 @@ import { ProxyAgent, setGlobalDispatcher, Agent } from "undici";
 
 let proxyConfigured = false;
 let currentProxy: string | null = null;
+/** 当前已创建的全局 dispatcher 引用，供 shutdownHttp 优雅关闭。 */
+let activeDispatcher: Agent | ProxyAgent | null = null;
 
 /**
  * 配置全局出站代理。传 URL 启用代理；传 null/undefined 则用直连。
@@ -17,12 +19,31 @@ let currentProxy: string | null = null;
 export function configureProxy(proxyUrl?: string | null): void {
   if (proxyUrl === currentProxy) return;
   currentProxy = proxyUrl ?? null;
-  if (proxyUrl) {
-    setGlobalDispatcher(new ProxyAgent(proxyUrl));
-  } else {
-    setGlobalDispatcher(new Agent());
-  }
+  const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : new Agent();
+  activeDispatcher = dispatcher;
+  setGlobalDispatcher(dispatcher);
   proxyConfigured = true;
+}
+
+/**
+ * 优雅关闭全局 dispatcher（释放 keep-alive 连接/定时器）。
+ * CLI 短命进程退出前调用——否则 process.exit() 强制 teardown 时，
+ * undici 残留句柄会在 Windows 触发 libuv 的 UV_HANDLE_CLOSING 断言。
+ * 长驻进程（server）无需调用。幂等；未配置过代理时为空操作。
+ *
+ * 用 destroy() 而非 close()：close() 只等空闲连接自然关闭，实测仍残留
+ * 句柄触发断言；destroy() 强制拆除连接池与内部 Poller，确保退出干净。
+ */
+export async function shutdownHttp(): Promise<void> {
+  const d = activeDispatcher;
+  activeDispatcher = null;
+  if (d) {
+    try {
+      await d.destroy();
+    } catch {
+      /* 忽略：进程即将退出，残留句柄由 teardown 兜底 */
+    }
+  }
 }
 
 export const DEFAULT_UA =
