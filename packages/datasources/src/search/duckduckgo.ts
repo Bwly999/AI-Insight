@@ -1,12 +1,16 @@
 /**
- * 搜索引擎统一接口 + 实现。
+ * 搜索引擎统一接口 + DuckDuckGo 实现。
  *
  * 接口设计（改进自 union-search：原项目无统一接口，引擎各自散落）：
  *   search(input): Promise<DataSourceItem[]>
  * 归一化到 DataSourceItem（强制在引擎边界归一，而非合并时）。
  *
- * 三引擎：DuckDuckGo(无 key, cheerio) / Exa(raw fetch) / Firecrawl(SDK)。
+ * 三引擎：DuckDuckGo(无 key, cheerio) / Exa(raw fetch) / Firecrawl(SDK) / arxiv(无 key)。
+ *
+ * 引擎接受注入的 EngineConfig（不再直读 process.env），
+ * 使 CLI（JSON 注入）与 server（DB/env 注入）共用同一份代码。
  */
+import type { TSchema } from "@sinclair/typebox";
 import type { DataSourceItem, DataSourceTag, TimeRange } from "@ai-insight/shared-types";
 import { fetchText } from "../http.js";
 import { timeRangeToDuckDf } from "../time-range.js";
@@ -18,15 +22,28 @@ export interface SearchInput {
   timeRange?: TimeRange;
   tags?: DataSourceTag[];
   limit?: number;
+  /** 引擎特有参数（由 CLI 从 --<engine>.<param> flag 解析注入；引擎自行解释）。 */
+  params?: Record<string, unknown>;
 }
 
-/** 搜索引擎统一接口。 */
+/**
+ * 搜索引擎统一接口。
+ *
+ * `paramsSchema`：引擎特有参数的 TypeBox schema。
+ * CLI 据此自动生成 `--<name>.<param>` flag 并静态校验。
+ * 无特有参数的引擎（如 ddg）留空。
+ */
 export interface SearchEngine {
-  /** 引擎名（用于 sourceName）。 */
+  /** 引擎 id（用于 --engines 选项与注册表 key，如 "ddg"）。 */
   readonly name: string;
+  /** 展示名（用于 sourceName 与帮助文本，如 "DuckDuckGo"）。 */
+  readonly label: string;
   /** 是否已配置（缺 key 的引擎返回 false，扇出时跳过）。 */
   isConfigured(): boolean;
+  /** 执行搜索，返回归一化 DataSourceItem[]。 */
   search(input: SearchInput): Promise<DataSourceItem[]>;
+  /** 引擎特有参数 schema（CLI 据此生成命名空间 flag）。 */
+  readonly paramsSchema?: TSchema;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,7 +53,8 @@ export interface SearchEngine {
 const DDG_URL = "https://html.duckduckgo.com/html/";
 
 export class DuckDuckGoEngine implements SearchEngine {
-  readonly name = "DuckDuckGo";
+  readonly name = "ddg";
+  readonly label = "DuckDuckGo";
 
   isConfigured(): boolean {
     return true;
@@ -89,7 +107,7 @@ export class DuckDuckGoEngine implements SearchEngine {
       items.push({
         id: `search:duckduckgo:${href}`,
         sourceType: "search",
-        sourceName: this.name,
+        sourceName: this.label,
         sourceId: href,
         title,
         url: href,

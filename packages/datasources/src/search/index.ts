@@ -7,13 +7,17 @@
 import type { DataSourceItem, DataSourceTag, TimeRange } from "@ai-insight/shared-types";
 import { dedupeItems } from "../normalize.js";
 import { filterByTimeRange } from "../time-range.js";
+import { engineConfigFromEnv, type EngineConfig } from "../config.js";
 import { DuckDuckGoEngine } from "./duckduckgo.js";
 import { ExaEngine } from "./exa.js";
 import { FirecrawlEngine } from "./firecrawl.js";
+import { ArxivEngine } from "./arxiv.js";
 import type { SearchEngine } from "./duckduckgo.js";
 
 export type { SearchEngine, SearchInput } from "./duckduckgo.js";
-export { DuckDuckGoEngine, ExaEngine, FirecrawlEngine };
+export { DuckDuckGoEngine, ExaEngine, FirecrawlEngine, ArxivEngine };
+export { exaParamsSchema } from "./exa.js";
+export { arxivParamsSchema } from "./arxiv.js";
 
 export interface FanoutOptions {
   query: string;
@@ -23,11 +27,19 @@ export interface FanoutOptions {
   perEngineLimit?: number;
   /** 启用哪些引擎（按 name）；不传 = 全部已配置引擎。 */
   engines?: string[];
+  /** 引擎特有参数（透传给命中的引擎）。 */
+  params?: Record<string, Record<string, unknown>>;
 }
 
-/** 默认三引擎实例（缺 key 的 isConfigured()=false，扇出时自动跳过）。 */
-export function createDefaultEngines(): SearchEngine[] {
-  return [new DuckDuckGoEngine(), new ExaEngine(), new FirecrawlEngine()];
+/**
+ * 默认引擎实例（缺 key 的 isConfigured()=false，扇出时自动跳过）。
+ *
+ * 含 4 引擎：ddg / exa / firecrawl / arxiv。
+ *
+ * @param cfg 注入配置；不传则从 process.env 构造（兼容现有 .env.local 用户）。
+ */
+export function createDefaultEngines(cfg: EngineConfig = engineConfigFromEnv()): SearchEngine[] {
+  return [new DuckDuckGoEngine(), new ExaEngine(cfg), new FirecrawlEngine(cfg), new ArxivEngine()];
 }
 
 /**
@@ -50,6 +62,7 @@ export async function fanoutSearch(
         timeRange: opts.timeRange,
         tags: opts.tags,
         limit: opts.perEngineLimit ?? 8,
+        params: opts.params?.[e.name],
       }),
     ),
   );

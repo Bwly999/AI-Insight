@@ -23,12 +23,32 @@ export {
   filterByTimeRange,
 } from "./time-range.js";
 
+// 引擎配置（注入式，见 §4.1）
+export { engineConfigFromEnv, type EngineConfig, EMPTY_ENGINE_CONFIG } from "./config.js";
+
+// 引擎注册表（见 §4.3）
+export {
+  registerSearchEngine,
+  registerExtractEngine,
+  createSearchEngine,
+  createExtractEngine,
+  createSearchEngines,
+  createExtractEngines,
+  listSearchEngineIds,
+  listExtractEngineIds,
+  type SearchEngineFactory,
+  type ExtractEngineFactory,
+} from "./registry.js";
+
 // 搜索
 export {
   fanoutSearch,
   createDefaultEngines,
   type SearchEngine,
   type SearchInput,
+  type FanoutOptions,
+  exaParamsSchema,
+  arxivParamsSchema,
 } from "./search/index.js";
 
 // 爬虫
@@ -42,4 +62,11 @@ export {
 export { fetchRss } from "./rss.js";
 
 // 正文提取
-export { extractContent, type ExtractResult } from "./extract.js";
+export {
+  extractContent,
+  extractContentWith,
+  buildExtractEngines,
+  type ExtractEngine,
+  type ExtractInput,
+  type ExtractResult,
+} from "./extract/index.js";

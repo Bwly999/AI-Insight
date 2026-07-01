@@ -40,3 +40,8 @@ Thumbs.db
 # pi agent runtime home (local)
 .pi-home
 .playwright-cli/
+
+# aiinsight CLI local config (明文 API key，见 docs/design/skills-融合-cli-通用数据源能力.md §6)
+# 默认在 ~/.aiinsight/，但若用户用 AIINSIGHT_CONFIG 指向仓库内则需此规则保护
+aiinsight.config.json
+.aiinsight/
