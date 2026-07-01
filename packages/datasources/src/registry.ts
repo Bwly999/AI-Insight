@@ -70,8 +70,9 @@ export function createExtractEngines(cfg: EngineConfig): ExtractEngine[] {
 }
 
 // ─── 内置引擎注册（模块加载时自动执行）────────────────────────────────────────
-// 搜索：ddg(无 key) / exa(x-api-key) / firecrawl(SDK key) / arxiv(公开 API)
-registerSearchEngine("ddg", () => new DuckDuckGoEngine());
+// 搜索：ddg(无 key, needle 代理) / exa(x-api-key) / firecrawl(SDK key) / arxiv(公开 API)
+// ddg 用 needle 而非 undici（绕开 Windows UV_HANDLE_CLOSING 崩溃），proxy 必须显式注入
+registerSearchEngine("ddg", (cfg) => new DuckDuckGoEngine(cfg));
 registerSearchEngine("exa", (cfg) => new ExaEngine(cfg));
 registerSearchEngine("firecrawl", (cfg) => new FirecrawlEngine(cfg));
 registerSearchEngine("arxiv", () => new ArxivEngine());
