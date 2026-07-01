@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="zh-CN" data-proto="margin">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Margin · 原型 B — 手稿页边</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   MARGIN · 手稿页边
+   thesis: 一份"边写边改的工作草稿"。AI 的正文是排好的正文，
+           它的思考是批在页边的钢笔旁注 —— 用位置而非样式区分思考与结论。
+   palette: 暖白纸 + 一抹铜 + 去饱和苔/陶/琥珀做状态
+   type: Fraunces 衬线主导正文(比参考更文学) · Jakarta 人文 sans · JetBrains Mono 标签
+   signature: 页边思考 (marginalia) —— 思考块挂在正文左侧的窄栏里，
+              像审稿人的铅笔批注，竖向铜发丝线连到正文它所支撑的论断
+   ============================================================ */
+:root{
+  /* 暖纸面分层（沿用参考项目 DNA，略调） */
+  --paper:      #fbf7ef;
+  --paper-tint: #f5f0e5;
+  --card:       #fffefb;
+  --overlay:    rgba(60,50,40,.06);
+  --overlay-2:  rgba(60,50,40,.10);
+
+  /* 暖墨灰 */
+  --ink:        #23201a;
+  --ink-soft:   #44403a;
+  --ink-mute:   #756e60;
+  --ink-faint:  #a8a193;
+
+  /* 铜为主，次级去饱和 */
+  --copper:     #b4623c;
+  --copper-deep:#8f4a2c;
+  --copper-soft:#f3e3d8;
+  --copper-glow:rgba(180,98,60,.12);
+  --sage:  #5f7a57;  --sage-soft:#e2e9d8;
+  --clay:  #a14b47;  --clay-soft:#f0d9d5;
+  --amber: #ad7a2f;  --amber-soft:#f0e2c4;
+
+  --rule:       rgba(60,50,40,.10);
+  --rule-2:     rgba(60,50,40,.18);
+
+  --serif:'Fraunces','Source Han Serif SC','Songti SC',serif;
+  --sans: 'Plus Jakarta Sans','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  --mono: 'JetBrains Mono','IBM Plex Mono',ui-monospace,monospace;
+
+  --r-xs:3px; --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+  --shadow:0 1px 0 rgba(60,50,40,.04),0 4px 14px rgba(60,50,40,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:15px; line-height:1.75;
+  font-optical-sizing:auto;
+  -webkit-font-smoothing:antialiased;
+}
+/* 纸张颗粒（签名纹理，比 dossier 柔） */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:100; opacity:.22;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;
+}
+
+/* ============ 布局 ============ */
+.app{display:grid; grid-template-columns:248px 1fr 332px; height:100vh; overflow:hidden}
+@media(max-width:1180px){ .app{grid-template-columns:230px 1fr} .col-right{display:none} }
+
+/* ============ 顶部刊头 ============ */
+.topbar{
+  grid-column:1/-1; height:58px; display:flex; align-items:center; gap:20px;
+  padding:0 24px; background:var(--paper-tint); border-bottom:1px solid var(--rule);
+  position:relative; z-index:5;
+}
+.topbar::after{ /* 刊头双线 */
+  content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:var(--rule);
+}
+.brand{display:flex; align-items:baseline; gap:12px}
+.brand .mark{font-family:var(--serif); font-size:24px; font-weight:500; letter-spacing:-.01em}
+.brand .mark em{font-style:italic; color:var(--copper)}
+.brand .vol{
+  font-family:var(--mono); font-size:9px; letter-spacing:.26em; text-transform:uppercase; color:var(--ink-mute);
+}
+.status-cap{
+  margin-left:auto; display:flex; align-items:center; gap:8px; padding:5px 12px;
+  background:var(--card); border:1px solid var(--rule-2); border-radius:var(--r-pill,999px);
+  font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+}
+.status-cap .dot{width:7px;height:7px;border-radius:50%;background:var(--sage); position:relative}
+.status-cap .dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:1px solid var(--sage);opacity:.4;animation:ping 2s ease-out infinite}
+@keyframes ping{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+.icon-btn{
+  width:30px;height:30px;border:1px solid var(--rule-2);background:var(--card);
+  border-radius:var(--r-sm); display:grid;place-items:center;color:var(--ink-soft);cursor:pointer;
+}
+.icon-btn:hover{border-color:var(--copper);color:var(--copper)}
+
+/* ============ 左：草稿目录（持续对话） ============ */
+.col-left{background:var(--paper-tint); border-right:1px solid var(--rule); display:flex; flex-direction:column; overflow:hidden}
+.new-btn{
+  margin:14px 14px 4px; padding:10px 13px; text-align:left;
+  background:var(--ink); color:var(--paper); border:none; border-radius:var(--r-md);
+  font-family:var(--sans); font-size:12px; font-weight:600;
+  cursor:pointer; display:flex; align-items:center; gap:8px;
+}
+.new-btn:hover{background:var(--copper-deep)}
+.draft-list{flex:1; overflow-y:auto; padding:6px 12px 16px}
+.dl-eb{
+  font-family:var(--mono); font-size:9px; letter-spacing:.26em; text-transform:uppercase; color:var(--ink-faint);
+  padding:14px 6px 8px; display:flex; align-items:center; gap:8px;
+}
+.dl-eb::after{content:""; flex:1; height:1px; background:var(--rule)}
+.draft-item{padding:9px 11px; border-radius:var(--r-sm); cursor:pointer; position:relative; margin-bottom:1px}
+.draft-item:hover{background:var(--overlay)}
+.draft-item.active{background:var(--copper-soft)}
+.draft-item.active::before{content:"";position:absolute;left:1px;top:9px;bottom:9px;width:2px;background:var(--copper)}
+.di-title{font-family:var(--serif); font-size:14px; font-weight:500; line-height:1.3; color:var(--ink); overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.di-meta{margin-top:3px; font-family:var(--mono); font-size:9px; letter-spacing:.12em; color:var(--ink-mute)}
+.di-tag{display:inline-block;margin-top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--copper-deep);background:var(--copper-soft);padding:1px 6px;border-radius:var(--r-xs)}
+
+/* ============ 中：手稿正文 ============ */
+.col-mid{display:flex; flex-direction:column; overflow:hidden; background:var(--paper)}
+.masthead{ /* 草稿首页 masthead */
+  padding:30px 56px 22px; border-bottom:1px solid var(--rule); background:var(--paper-tint);
+}
+.masthead .eb{font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--copper-deep)}
+.masthead h1{font-family:var(--serif);font-weight:500;font-size:30px;margin:8px 0 4px;line-height:1.15;letter-spacing:-.015em}
+.masthead .lede{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-soft);max-width:60ch;margin:0}
+.masthead .rule-double{margin-top:14px;border-top:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);height:4px}
+
+.stream{flex:1; overflow-y:auto; padding:24px 56px 180px}
+
+/* —— 页边思考布局：每条 AI 回复 = 一个双栏栅格 —— */
+.turn{margin-bottom:30px}
+.turn.user{display:flex; justify-content:flex-end}
+/* 用户 = 墨水便签卡 */
+.ink-card{
+  background:var(--ink); color:var(--paper); padding:13px 17px; max-width:74%;
+  border-radius:var(--r-md) var(--r-md) var(--r-xs) var(--r-md);
+  font-family:var(--sans); font-size:14.5px; line-height:1.6; box-shadow:var(--shadow);
+}
+.ink-card .ic-eb{font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--copper-soft);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.ink-card .ic-eb::after{content:"";flex:1;height:1px;background:rgba(251,247,239,.2)}
+
+/* AI 回复 = 双栏：左页边(思考) + 右正文 */
+.ai-turn{display:grid; grid-template-columns:180px 1fr; gap:22px; position:relative}
+.ai-eb{font-family:var(--mono);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--copper-deep);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.ai-eb::after{content:"";flex:1;height:1px;background:var(--rule)}
+
+/* ============ 页边思考 (MARGINALIA · 签名) ============ */
+.margin-col{ padding-top:24px; position:relative }
+.margin-col::before{ /* 竖向铜发丝线，连到正文 */
+  content:""; position:absolute; right:-11px; top:24px; bottom:0; width:1px; background:var(--copper); opacity:.4;
+}
+.marginalia{
+  font-family:var(--serif); font-style:italic; font-size:13.5px; line-height:1.7; color:var(--ink-mute);
+  background:var(--paper-tint); border-radius:var(--r-sm); padding:11px 13px;
+  position:relative;
+}
+.marginalia .m-label{
+  font-family:var(--mono); font-style:normal; font-size:8px; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--copper-deep); display:flex; align-items:center; gap:6px; margin-bottom:6px;
+}
+.marginalia .m-label svg{width:11px;height:11px}
+/* 折叠态：页边显示一行省略 + 展开按钮 */
+.marginalia.collapsed{max-height:38px; overflow:hidden; cursor:pointer}
+.marginalia.collapsed::after{
+  content:""; position:absolute; bottom:0; left:0; right:0; height:18px;
+  background:linear-gradient(180deg,transparent,var(--paper-tint));
+}
+.marginalia .m-toggle{font-family:var(--mono);font-style:normal;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--copper);margin-top:7px;cursor:pointer;font-weight:600}
+
+/* ============ 工具卡（扁平，左色条） ============ */
+.tool-card{
+  margin:12px 0; background:var(--card); border:1px solid var(--rule); border-radius:var(--r-sm);
+  overflow:hidden; box-shadow:var(--shadow-sm); border-left:2px solid var(--ink-faint);
+  font-family:var(--sans);
+}
+.tool-card.running{border-left-color:var(--amber)}
+.tool-card.ok{border-left-color:var(--sage)}
+.tool-card.fail{border-left-color:var(--clay)}
+.tc-head{display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer}
+.tc-icon{width:22px;height:22px;border-radius:var(--r-xs);display:grid;place-items:center;background:var(--overlay);color:var(--ink-soft)}
+.tc-name{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink)}
+.tc-args{font-family:var(--mono);font-size:10px;color:var(--ink-mute);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tc-badge{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;padding:2px 7px;border-radius:var(--r-xs)}
+.tc-badge.ok{color:var(--sage);background:var(--sage-soft)}
+.tc-badge.running{color:var(--amber);background:var(--amber-soft)}
+.tc-body{padding:0 12px 11px;font-size:11.5px;color:var(--ink-soft);display:none;line-height:1.6}
+.tool-card.open .tc-body{display:block}
+
+/* ============ 正文 Markdown（衬线主导） ============ */
+.body-col{}
+.prose{font-family:var(--serif); font-size:15.5px; line-height:1.78; color:var(--ink); max-width:64ch}
+.prose h1,.prose h2,.prose h3{font-family:var(--serif);font-weight:500;line-height:1.25;margin:1.3em 0 .5em;letter-spacing:-.005em}
+.prose h1{font-size:24px} .prose h2{font-size:19px;border-bottom:1px solid var(--rule);padding-bottom:.2em} .prose h3{font-size:16px}
+.prose p{margin:.7em 0}
+.prose strong{font-weight:600}
+.prose em{font-style:italic;color:var(--ink-soft)}
+.prose a{color:var(--copper-deep);border-bottom:1px solid var(--copper-soft)}
+.prose code{font-family:var(--mono);font-size:12.5px;background:var(--copper-soft);padding:1px 5px;border-radius:var(--r-xs);color:var(--copper-deep)}
+.prose pre{background:var(--paper-tint);border-left:2px solid var(--copper);padding:12px 15px;border-radius:0 var(--r-sm) var(--r-sm) 0;overflow-x:auto;font-size:12.5px}
+.prose pre code{background:none;padding:0;color:var(--ink)}
+.prose blockquote{border-left:3px solid var(--copper);margin:1em 0;padding:2px 16px;color:var(--ink-soft);font-style:italic}
+.prose ul,.prose ol{padding-left:1.5em}
+.prose li{margin:.35em 0}
+.prose table{border-collapse:collapse;margin:1em 0;font-size:13px;width:100%}
+.prose th,.prose td{border:1px solid var(--rule-2);padding:6px 11px;text-align:left}
+.prose th{background:var(--paper-tint);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.cite{display:inline-block;font-family:var(--mono);font-size:8px;font-weight:700;color:var(--copper-deep);background:var(--copper-soft);padding:0 4px;border-radius:var(--r-xs);margin:0 1px;vertical-align:super;line-height:1.6;cursor:pointer}
+
+/* —— 流式"正在落笔"指示器 —— */
+.writing{display:inline-flex;align-items:center;gap:8px;font-family:var(--serif);font-style:italic;color:var(--copper-deep);font-size:13px;margin-top:6px}
+.writing .wd{width:6px;height:6px;border-radius:50%;background:var(--copper);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* ============ 报告卡片（弹窗触发） ============ */
+.report-stub{
+  margin:16px 0; background:var(--card); border:1px solid var(--rule-2); border-radius:var(--r-md);
+  overflow:hidden; box-shadow:var(--shadow); cursor:pointer;
+}
+.report-stub:hover{border-color:var(--copper)}
+.rs-top{background:var(--copper);color:var(--paper);padding:6px 16px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:600}
+.rs-body{padding:17px 20px}
+.rs-body h3{font-family:var(--serif);font-weight:500;font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+.rs-body .rs-lede{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-mute);margin:0}
+.rs-foot{padding:9px 20px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute);display:flex;gap:18px}
+.rs-foot .open-hint{margin-left:auto;color:var(--copper-deep);font-weight:600}
+
+/* ============ 输入区（浮动，纸张渐隐） ============ */
+.composer-wrap{position:sticky;bottom:0;padding:18px 56px 22px;background:linear-gradient(180deg,rgba(251,247,239,0) 0%,var(--paper) 55%)}
+.composer{background:var(--card);border:1.5px solid var(--rule-2);border-radius:var(--r-lg);padding:13px 16px;box-shadow:var(--shadow)}
+.composer:focus-within{border-color:var(--copper)}
+.composer textarea{width:100%;border:none;outline:none;resize:none;background:transparent;font-family:var(--serif);font-size:15.5px;color:var(--ink);line-height:1.6;min-height:44px}
+.composer-foot{display:flex;align-items:center;gap:12px;margin-top:10px}
+.cm-meta{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-mute)}
+.send-btn{margin-left:auto;background:var(--copper);color:var(--paper);border:none;border-radius:var(--r-sm);padding:8px 16px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px}
+.send-btn:hover{background:var(--copper-deep)}
+.ctx-ring{width:16px;height:16px;border-radius:50%;background:conic-gradient(var(--sage) 0 41%,var(--rule-2) 41% 100%)}
+
+/* ============ 右：来源栏（仅数据源） ============ */
+.col-right{background:var(--paper-tint);border-left:1px solid var(--rule);display:flex;flex-direction:column;overflow:hidden}
+.r-head{padding:18px 20px 12px;border-bottom:1px solid var(--rule)}
+.r-head .r-eb{font-family:var(--mono);font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--copper-deep);margin-bottom:3px}
+.r-head .r-title{font-family:var(--serif);font-size:17px;font-weight:500}
+.r-head .r-count{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--ink-mute);margin-top:4px}
+.r-note{margin:11px 16px 0;padding:8px 11px;font-family:var(--sans);font-size:11px;color:var(--ink-mute);line-height:1.5;background:var(--overlay);border-radius:var(--r-xs);border-left:2px solid var(--ink-faint)}
+.r-list{flex:1;overflow-y:auto;padding:10px 16px 18px}
+.source-item{background:var(--card);border:1px solid var(--rule);border-radius:var(--r-sm);padding:12px 13px;margin-bottom:10px;box-shadow:var(--shadow-sm);position:relative;cursor:pointer}
+.source-item:hover{border-color:var(--copper)}
+.source-item .si-no{position:absolute;top:10px;right:11px;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--ink-faint)}
+.si-src{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--copper-deep);font-weight:600;display:flex;align-items:center;gap:6px}
+.si-src .dot{width:7px;height:7px;border-radius:50%}
+.dot-search{background:#3b7ea1}.dot-rss{background:#7a5b9e}.dot-crawl{background:var(--amber)}
+.si-title{font-family:var(--serif);font-size:15px;font-weight:500;margin:4px 0 4px;line-height:1.3;color:var(--ink)}
+.si-sum{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.si-foot{margin-top:8px;font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--ink-mute);display:flex;gap:12px}
+
+/* ============ 报告弹窗 ============ */
+.modal-veil{position:fixed;inset:0;background:rgba(30,24,16,.5);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:200;padding:28px}
+.modal-veil.open{display:flex}
+.modal{background:var(--paper);border:1px solid var(--rule-2);border-radius:var(--r-lg);width:min(900px,100%);max-height:88vh;overflow:hidden;box-shadow:0 24px 70px rgba(30,24,16,.35);display:flex;flex-direction:column}
+.modal-head{padding:18px 26px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:14px;background:var(--paper-tint)}
+.modal-head h2{font-family:var(--serif);font-weight:500;font-size:22px;margin:0;letter-spacing:-.01em}
+.modal-head .m-eb{font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--copper-deep);font-weight:600}
+.modal-body{flex:1;overflow-y:auto;padding:28px 38px}
+.modal-foot{padding:12px 26px;border-top:1px solid var(--rule);display:flex;gap:10px;background:var(--paper-tint)}
+.modal-foot .btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:8px 15px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--rule-2);background:var(--card);color:var(--ink-soft)}
+.modal-foot .btn.primary{background:var(--copper);color:var(--paper);border-color:var(--copper)}
+
+.fade-up{animation:fu .4s cubic-bezier(.2,.7,.2,1) both}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--rule-2);border-radius:6px;border:2px solid var(--paper-tint)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 顶部 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">AI-<em>Insight</em></span>
+      <span class="vol">Vol. III · Working Draft · 02 JUL 2026</span>
+    </div>
+    <div class="status-cap"><span class="dot"></span> Drafting</div>
+    <button class="icon-btn" title="切换主题" style="margin-left:auto">◑</button>
+    <button class="icon-btn" title="导出">⤓</button>
+  </header>
+
+  <!-- 左：草稿目录 -->
+  <aside class="col-left">
+    <button class="new-btn">✎ New Draft</button>
+    <div class="draft-list">
+      <div class="dl-eb">Current Draft</div>
+      <div class="draft-item active">
+        <div class="di-title">光伏逆变器出口差额归因</div>
+        <div class="di-meta">02 JUL · 11:42 · 14 turns</div>
+        <span class="di-tag">Drafting</span>
+      </div>
+      <div class="dl-eb">Earlier Drafts</div>
+      <div class="draft-item">
+        <div class="di-title">欧盟碳关税对钢铝出口影响</div>
+        <div class="di-meta">28 JUN · 09:15 · 8 turns</div>
+      </div>
+      <div class="draft-item">
+        <div class="di-title">稀土价格与地缘事件相关性</div>
+        <div class="di-meta">25 JUN · 16:30 · 22 turns</div>
+        <span class="di-tag">Final</span>
+      </div>
+      <div class="draft-item">
+        <div class="di-title">东南亚跨境电商物流时效</div>
+        <div class="di-meta">21 JUN · 10:08 · 6 turns</div>
+      </div>
+      <div class="draft-item">
+        <div class="di-title">锂电池产能过剩预警模型</div>
+        <div class="di-meta">18 JUN · 14:22 · 19 turns</div>
+        <span class="di-tag">Final</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中：手稿 -->
+  <main class="col-mid">
+    <div class="masthead">
+      <div class="eb">Analysis Notebook</div>
+      <h1>光伏逆变器出口差额归因</h1>
+      <p class="lede">a working draft, written and revised in conversation. — 关于 6 月那 23% 缺口的拆解。</p>
+      <div class="rule-double"></div>
+    </div>
+
+    <div class="stream">
+
+      <!-- 用户提问 -->
+      <div class="turn user fade-up">
+        <div class="ink-card">
+          <div class="ic-eb">You — 11:42</div>
+          6 月欧洲海关的逆变器进口量和国内前五大厂商报关出口对不上，差额约 23%。查一下这个差额来自哪里——转口、口径，还是瞒报？
+        </div>
+      </div>
+
+      <!-- AI 回复：双栏 页边思考 + 正文 -->
+      <div class="turn fade-up">
+        <div class="ai-eb">Assistant</div>
+        <div class="ai-turn">
+          <!-- 页边思考（完整，需求2a） -->
+          <div class="margin-col">
+            <div class="marginalia" id="mg1">
+              <div class="m-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6a4 4 0 014 4v10l-4-3H9a4 4 0 01-4-4V7a4 4 0 014-4z"/></svg>
+                思考 · marginalia
+              </div>
+              23% 的差额不像是单一原因。先把来源穷举：转口贸易（荷/土中转，原产地规则差）、统计口径（HS 8504 整机 vs 拆分报关）、FOB/CIF 时点差、瞒报（最敏感）。<br><br>
+              策略：先证伪可量化的口径与转口，瞒报留最后用间接证据。需要 Eurostat 细项、转口国数据、厂商季报区域披露。
+              <div class="m-toggle" onclick="document.getElementById('mg1').classList.toggle('collapsed')">▾ hide</div>
+            </div>
+          </div>
+          <!-- 正文 -->
+          <div class="body-col">
+            <!-- 工具卡 -->
+            <div class="tool-card ok">
+              <div class="tc-head" onclick="this.parentElement.classList.toggle('open')">
+                <span class="tc-icon">🔍</span>
+                <span class="tc-name">SEARCH</span>
+                <span class="tc-args">eurostat inverter import 8504.50 2026 H1</span>
+                <span class="tc-badge ok">✓ 4.2s</span>
+              </div>
+              <div class="tc-body">命中 Eurostat Comext 4 条 HS 8504.50 细项，覆盖 2026 H1 欧盟 27 国进口。</div>
+            </div>
+            <div class="tool-card ok">
+              <div class="tc-head" onclick="this.parentElement.classList.toggle('open')">
+                <span class="tc-icon">📡</span>
+                <span class="tc-name">RSS</span>
+                <span class="tc-args">china customs exporter top5 inverter Q2</span>
+                <span class="tc-badge ok">✓ 2.8s</span>
+              </div>
+              <div class="tc-body">抓取前五大厂商 Q2 季报区域营收，已与报关口径对齐。</div>
+            </div>
+
+            <!-- markdown 正文（需求3） -->
+            <div class="prose">
+<p>23% 的差额不太可能由单一原因造成。我把它拆成三层，按<strong>可量化程度</strong>排序：</p>
+<h2>口径差异（约 9–11 个百分点）</h2>
+<p>欧盟海关按 <code>HS 8504.50</code> 整机归类，国内厂商报关时把逆变器与组件"拆分合并"申报。这是<em>技术性偏差</em>，几乎每季度都存在。</p>
+<blockquote>结构性差额，连续四季度稳定在 8–12% 区间，不构成瞒报证据。</blockquote>
+<h2>转口贸易（约 7–9 个百分点）</h2>
+<p>经荷兰鹿特丹、土耳其伊斯坦布尔中转的货量，在欧方记为"自原产地进口"，在中方记为"对荷/土出口"，解释了差额的另一半。</p>
+<h3>剩余约 3–5 个百分点</h3>
+<p>扣除上述两项后仍有 <strong>3–5pp</strong> 无法解释<sup class="cite">①</sup><sup class="cite">②</sup><sup class="cite">③</sup>，落在瞒报可疑区间，需发票流或电力并网数据作旁证。</p>
+            </div>
+
+            <!-- 报告卡片（需求5） -->
+            <div class="report-stub" onclick="openReport()">
+              <div class="rs-top"><span>Case Report · Draft</span><span>02 JUL · 11:58</span></div>
+              <div class="rs-body">
+                <h3>逆变器出口差额归因报告</h3>
+                <p class="rs-lede">把 23% 缺口拆解为口径、转口、瞒报三层，附证据链。</p>
+              </div>
+              <div class="rs-foot">
+                <span>3 sections</span><span>7 sources</span><span>1,840 words</span>
+                <span class="open-hint">在草稿内查阅 →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第二轮（持续对话，需求4） -->
+      <div class="turn user fade-up">
+        <div class="ink-card">
+          <div class="ic-eb">You — 11:59</div>
+          想进一步缩小"瞒报"那 3–5 个点的范围，建议补什么数据？越具体越好。
+        </div>
+      </div>
+
+      <div class="turn fade-up">
+        <div class="ai-eb">Assistant</div>
+        <div class="ai-turn">
+          <div class="margin-col">
+            <div class="marginalia collapsed" id="mg2" onclick="this.classList.toggle('collapsed')">
+              <div class="m-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6a4 4 0 014 4v10l-4-3H9a4 4 0 01-4-4V7a4 4 0 014-4z"/></svg>
+                思考 · marginalia
+              </div>
+              缩小瞒报区间要靠"物理侧"对账"票据侧"。电力并网数据是金标准——装了多少逆变器，电网最清楚；其次是港口吞吐。两者都能绕开报关单，形成三角验证。
+              <div class="m-toggle">▸ 展开</div>
+            </div>
+          </div>
+          <div class="body-col">
+            <div class="tool-card running">
+              <div class="tc-head">
+                <span class="tc-icon">🕸</span>
+                <span class="tc-name">CRAWL</span>
+                <span class="tc-args">entso-e transparency installed pv inverter capacity</span>
+                <span class="tc-badge running">◐ 6.1s</span>
+              </div>
+            </div>
+            <div class="prose">
+<p>建议从两条独立链路对账：</p>
+<ol>
+<li><strong>电力并网侧</strong>：ENTSO-E 透明度平台按国别光伏装机增量，是绕开海关的地面真值。</li>
+<li><strong>物流侧</strong>：鹿特丹、汉堡港集装箱吞吐与品名清单，还原实际到货量。</li>
+</ol>
+<p>两相交叉后，剩余不可解释部分即可视为瞒报的<strong>上限估计</strong>。</p>
+            </div>
+            <div class="writing"><span class="wd"></span> 正在落笔</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 浮动输入 -->
+    <div class="composer-wrap">
+      <div class="composer">
+        <textarea placeholder="续写这份草稿…   (⌘K 聚焦 · ⌘↵ 发送)"></textarea>
+        <div class="composer-foot">
+          <span class="ctx-ring" title="上下文 41%"></span>
+          <span class="cm-meta">Lens · Deep</span>
+          <span class="cm-meta">·</span>
+          <span class="cm-meta">Context 41%</span>
+          <button class="send-btn">Send ↵</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右：来源栏（仅数据源，需求7） -->
+  <aside class="col-right">
+    <div class="r-head">
+      <div class="r-eb">Sources</div>
+      <div class="r-title">来源条目</div>
+      <div class="r-count">7 items · 3 类来源</div>
+    </div>
+    <div class="r-note">本栏仅收录<b>数据源</b>条目。工具执行记录见正文工具卡。</div>
+    <div class="r-list">
+      <div class="source-item">
+        <span class="si-no">01</span>
+        <div class="si-src"><span class="dot dot-search"></span>SEARCH · Eurostat</div>
+        <div class="si-title">EU imports of static converters, H1 2026</div>
+        <div class="si-sum">按成员国与月份拆分的进口金额、数量与原产地，覆盖 27 国。已提取意、德、荷三国。</div>
+        <div class="si-foot"><span>2026-07-02</span><span>eurostat.ec.europa.eu</span></div>
+      </div>
+      <div class="source-item">
+        <span class="si-no">02</span>
+        <div class="si-src"><span class="dot dot-rss"></span>RSS · 中国海关总署</div>
+        <div class="si-title">6 月重点商品出口量值表</div>
+        <div class="si-sum">逆变器(8504)类目前五大厂商报关汇总，按目的国口径统计。</div>
+        <div class="si-foot"><span>2026-06-30</span><span>customs.gov.cn</span></div>
+      </div>
+      <div class="source-item">
+        <span class="si-no">03</span>
+        <div class="si-src"><span class="dot dot-crawl"></span>CRAWL · Dutch Customs</div>
+        <div class="si-title">Rotterdam transit & re-export Q2</div>
+        <div class="si-sum">鹿特丹港 Q2 中转与转口统计，含原产地变更记录。</div>
+        <div class="si-foot"><span>2026-07-01</span><span>douane.nl</span></div>
+      </div>
+      <div class="source-item">
+        <span class="si-no">04</span>
+        <div class="si-src"><span class="dot dot-crawl"></span>CRAWL · TurkStat</div>
+        <div class="si-title">Türkiye transit trade, electrical machinery</div>
+        <div class="si-sum">土耳其统计署电气机械类转口数据，伊斯坦布尔枢纽 +34%。</div>
+        <div class="si-foot"><span>2026-06-28</span><span>turkstat.gov.tr</span></div>
+      </div>
+      <div class="source-item">
+        <span class="si-no">05</span>
+        <div class="si-src"><span class="dot dot-rss"></span>RSS · 阳光电源 IR</div>
+        <div class="si-title">Sungrow Q2 2026 earnings disclosure</div>
+        <div class="si-sum">季报披露对欧洲区域营收与出货量，含逆变器与储能拆分。</div>
+        <div class="si-foot"><span>2026-06-25</span><span>sungrowpower.com</span></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- 报告弹窗 -->
+<div class="modal-veil" id="reportModal" onclick="if(event.target===this)closeReport()">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="m-eb">Case Report · Draft</div>
+        <h2>逆变器出口差额归因报告</h2>
+      </div>
+      <button class="icon-btn" style="margin-left:auto" onclick="closeReport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="prose">
+<h1>逆变器出口差额归因：23% 缺口的拆解</h1>
+<p><em>审查备忘录 · 机密 · 02 JUL 2026</em></p>
+<h2>摘要</h2>
+<p>2026 年 6 月，欧盟海关公布的逆变器进口量与国内前五大厂商报关出口额出现 <strong>约 23 个百分点</strong>的背离。本备忘录将该缺口拆解为三层，并逐层附证据。</p>
+<h2>一、统计口径差异（9–11 pp）</h2>
+<p>欧方按 <code>HS 8504.50</code> 整机归类，中方报关存在整机与组件拆分合并申报。此为<em>结构性技术偏差</em>，连续四季度稳定在 8–12% 区间。</p>
+<h2>二、转口贸易（7–9 pp）</h2>
+<p>经鹿特丹、伊斯坦布尔中转的货量，在双方统计中归属不同。荷兰 Q2 转口同比 +18%，土耳其 +34%。</p>
+<h2>三、剩余可疑区间（3–5 pp）</h2>
+<p>扣除前两项后仍有 <strong>3–5 个百分点</strong>无法用技术与转口解释，落在瞒报可疑区间。建议以电力并网数据与港口吞吐进行三角对账，逼近上限估计。</p>
+<blockquote>结论不构成对任何主体的指控。瞒报判定需发票流或电网侧旁证，本案仅提供差额归因框架。</blockquote>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeReport()">关闭</button>
+      <button class="btn">下载 HTML</button>
+      <button class="btn primary" style="margin-left:auto">下载 PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openReport(){document.getElementById('reportModal').classList.add('open')}
+function closeReport(){document.getElementById('reportModal').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReport()})
+</script>
+</body>
+</html>

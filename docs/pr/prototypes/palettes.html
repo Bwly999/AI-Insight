@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI-Insight · 4 版配色快速选</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#ededf2;font-family:Inter,system-ui,-apple-system,sans-serif;color:#111;padding:40px 24px 64px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1320px;margin:0 auto}
+.head{margin-bottom:30px}
+.head .eb{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#6b7280}
+.head h1{font-size:26px;font-weight:700;margin:8px 0 6px;letter-spacing:-.01em}
+.head p{color:#4b5563;font-size:14.5px;max-width:72ch;line-height:1.6}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+.panel{border-radius:18px;overflow:hidden;border:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column}
+.panel-head{padding:18px 20px 14px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.panel-head .pname{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.panel-head .pdesc{font-size:12.5px;opacity:.7;font-weight:500}
+.mood{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:5px;font-weight:600}
+
+/* ===== mini app window inside each panel ===== */
+.win{margin:0 18px 0;border-radius:12px;overflow:hidden;border:1px solid var(--c-border)}
+.win-bar{height:34px;display:flex;align-items:center;gap:8px;padding:0 13px;border-bottom:1px solid var(--c-border)}
+.win-bar .wdot{width:9px;height:9px;border-radius:50%;background:var(--c-border)}
+.win-bar .wtitle{font-size:11px;font-weight:600;opacity:.65;margin-left:4px}
+.win-body{padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+
+.msg-user{align-self:flex-end;max-width:78%;padding:9px 13px;border-radius:12px 12px 4px 12px;font-size:13px;line-height:1.55;font-weight:500}
+.msg-ai{display:flex;gap:9px;align-items:flex-start}
+.ai-ava{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;background:var(--c-accent)}
+.ai-bubble{flex:1;font-size:13px;line-height:1.6}
+.ai-bubble b{font-weight:600}
+.ai-bubble code{font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:1px 5px;border-radius:4px}
+
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;letter-spacing:.03em}
+.btn{font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--c-border);color:var(--c-text)}
+
+/* status dot colors shared */
+.dot-ok{background:var(--c-green)}
+.dot-run{background:var(--c-amber)}
+
+/* ===== swatch row ===== */
+.swatches{display:flex;gap:0;margin:16px 18px 20px;border-radius:9px;overflow:hidden;border:1px solid rgba(0,0,0,.06)}
+.sw{flex:1;height:46px;display:flex;align-items:flex-end;justify-content:center;padding:0 0 5px}
+.sw span{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:.02em}
+
+/* =========================================================
+   V1 · Cool Blue  (参考图同款)
+   浅蓝底 + 白卡 + 活力蓝 + 绿状态。干净、冷调、专业 SaaS。
+   ========================================================= */
+[data-v="1"]{background:#F0F4FF;color:#1A2233}
+[data-v="1"] .panel-head{color:#1A2233}
+[data-v="1"] .mood{background:#4F7DF3;color:#fff}
+[data-v="1"]{--c-accent:#4F7DF3;--c-accent-soft:#E2EBFE;--c-bg:#F0F4FF;--c-card:#fff;--c-border:#E0E7F5;--c-text:#1A2233;--c-text-2:#5B6478;--c-green:#16A34A;--c-amber:#E8920C}
+[data-v="1"] .win{background:#fff}
+[data-v="1"] .win-bar{background:#F7F9FF}
+[data-v="1"] .msg-user{background:#4F7DF3;color:#fff}
+[data-v="1"] .ai-bubble{color:#2A3445}
+[data-v="1"] .ai-bubble code{background:#E2EBFE;color:#2750CC}
+[data-v="1"] .chip{background:#E2EBFE;color:#2750CC}
+[data-v="1"] .btn{background:#4F7DF3}
+[data-v="1"] .sw:nth-child(1){background:#F0F4FF} [data-v="1"] .sw:nth-child(1) span{color:#5B6478}
+[data-v="1"] .sw:nth-child(2){background:#fff} [data-v="1"] .sw:nth-child(2) span{color:#5B6478}
+[data-v="1"] .sw:nth-child(3){background:#4F7DF3} [data-v="1"] .sw:nth-child(3) span{color:#fff}
+[data-v="1"] .sw:nth-child(4){background:#16A34A} [data-v="1"] .sw:nth-child(4) span{color:#fff}
+[data-v="1"] .sw:nth-child(5){background:#1A2233} [data-v="1"] .sw:nth-child(5) span{color:#fff}
+
+/* =========================================================
+   V2 · Slate + Indigo  (精致中性光)
+   暖白 + 锌灰 + 靛蓝。比纯蓝更克制高级，类 Linear/Notion。
+   ========================================================= */
+[data-v="2"]{background:#FAFAFB;color:#18181B}
+[data-v="2"] .panel-head{color:#18181B}
+[data-v="2"] .mood{background:#4F46E5;color:#fff}
+[data-v="2"]{--c-accent:#4F46E5;--c-accent-soft:#EEF0FC;--c-bg:#FAFAFB;--c-card:#fff;--c-border:#E7E7EA;--c-text:#18181B;--c-text-2:#71717A;--c-green:#10B981;--c-amber:#F59E0B}
+[data-v="2"] .win{background:#fff}
+[data-v="2"] .win-bar{background:#FAFAFB}
+[data-v="2"] .msg-user{background:#18181B;color:#FAFAFB}
+[data-v="2"] .ai-bubble{color:#27272A}
+[data-v="2"] .ai-bubble code{background:#EEF0FC;color:#4338CA}
+[data-v="2"] .chip{background:#F4F4F5;color:#52525B}
+[data-v="2"] .btn{background:#4F46E5}
+[data-v="2"] .sw:nth-child(1){background:#FAFAFB} [data-v="2"] .sw:nth-child(1) span{color:#71717A}
+[data-v="2"] .sw:nth-child(2){background:#fff} [data-v="2"] .sw:nth-child(2) span{color:#71717A}
+[data-v="2"] .sw:nth-child(3){background:#4F46E5} [data-v="2"] .sw:nth-child(3) span{color:#fff}
+[data-v="2"] .sw:nth-child(4){background:#10B981} [data-v="2"] .sw:nth-child(4) span{color:#fff}
+[data-v="2"] .sw:nth-child(5){background:#18181B} [data-v="2"] .sw:nth-child(5) span{color:#fff}
+
+/* =========================================================
+   V3 · Modern Dark  (精致暗色)
+   近黑炭灰 + 靛蓝高亮。类 Vercel/Linear dark，替代原来的浑浊棕。
+   ========================================================= */
+[data-v="3"]{background:#0E0F13;color:#E5E7EB}
+[data-v="3"] .panel-head{color:#F3F4F6}
+[data-v="3"] .mood{background:#6366F1;color:#fff}
+[data-v="3"]{--c-accent:#6366F1;--c-accent-soft:rgba(99,102,241,.16);--c-bg:#0E0F13;--c-card:#16171D;--c-border:#262830;--c-text:#E5E7EB;--c-text-2:#9CA3AF;--c-green:#34D399;--c-amber:#FBBF24}
+[data-v="3"] .win{background:#16171D}
+[data-v="3"] .win-bar{background:#1A1C22}
+[data-v="3"] .win-bar .wdot{background:#363841}
+[data-v="3"] .msg-user{background:#6366F1;color:#fff}
+[data-v="3"] .ai-bubble{color:#D1D5DB}
+[data-v="3"] .ai-bubble code{background:rgba(99,102,241,.16);color:#A5B4FC}
+[data-v="3"] .chip{background:rgba(99,102,241,.16);color:#A5B4FC}
+[data-v="3"] .btn{background:#6366F1}
+[data-v="3"] .btn-ghost{border-color:#363841;color:#9CA3AF}
+[data-v="3"] .sw:nth-child(1){background:#0E0F13} [data-v="3"] .sw:nth-child(1) span{color:#9CA3AF}
+[data-v="3"] .sw:nth-child(2){background:#16171D} [data-v="3"] .sw:nth-child(2) span{color:#9CA3AF}
+[data-v="3"] .sw:nth-child(3){background:#6366F1} [data-v="3"] .sw:nth-child(3) span{color:#fff}
+[data-v="3"] .sw:nth-child(4){background:#34D399} [data-v="3"] .sw:nth-child(4) span{color:#06281D}
+[data-v="3"] .sw:nth-child(5){background:#E5E7EB} [data-v="3"] .sw:nth-child(5) span{color:#18181B}
+
+/* =========================================================
+   V4 · Sage Calm  (柔和绿调光)
+   极浅绿底 + 白卡 + 深翠强调。柔和不刺眼，独特但不主题化。
+   ========================================================= */
+[data-v="4"]{background:#F2F6F1;color:#1C2A22}
+[data-v="4"] .panel-head{color:#1C2A22}
+[data-v="4"] .mood{background:#2F855A;color:#fff}
+[data-v="4"]{--c-accent:#2F855A;--c-accent-soft:#E1EFE5;--c-bg:#F2F6F1;--c-card:#fff;--c-border:#DDE7DC;--c-text:#1C2A22;--c-text-2:#5C6B62;--c-green:#2F855A;--c-amber:#C4870E}
+[data-v="4"] .win{background:#fff}
+[data-v="4"] .win-bar{background:#F7FAF6}
+[data-v="4"] .msg-user{background:#1C2A22;color:#F2F6F1}
+[data-v="4"] .ai-bubble{color:#2B3A30}
+[data-v="4"] .ai-bubble code{background:#E1EFE5;color:#235944}
+[data-v="4"] .chip{background:#E1EFE5;color:#235944}
+[data-v="4"] .btn{background:#2F855A}
+[data-v="4"] .sw:nth-child(1){background:#F2F6F1} [data-v="4"] .sw:nth-child(1) span{color:#5C6B62}
+[data-v="4"] .sw:nth-child(2){background:#fff} [data-v="4"] .sw:nth-child(2) span{color:#5C6B62}
+[data-v="4"] .sw:nth-child(3){background:#2F855A} [data-v="4"] .sw:nth-child(3) span{color:#fff}
+[data-v="4"] .sw:nth-child(4){background:#C4870E} [data-v="4"] .sw:nth-child(4) span{color:#fff}
+[data-v="4"] .sw:nth-child(5){background:#1C2A22} [data-v="4"] .sw:nth-child(5) span{color:#fff}
+
+.legend{margin-top:14px;font-size:12.5px;color:#6b7280;line-height:1.7}
+.legend b{color:#111}
+.pick-hint{margin-top:32px;padding:14px 18px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;color:#374151;line-height:1.6}
+.pick-hint b{color:#111}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="eb">Color Palette · 4 Options</div>
+    <h1>挑一个顺眼的配色</h1>
+    <p>四个方向都做了真实小组件渲染（用户气泡 / AI 回复 / 标签 / 按钮），不只是色块。<b>V1 就是你给的参考图同款冷蓝</b>。底部色条标了 hex。选定编号即可，我再据此重做完整 UI。</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== V1 Cool Blue ===== -->
+    <div class="panel" data-v="1">
+      <div class="panel-head">
+        <div><div class="pname">V1 · Cool Blue</div><div class="pdesc">参考图同款 · 冷调专业 SaaS</div></div>
+        <span class="mood">Light · Cool</span>
+      </div>
+      <div class="win">
+        <div class="win-bar"><span class="wdot"></span><span class="wdot"></span><span class="wdot"></span><span class="wtitle">光伏差额归因</span></div>
+        <div class="win-body">
+          <div class="msg-user">6 月欧洲海关数据和厂商报关差了 23%，查下来源？</div>
+          <div class="msg-ai">
+            <div class="ai-ava">AI</div>
+            <div class="ai-bubble">23% 缺口拆三层：口径 <code>9–11pp</code>、转口 <b>7–9pp</b>、剩余可疑 3–5pp。</div>
+          </div>
+          <div class="row">
+            <span class="chip"><span class="dot dot-ok" style="display:inline-block;width:6px;height:6px;border-radius:50%;vertical-align:middle;margin-right:4px"></span>SEARCH · OK</span>
+            <button class="btn">查看报告</button>
+            <button class="btn btn-ghost">追问</button>
+          </div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="sw"><span>#F0F4FF</span></div>
+        <div class="sw"><span>#FFFFFF</span></div>
+        <div class="sw"><span>#4F7DF3</span></div>
+        <div class="sw"><span>#16A34A</span></div>
+        <div class="sw"><span>#1A2233</span></div>
+      </div>
+    </div>
+
+    <!-- ===== V2 Slate + Indigo ===== -->
+    <div class="panel" data-v="2">
+      <div class="panel-head">
+        <div><div class="pname">V2 · Slate + Indigo</div><div class="pdesc">精致中性 · 类 Linear / Notion</div></div>
+        <span class="mood">Light · Neutral</span>
+      </div>
+      <div class="win">
+        <div class="win-bar"><span class="wdot"></span><span class="wdot"></span><span class="wdot"></span><span class="wtitle">光伏差额归因</span></div>
+        <div class="win-body">
+          <div class="msg-user">6 月欧洲海关数据和厂商报关差了 23%，查下来源？</div>
+          <div class="msg-ai">
+            <div class="ai-ava">AI</div>
+            <div class="ai-bubble">23% 缺口拆三层：口径 <code>9–11pp</code>、转口 <b>7–9pp</b>、剩余可疑 3–5pp。</div>
+          </div>
+          <div class="row">
+            <span class="chip"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--c-green);vertical-align:middle;margin-right:4px"></span>SEARCH · OK</span>
+            <button class="btn">查看报告</button>
+            <button class="btn btn-ghost">追问</button>
+          </div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="sw"><span>#FAFAFB</span></div>
+        <div class="sw"><span>#FFFFFF</span></div>
+        <div class="sw"><span>#4F46E5</span></div>
+        <div class="sw"><span>#10B981</span></div>
+        <div class="sw"><span>#18181B</span></div>
+      </div>
+    </div>
+
+    <!-- ===== V3 Modern Dark ===== -->
+    <div class="panel" data-v="3">
+      <div class="panel-head">
+        <div><div class="pname">V3 · Modern Dark</div><div class="pdesc">精致暗色 · 类 Vercel / Linear dark</div></div>
+        <span class="mood">Dark · Indigo</span>
+      </div>
+      <div class="win">
+        <div class="win-bar"><span class="wdot"></span><span class="wdot"></span><span class="wdot"></span><span class="wtitle">光伏差额归因</span></div>
+        <div class="win-body">
+          <div class="msg-user">6 月欧洲海关数据和厂商报关差了 23%，查下来源？</div>
+          <div class="msg-ai">
+            <div class="ai-ava">AI</div>
+            <div class="ai-bubble">23% 缺口拆三层：口径 <code>9–11pp</code>、转口 <b>7–9pp</b>、剩余可疑 3–5pp。</div>
+          </div>
+          <div class="row">
+            <span class="chip"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--c-green);vertical-align:middle;margin-right:4px"></span>SEARCH · OK</span>
+            <button class="btn">查看报告</button>
+            <button class="btn btn-ghost">追问</button>
+          </div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="sw"><span>#0E0F13</span></div>
+        <div class="sw"><span>#16171D</span></div>
+        <div class="sw"><span>#6366F1</span></div>
+        <div class="sw"><span>#34D399</span></div>
+        <div class="sw"><span>#E5E7EB</span></div>
+      </div>
+    </div>
+
+    <!-- ===== V4 Sage Calm ===== -->
+    <div class="panel" data-v="4">
+      <div class="panel-head">
+        <div><div class="pname">V4 · Sage Calm</div><div class="pdesc">柔和绿调 · 沉静不刺眼</div></div>
+        <span class="mood">Light · Sage</span>
+      </div>
+      <div class="win">
+        <div class="win-bar"><span class="wdot"></span><span class="wdot"></span><span class="wdot"></span><span class="wtitle">光伏差额归因</span></div>
+        <div class="win-body">
+          <div class="msg-user">6 月欧洲海关数据和厂商报关差了 23%，查下来源？</div>
+          <div class="msg-ai">
+            <div class="ai-ava">AI</div>
+            <div class="ai-bubble">23% 缺口拆三层：口径 <code>9–11pp</code>、转口 <b>7–9pp</b>、剩余可疑 3–5pp。</div>
+          </div>
+          <div class="row">
+            <span class="chip"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--c-green);vertical-align:middle;margin-right:4px"></span>SEARCH · OK</span>
+            <button class="btn">查看报告</button>
+            <button class="btn btn-ghost">追问</button>
+          </div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="sw"><span>#F2F6F1</span></div>
+        <div class="sw"><span>#FFFFFF</span></div>
+        <div class="sw"><span>#2F855A</span></div>
+        <div class="sw"><span>#C4870E</span></div>
+        <div class="sw"><span>#1C2A22</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    每个色条从左到右：<b>背景 / 卡片 / 强调色 / 状态色 / 主文字</b>。四版都可独立切换亮/暗，这里先给你最顺眼的主基调。
+  </div>
+  <div class="pick-hint">
+    👉 <b>告诉我编号（V1/V2/V3/V4）</b>，或指出"喜欢某版的 X、但想要 Y"。也可以说"再来几版"——比如想要更暖、或别的强调色方向。
+  </div>
+</div>
+</body>
+</html>

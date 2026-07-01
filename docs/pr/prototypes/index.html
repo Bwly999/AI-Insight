@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI-Insight · Web UI 原型三选一</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1a1714; --bg2:#232019; --ink:#ece4d2; --ink2:#b8ad95; --ink3:#857b66; --ink4:#5d5544;
+  --brass:#c89a3c; --brass2:#e8c068; --rule:rgba(236,228,210,.12); --rule2:rgba(236,228,210,.22);
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.65;padding:48px 32px 80px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto}
+header{margin-bottom:44px;border-bottom:1px solid var(--rule2);padding-bottom:28px}
+header .eb{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--brass2)}
+header h1{font-family:'Fraunces',serif;font-weight:500;font-size:38px;margin:10px 0 8px;letter-spacing:-.015em}
+header p{color:var(--ink2);font-family:'Fraunces',serif;font-style:italic;font-size:16px;max-width:70ch}
+.picker-note{
+  margin-top:18px;padding:13px 18px;background:var(--bg2);border:1px solid var(--rule2);border-radius:10px;
+  font-size:13.5px;color:var(--ink2);border-left:3px solid var(--brass);
+}
+.picker-note b{color:var(--brass2)}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:8px}
+@media(max-width:980px){.grid{grid-template-columns:1fr}}
+.card{
+  background:var(--bg2);border:1px solid var(--rule2);border-radius:14px;overflow:hidden;
+  display:flex;flex-direction:column;transition:transform .2s,border-color .2s;
+}
+.card:hover{transform:translateY(-3px);border-color:var(--brass)}
+.card .swatch-strip{height:8px;display:flex}
+.card .body{padding:22px 22px 20px;flex:1;display:flex;flex-direction:column}
+.card .tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.card h2{font-family:'Fraunces',serif;font-weight:500;font-size:25px;margin-bottom:4px;letter-spacing:-.01em}
+.card .tagline{font-family:'Fraunces',serif;font-style:italic;font-size:14px;color:var(--ink2);margin-bottom:16px}
+.card .label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3);margin:14px 0 5px}
+.card .palette{display:flex;gap:5px}
+.swatch{flex:1;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.25)}
+.card .fonts{font-size:12px;color:var(--ink2);line-height:1.7}
+.card .fonts span{display:block}
+.card .fonts b{color:var(--ink);font-weight:500}
+.card .signature{font-size:13px;color:var(--ink2);line-height:1.65}
+.card .signature b{color:var(--brass2)}
+.meta-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;padding:3px 7px;border-radius:4px;background:rgba(236,228,210,.07);color:var(--ink2)}
+.open-btn{
+  margin-top:18px;padding:11px;text-align:center;background:var(--brass);color:#2a2018;border:none;border-radius:8px;
+  font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.02em;
+  text-decoration:none;display:block;
+}
+.open-btn:hover{background:var(--brass2)}
+
+/* shared needs section */
+.needs{margin-top:56px;border-top:1px solid var(--rule2);padding-top:32px}
+.needs h3{font-family:'Fraunces',serif;font-weight:500;font-size:22px;margin-bottom:6px}
+.needs>p{color:var(--ink2);margin-bottom:18px;font-family:'Fraunces',serif;font-style:italic}
+.need-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(max-width:760px){.need-grid{grid-template-columns:1fr}}
+.need{padding:14px 17px;background:var(--bg2);border:1px solid var(--rule);border-radius:9px}
+.need .n-no{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--brass2);letter-spacing:.2em}
+.need .n-title{font-weight:600;font-size:13.5px;margin:3px 0 5px}
+.need .n-desc{font-size:12.5px;color:var(--ink2);line-height:1.55}
+
+/* per-proto swatch colors */
+.s-dossier .s1{background:#ece3cf}.s-dossier .s2{background:#221d14}.s-dossier .s3{background:#a92a1e}.s-dossier .s4{background:#4f6b3a}
+.s-margin .s1{background:#fbf7ef}.s-margin .s2{background:#b4623c}.s-margin .s3{background:#23201a}.s-margin .s4{background:#5f7a57}
+.s-loom .s1{background:#2a201a}.s-loom .s2{background:#e8dcc0}.s-loom .s3{background:#c89a3c}.s-loom .s4{background:#5b9b8f}
+
+footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink3);font-family:'JetBrains Mono',monospace;letter-spacing:.05em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eb">AI-Insight · Web Redesign · Prototypes</div>
+    <h1>三个原型，请挑一个</h1>
+    <p>针对你提的 7 个问题，我设计了三个视觉方向完全不同的原型。它们都满足需求 2–7（完整思考块、对话内 markdown、持续对话、报告弹窗、回看全要素、右侧仅数据源），区别只在<strong style="font-style:normal;color:var(--brass2)">"长得像什么"</strong>。</p>
+    <div class="picker-note">⤵ <b>用法</b>：点每个卡片下方的按钮在新标签打开原型（可直接交互：折叠思考、点工具卡、开报告弹窗、hover 引用标记）。挑好后告诉我编号即可。</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- A · Dossier -->
+    <div class="card">
+      <div class="swatch-strip s-dossier"><div class="swatch s1"></div><div class="swatch s2"></div><div class="swatch s3"></div><div class="swatch s4"></div></div>
+      <div class="body">
+        <div class="tag">A · Prototype 01</div>
+        <h2>Dossier</h2>
+        <div class="tagline">情报卷宗 · 一份被反复审阅的档案</div>
+        <div class="label">Concept</div>
+        <div class="signature">manila 牛皮纸档案袋 + 打字机正文 + 印章红。把"思考被截断"这个 bug 反转成签名——思考块渲染成档案室的<b>涂黑条 (redaction bars)</b>，折叠时是审查痕迹，展开是审查员旁批。</div>
+        <div class="label">Palette</div>
+        <div class="palette"><div class="swatch s1" style="background:#ece3cf"></div><div class="swatch s2" style="background:#221d14"></div><div class="swatch s3" style="background:#a92a1e"></div><div class="swatch s4" style="background:#4f6b3a"></div></div>
+        <div class="label">Type</div>
+        <div class="fonts"><span><b>JetBrains Mono</b> — 正文（反默认：mono 当正文）</span><span><b>Newsreader</b> — 衬线标题</span><span><b>IBM Plex Sans</b> — 工具标签</span></div>
+        <div class="label">Signature</div>
+        <div class="signature">涂黑条思考 + 装订孔 + 复印噪点。<b>最反默认</b>，气质冷峻、专业、像情报机构内部工具。</div>
+        <div class="meta-row"><span class="chip">Light</span><span class="chip">Mono-led</span><span class="chip">克制红</span><span class="chip">高信息密度</span></div>
+        <a class="open-btn" href="dossier.html" target="_blank">打开 Dossier 原型 →</a>
+      </div>
+    </div>
+
+    <!-- B · Margin -->
+    <div class="card">
+      <div class="swatch-strip s-margin"><div class="swatch s1"></div><div class="swatch s2"></div><div class="swatch s3"></div><div class="swatch s4"></div></div>
+      <div class="body">
+        <div class="tag">B · Prototype 02</div>
+        <h2>Margin</h2>
+        <div class="tagline">手稿页边 · 一份边写边改的工作草稿</div>
+        <div class="label">Concept</div>
+        <div class="signature">暖白纸 + 衬线主导 + 一抹铜。AI 正文是排好的手稿，它的思考是<b>批在页边的钢笔旁注 (marginalia)</b>——用位置而非样式区分思考与结论。最贴近你给的参考项目，但比它更文学（衬线主导正文）。</div>
+        <div class="label">Palette</div>
+        <div class="palette"><div class="swatch s1" style="background:#fbf7ef"></div><div class="swatch s2" style="background:#b4623c"></div><div class="swatch s3" style="background:#23201a"></div><div class="swatch s4" style="background:#5f7a57"></div></div>
+        <div class="label">Type</div>
+        <div class="fonts"><span><b>Fraunces</b> — 衬线主导正文（比参考更文学）</span><span><b>Plus Jakarta Sans</b> — 人文 sans</span><span><b>JetBrains Mono</b> — 工艺标签</span></div>
+        <div class="label">Signature</div>
+        <div class="signature">页边思考 + 铜发丝线 + 纸张颗粒。<b>最温和、最易读</b>，气质像一本精致的研究笔记，适合长时间阅读分析。</div>
+        <div class="meta-row"><span class="chip">Light</span><span class="chip">Serif-led</span><span class="chip">铜色</span><span class="chip">文档隐喻</span></div>
+        <a class="open-btn" href="margin.html" target="_blank">打开 Margin 原型 →</a>
+      </div>
+    </div>
+
+    <!-- C · Loom -->
+    <div class="card">
+      <div class="swatch-strip s-loom"><div class="swatch s1"></div><div class="swatch s2"></div><div class="swatch s3"></div><div class="swatch s4"></div></div>
+      <div class="body">
+        <div class="tag">C · Prototype 03</div>
+        <h2>Loom</h2>
+        <div class="tagline">线索工坊 · 一面钉满证据的工作台</div>
+        <div class="label">Concept</div>
+        <div class="signature">暖暗胡桃工作台 + 牛皮纸便签 + 黄铜丝。数据源是钉在板上的便签，结论被<b>黄铜活线 (brass threads)</b>牵引出来——正文里的引用标记 hover 会高亮右侧对应证据。<b>把需求 7（右侧仅数据源）升级成核心视觉装置。</b></div>
+        <div class="label">Palette</div>
+        <div class="palette"><div class="swatch s1" style="background:#2a201a"></div><div class="swatch s2" style="background:#e8dcc0"></div><div class="swatch s3" style="background:#c89a3c"></div><div class="swatch s4" style="background:#5b9b8f"></div></div>
+        <div class="label">Type</div>
+        <div class="fonts"><span><b>Fraunces</b> — 衬线标题</span><span><b>IBM Plex Sans</b> — 正文</span><span><b>IBM Plex Mono</b> — 工艺标签</span></div>
+        <div class="label">Signature</div>
+        <div class="signature">黄铜活线 + 木纹 + 图钉便签。<b>最独特、最大胆</b>，气质像调查记者的证据墙，把"可追溯性"做成视觉主角。暖暗色不刺眼。</div>
+        <div class="meta-row"><span class="chip">Dark-warm</span><span class="chip">证据隐喻</span><span class="chip">黄铜</span><span class="chip">可追溯</span></div>
+        <a class="open-btn" href="loom.html" target="_blank">打开 Loom 原型 →</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 三者都解决了的需求 -->
+  <section class="needs">
+    <h3>三者都已落实的需求 2–7</h3>
+    <p>以下不是"哪个原型有"，而是三个都做了——你选哪个都会拿到这些。</p>
+    <div class="need-grid">
+      <div class="need"><div class="n-no">02 · 思考块完整</div><div class="n-title">不再截断到 220 字</div><div class="n-desc">思考块完整展示，默认可折叠/展开。Dossier 用涂黑条、Margin 用页边批注、Loom 用卷轴装置——各自有签名性的折叠形态，而非简单收起。</div></div>
+      <div class="need"><div class="n-no">03 · Markdown 渲染</div><div class="n-title">对话流内全程 markdown</div><div class="n-desc">标题/加粗/列表/表格/代码/引用块/链接全部渲染，流式与历史统一（修复当前"流式纯文本、历史 markdown"的不一致）。</div></div>
+      <div class="need"><div class="n-no">04 · 持续对话</div><div class="n-title">左侧会话列表 + 跨轮保留</div><div class="n-desc">左侧"卷宗/草稿/线索"列表可切换历史会话；新对话不会清空旧的。原型展示了多轮追问的完整记录。</div></div>
+      <div class="need"><div class="n-no">05 · 报告弹窗</div><div class="n-title">不再跳转页面</div><div class="n-desc">点击报告卡片在本页弹出 modal（带 ESC 关闭、点遮罩关闭），不再 router.push 到独立路由，避免页面切换。</div></div>
+      <div class="need"><div class="n-no">06 · 回看全要素</div><div class="n-title">思考/工具/正文都保留</div><div class="n-desc">原型第一轮 AI 回复里就完整保留了思考、两个工具调用、markdown 正文——证明回看时不会只剩最后一段文字。（注：彻底修复需后端 executor 持久化 thinking/tool_result 消息，原型已为这些预留了渲染位。）</div></div>
+      <div class="need"><div class="n-no">07 · 右侧仅数据源</div><div class="n-title">工具调用移出右栏</div><div class="n-desc">右侧只放数据源条目（带来源类型 dot、标题、摘要、日期、域名），工具调用记录移到正文的工具卡里。Loom 更进一步用引用标记把正文结论和右侧证据一一对应。</div></div>
+    </div>
+  </section>
+
+  <footer>
+    prototypes/ · dossier.html · margin.html · loom.html &nbsp;|&nbsp; 三选一后，我会基于选中方向落地到 apps/web 真实代码
+  </footer>
+</div>
+</body>
+</html>

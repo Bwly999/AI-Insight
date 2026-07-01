@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="zh-CN" data-proto="loom">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Loom · 原型 C — 线索工坊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   LOOM · 线索工坊
+   thesis: 一张展开在工作台上的证据墙。数据源是钉在软木板上的便签，
+           结论是被黄铜丝牵引出来的 —— 物理地呈现"证据如何支撑结论"。
+   palette: 暖暗胡桃工作台 + 牛皮纸便签 + 黄铜丝 + 旧地图青绿
+   type: Fraunces 衬线标题 · Plex Sans 正文 · Plex Mono 工艺标签
+   signature: 黄铜活线 (brass threads) —— 每个结论旁的引用标记[①]与右侧
+              证据便签之间，用一条发光的黄铜丝相连，hover 时高亮其证据链。
+   ============================================================ */
+:root{
+  /* 暖暗胡桃工作台（不是近黑，是带红棕的暖暗） */
+  --bench:      #2a201a;            /* 主背景，胡桃木暗调 */
+  --bench-2:    #332720;            /* 略亮分区 */
+  --bench-3:    #3d2f25;            /* 卡片底/抬头 */
+  --plank:      #241b15;            /* 更暗的板 */
+
+  /* 牛皮纸便签（在暗底上浮起的暖纸） */
+  --kraft:      #e8dcc0;            /* 牛皮纸主色 */
+  --kraft-2:    #ddd0b0;            /* 略深 */
+  --kraft-edge: #b8a888;
+
+  /* 墨与铜 */
+  --ink:        #f0e7d2;            /* 暗底上的"墨"= 暖白 */
+  --ink-2:      #c9bda3;
+  --ink-3:      #948871;
+  --ink-4:      #6b6151;
+  /* 牛皮纸上的深墨 */
+  --pin-ink:    #2a2018;
+  --pin-ink-2:  #4a3e2e;
+
+  /* 黄铜（主角） */
+  --brass:      #c89a3c;
+  --brass-bright:#e8c068;
+  --brass-deep: #8a6a22;
+  --brass-glow: rgba(200,154,60,.18);
+
+  /* 旧地图青绿（辅助强调，呼应"制图"） */
+  --teal:       #5b9b8f;
+  --teal-soft:  rgba(91,155,143,.16);
+  /* 状态 */
+  --ok:         #7ba85a;
+  --warn:       #d4a23e;
+  --clay:       #c46a52;
+
+  --rule:       rgba(232,220,192,.10);
+  --rule-2:     rgba(232,220,192,.18);
+
+  --serif:'Fraunces','Source Han Serif SC','Songti SC',serif;
+  --sans: 'IBM Plex Sans','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  --mono: 'IBM Plex Mono',ui-monospace,monospace;
+
+  --r-xs:3px; --r-sm:5px; --r-md:9px; --r-lg:13px;
+  --shadow-pin:0 3px 8px rgba(0,0,0,.35),0 1px 2px rgba(0,0,0,.4);
+  --shadow-card:0 2px 10px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:
+    /* 木纹层 */
+    linear-gradient(180deg,var(--bench) 0%,var(--plank) 100%);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:14px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+/* 木纹纹理（签名背景） */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0 80px, rgba(0,0,0,.04) 80px 81px, transparent 81px 160px),
+    repeating-linear-gradient(90deg,
+      transparent 0 240px, rgba(0,0,0,.06) 240px 242px, transparent 242px 480px),
+    radial-gradient(ellipse at 20% 30%, rgba(140,90,40,.06), transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(140,90,40,.05), transparent 60%);
+}
+.app{position:relative; z-index:1; display:grid; grid-template-columns:252px 1fr 360px; height:100vh; overflow:hidden}
+@media(max-width:1200px){ .app{grid-template-columns:236px 1fr} .col-right{display:none} }
+
+/* ============ 顶部工具栏 ============ */
+.topbar{
+  grid-column:1/-1; height:54px; display:flex; align-items:center; gap:18px;
+  padding:0 22px; background:var(--bench-2); border-bottom:1px solid var(--rule-2);
+  position:relative; z-index:5;
+}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,var(--brass) 30%,var(--brass) 70%,transparent);opacity:.4}
+.brand{display:flex;align-items:baseline;gap:11px}
+.brand .mark{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--ink)}
+.brand .mark b{color:var(--brass-bright);font-weight:500}
+.brand .sub{font-family:var(--mono);font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-3)}
+.topbar .spool{
+  margin-left:auto; display:flex; align-items:center; gap:9px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2);
+}
+.topbar .spool .bead{width:8px;height:8px;border-radius:50%;background:var(--brass);box-shadow:0 0 8px var(--brass-glow)}
+.icon-btn{width:30px;height:30px;border:1px solid var(--rule-2);background:var(--bench-3);border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink-2);cursor:pointer;font-size:13px}
+.icon-btn:hover{border-color:var(--brass);color:var(--brass-bright)}
+
+/* ============ 左：卷宗抽屉（持续对话） ============ */
+.col-left{background:var(--bench-2);border-right:1px solid var(--rule-2);display:flex;flex-direction:column;overflow:hidden}
+.new-btn{
+  margin:14px 14px 4px;padding:10px 13px;text-align:left;
+  background:linear-gradient(180deg,var(--brass-bright),var(--brass));color:var(--pin-ink);
+  border:none;border-radius:var(--r-sm);
+  font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+.new-btn:hover{filter:brightness(1.08)}
+.spool-list{flex:1;overflow-y:auto;padding:8px 12px 16px}
+.sl-eb{font-family:var(--mono);font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-4);padding:12px 6px 8px;display:flex;align-items:center;gap:8px}
+.sl-eb::after{content:"";flex:1;height:1px;background:var(--rule)}
+.spool-item{padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;position:relative;margin-bottom:2px}
+.spool-item:hover{background:var(--bench-3)}
+.spool-item.active{background:var(--bench-3)}
+.spool-item.active::before{content:"";position:absolute;left:2px;top:10px;bottom:10px;width:2px;background:var(--brass);box-shadow:0 0 6px var(--brass-glow)}
+.si2-title{font-family:var(--serif);font-size:14px;font-weight:500;color:var(--ink);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si2-meta{margin-top:3px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--ink-3)}
+.si2-tag{display:inline-block;margin-top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass-bright);border:1px solid var(--brass-deep);padding:1px 6px;border-radius:var(--r-xs)}
+
+/* ============ 中：工作台 ============ */
+.col-mid{display:flex;flex-direction:column;overflow:hidden}
+.board-head{padding:22px 44px 16px;border-bottom:1px solid var(--rule-2);background:var(--bench-2)}
+.board-head .eb{font-family:var(--mono);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--brass-bright);display:flex;align-items:center;gap:10px}
+.board-head .eb::after{content:"";flex:1;height:1px;background:var(--rule)}
+.board-head h1{font-family:var(--serif);font-weight:500;font-size:25px;margin:8px 0 3px;color:var(--ink);letter-spacing:-.01em}
+.board-head .lede{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-2);margin:0;max-width:60ch}
+.board-head .meta-row{margin-top:11px;display:flex;gap:18px;font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+
+.stream{flex:1;overflow-y:auto;padding:20px 44px 170px}
+.turn{margin-bottom:26px}
+
+/* 用户 = 深色琥珀便签 */
+.turn.user{display:flex;justify-content:flex-end}
+.note-user{
+  background:var(--bench-3); color:var(--ink); padding:13px 16px; max-width:76%;
+  border-radius:var(--r-md); border:1px solid var(--rule-2);
+  font-family:var(--sans); font-size:14px; line-height:1.6; box-shadow:var(--shadow-card);
+  position:relative;
+}
+.note-user::before{ /* 图钉 */
+  content:""; position:absolute; top:-5px; right:18px; width:10px; height:10px; border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, var(--brass-bright), var(--brass-deep));
+  box-shadow:0 2px 3px rgba(0,0,0,.4);
+}
+.note-user .nu-eb{font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass-bright);margin-bottom:6px}
+
+/* AI 回复 */
+.turn.ai .ai-eb{font-family:var(--mono);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.turn.ai .ai-eb::after{content:"";flex:1;height:1px;background:var(--rule)}
+
+/* ============ 思考块 · 卷轴装置 ============ */
+.scroll-think{margin:6px 0 14px;border:1px solid var(--rule-2);border-radius:var(--r-md);background:var(--bench-3);overflow:hidden}
+.scroll-think-head{display:flex;align-items:center;gap:10px;padding:8px 13px;cursor:pointer;user-select:none}
+.scroll-think-head .sth-label{font-family:var(--mono);font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--brass-bright);font-weight:600;display:flex;align-items:center;gap:7px}
+.scroll-think-head .sth-spark{ /* 思考脉冲线 */
+  flex:1; height:2px; border-radius:1px;
+  background:linear-gradient(90deg, transparent, var(--brass) 20%, var(--brass-bright) 50%, var(--brass) 80%, transparent);
+  background-size:200% 100%; animation:spark 2.4s linear infinite;
+}
+@keyframes spark{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.scroll-think-head .sth-toggle{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.scroll-think-body{
+  padding:0 15px 14px; font-family:var(--serif); font-style:italic; font-size:13.5px; line-height:1.75; color:var(--ink-2);
+  border-top:1px solid var(--rule); display:none;
+}
+.scroll-think.open .scroll-think-body{display:block}
+
+/* ============ 工具卡（工作台仪器卡） ============ */
+.gauge{
+  margin:10px 0; background:var(--bench-3); border:1px solid var(--rule-2); border-radius:var(--r-sm);
+  overflow:hidden; border-left:2px solid var(--ink-4);
+}
+.gauge.running{border-left-color:var(--warn)}
+.gauge.ok{border-left-color:var(--ok)}
+.gauge-head{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer}
+.gauge-name{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink)}
+.gauge-args{font-family:var(--mono);font-size:10px;color:var(--ink-3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gauge-status{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;padding:2px 7px;border-radius:var(--r-xs)}
+.gauge-status.ok{color:var(--ok);background:rgba(123,168,90,.14)}
+.gauge-status.running{color:var(--warn);background:rgba(212,162,62,.14)}
+.gauge-status .spin{display:inline-block;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.gauge-body{padding:0 12px 11px;font-family:var(--sans);font-size:11.5px;color:var(--ink-2);display:none;line-height:1.6}
+.gauge.open .gauge-body{display:block}
+
+/* ============ 正文 Markdown（暗底暖纸） ============ */
+.md{font-family:var(--sans);font-size:14.5px;line-height:1.75;color:var(--ink);max-width:66ch}
+.md h1,.md h2,.md h3{font-family:var(--serif);font-weight:500;color:var(--ink);line-height:1.25;margin:1.2em 0 .5em}
+.md h1{font-size:22px} .md h2{font-size:18px} .md h3{font-size:15px;color:var(--brass-bright)}
+.md p{margin:.65em 0}
+.md strong{color:var(--brass-bright);font-weight:600}
+.md em{color:var(--ink-2);font-style:italic}
+.md a{color:var(--teal);border-bottom:1px solid var(--teal-soft)}
+.md code{font-family:var(--mono);font-size:12.5px;background:var(--bench-3);padding:1px 5px;border-radius:var(--r-xs);color:var(--brass-bright)}
+.md pre{background:var(--plank);border-left:2px solid var(--brass);padding:12px 15px;border-radius:0 var(--r-sm) var(--r-sm) 0;overflow-x:auto;font-size:12.5px}
+.md pre code{background:none;padding:0;color:var(--ink)}
+.md blockquote{border-left:3px solid var(--teal);margin:1em 0;padding:2px 15px;color:var(--ink-2);font-family:var(--serif);font-style:italic;background:var(--teal-soft);border-radius:0 var(--r-sm) var(--r-sm) 0}
+.md ul,.md ol{padding-left:1.5em}
+.md li{margin:.3em 0}
+.md table{border-collapse:collapse;margin:1em 0;font-size:12.5px;width:100%}
+.md th,.md td{border:1px solid var(--rule-2);padding:6px 11px;text-align:left}
+.md th{background:var(--bench-3);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass-bright)}
+
+/* 引用标记 = 黄铜线头编号（连接右侧证据，需求7的视觉锚） */
+.thread{
+  display:inline-block; font-family:var(--mono); font-size:8.5px; font-weight:700;
+  color:var(--brass-bright); border:1px solid var(--brass-deep); background:var(--bench-3);
+  padding:0 5px; border-radius:var(--r-xs); margin:0 1px; vertical-align:super; line-height:1.6;
+  cursor:pointer; position:relative;
+  transition:all .15s;
+}
+.thread:hover,.thread.hot{background:var(--brass);color:var(--pin-ink);border-color:var(--brass-bright);box-shadow:0 0 10px var(--brass-glow)}
+
+/* ============ 报告卡片（弹窗） ============ */
+.report-pin{
+  margin:16px 0; background:var(--kraft); color:var(--pin-ink); border:1px solid var(--kraft-edge);
+  border-radius:var(--r-md); overflow:hidden; box-shadow:var(--shadow-pin); cursor:pointer; position:relative;
+}
+.report-pin::before{ /* 图钉 */
+  content:""; position:absolute; top:-5px; left:24px; width:11px; height:11px; border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, var(--brass-bright), var(--brass-deep));
+  box-shadow:0 2px 4px rgba(0,0,0,.5);
+}
+.report-pin:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(0,0,0,.4)}
+.rp-top{background:var(--pin-ink);color:var(--kraft);padding:5px 16px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
+.rp-body{padding:16px 18px}
+.rp-body h3{font-family:var(--serif);font-weight:500;font-size:20px;margin:0 0 4px;color:var(--pin-ink);letter-spacing:-.01em}
+.rp-body .rp-lede{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--pin-ink-2);margin:0}
+.rp-foot{padding:8px 18px;border-top:1px dashed var(--kraft-edge);font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--pin-ink-2);display:flex;gap:16px}
+.rp-foot .open-hint{margin-left:auto;color:var(--brass-deep);font-weight:600}
+
+/* ============ 输入区 ============ */
+.composer-wrap{position:sticky;bottom:0;padding:14px 44px 18px;background:linear-gradient(180deg,rgba(42,32,26,0) 0%,var(--bench) 55%)}
+.composer{background:var(--bench-3);border:1.5px solid var(--rule-2);border-radius:var(--r-md);padding:12px 15px;box-shadow:var(--shadow-card)}
+.composer:focus-within{border-color:var(--brass);box-shadow:0 0 0 3px var(--brass-glow)}
+.composer textarea{width:100%;border:none;outline:none;resize:none;background:transparent;font-family:var(--sans);font-size:14px;color:var(--ink);line-height:1.6;min-height:42px}
+.composer textarea::placeholder{color:var(--ink-3)}
+.composer-foot{display:flex;align-items:center;gap:11px;margin-top:9px}
+.cm-meta{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.send-btn{margin-left:auto;background:linear-gradient(180deg,var(--brass-bright),var(--brass));color:var(--pin-ink);border:none;border-radius:var(--r-sm);padding:7px 15px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 2px 5px rgba(0,0,0,.3)}
+.send-btn:hover{filter:brightness(1.08)}
+
+/* ============ 右：证据板（仅数据源 · 签名面板） ============ */
+.col-right{background:var(--bench-2);border-left:1px solid var(--rule-2);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.col-right::before{ /* 左缘黄铜竖轨，暗示"线"从这边牵引出去 */
+  content:""; position:absolute; left:-1px; top:0; bottom:0; width:2px;
+  background:linear-gradient(180deg,transparent,var(--brass-deep) 10%,var(--brass) 50%,var(--brass-deep) 90%,transparent);
+  opacity:.5;
+}
+.r-head{padding:16px 18px 12px;border-bottom:1px solid var(--rule-2)}
+.r-head .r-eb{font-family:var(--mono);font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--brass-bright);margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.r-head .r-eb svg{width:12px;height:12px}
+.r-head .r-title{font-family:var(--serif);font-size:17px;font-weight:500;color:var(--ink)}
+.r-head .r-count{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--ink-3);margin-top:4px}
+.r-note{margin:10px 14px 0;padding:8px 11px;font-family:var(--sans);font-size:11px;color:var(--ink-2);line-height:1.5;background:var(--teal-soft);border-radius:var(--r-xs);border-left:2px solid var(--teal)}
+.r-list{flex:1;overflow-y:auto;padding:12px 14px 18px}
+.evidence{
+  background:var(--kraft); color:var(--pin-ink); border:1px solid var(--kraft-edge);
+  border-radius:var(--r-sm); padding:11px 12px; margin-bottom:11px; box-shadow:var(--shadow-pin);
+  position:relative; cursor:pointer;
+}
+.evidence::before{ /* 每条证据的图钉 */
+  content:""; position:absolute; top:-4px; left:14px; width:9px; height:9px; border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, var(--brass-bright), var(--brass-deep));
+  box-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+.evidence:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.evidence .ev-no{position:absolute;top:9px;right:10px;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--pin-ink-2);opacity:.6}
+.evidence .ev-src{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep);font-weight:600;display:flex;align-items:center;gap:6px}
+.evidence .ev-src .dot{width:7px;height:7px;border-radius:50%}
+.ev-dot-search{background:#3b7ea1}.ev-dot-rss{background:#7a5b9e}.ev-dot-crawl{background:var(--warn)}
+.evidence .ev-title{font-family:var(--serif);font-size:14.5px;font-weight:500;margin:4px 0 3px;line-height:1.3;color:var(--pin-ink)}
+.evidence .ev-sum{font-family:var(--sans);font-size:11.5px;color:var(--pin-ink-2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.evidence .ev-foot{margin-top:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--pin-ink-2);display:flex;gap:12px;opacity:.8}
+
+/* ============ 报告弹窗 ============ */
+.modal-veil{position:fixed;inset:0;background:rgba(15,10,5,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200;padding:28px}
+.modal-veil.open{display:flex}
+.modal{background:var(--kraft);color:var(--pin-ink);border:1px solid var(--kraft-edge);border-radius:var(--r-lg);width:min(920px,100%);max-height:88vh;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.modal-head{padding:17px 24px;border-bottom:1px solid var(--kraft-edge);display:flex;align-items:center;gap:14px;background:var(--pin-ink);color:var(--kraft)}
+.modal-head h2{font-family:var(--serif);font-weight:500;font-size:21px;margin:0;color:var(--kraft)}
+.modal-head .m-eb{font-family:var(--mono);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass-bright);font-weight:600}
+.modal-body{flex:1;overflow-y:auto;padding:26px 34px}
+.modal-body .md{color:var(--pin-ink);max-width:none}
+.modal-body .md h1,.modal-body .md h2,.modal-body .md h3{color:var(--pin-ink)}
+.modal-body .md h3{color:var(--brass-deep)}
+.modal-body .md strong{color:var(--brass-deep)}
+.modal-body .md code{background:var(--kraft-2);color:var(--brass-deep)}
+.modal-body .md blockquote{border-left-color:var(--brass);background:rgba(200,154,60,.1);color:var(--pin-ink-2)}
+.modal-body .md a{color:var(--brass-deep)}
+.modal-foot{padding:12px 24px;border-top:1px solid var(--kraft-edge);display:flex;gap:10px;background:var(--kraft-2)}
+.modal-foot .btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:8px 15px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--kraft-edge);background:var(--kraft);color:var(--pin-ink-2)}
+.modal-foot .btn.primary{background:linear-gradient(180deg,var(--brass-bright),var(--brass));color:var(--pin-ink);border-color:var(--brass-deep)}
+.modal-close{background:transparent;border:1px solid rgba(232,220,192,.3);color:var(--kraft);width:30px;height:30px;border-radius:var(--r-sm);cursor:pointer;margin-left:auto}
+
+.fade-up{animation:fu .4s cubic-bezier(.2,.7,.2,1) both}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bench-2)}
+::-webkit-scrollbar-thumb{background:var(--rule-2);border-radius:6px;border:2px solid var(--bench-2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 顶部 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">AI-<b>Insight</b></span>
+      <span class="sub">Loom Workshop</span>
+    </div>
+    <div class="spool"><span class="bead"></span> Spool · Deep · 7 threads</div>
+    <button class="icon-btn" title="切换主题" style="margin-left:auto">◑</button>
+    <button class="icon-btn" title="导出">⤓</button>
+  </header>
+
+  <!-- 左：卷宗抽屉 -->
+  <aside class="col-left">
+    <button class="new-btn">✚ New Thread</button>
+    <div class="spool-list">
+      <div class="sl-eb">Active Thread</div>
+      <div class="spool-item active">
+        <div class="si2-title">光伏逆变器出口差额归因</div>
+        <div class="si2-meta">02 JUL · 11:42 · 14 turns</div>
+        <span class="si2-tag">Looming</span>
+      </div>
+      <div class="sl-eb">Earlier Threads</div>
+      <div class="spool-item">
+        <div class="si2-title">欧盟碳关税对钢铝出口影响</div>
+        <div class="si2-meta">28 JUN · 09:15 · 8 turns</div>
+      </div>
+      <div class="spool-item">
+        <div class="si2-title">稀土价格与地缘事件相关性</div>
+        <div class="si2-meta">25 JUN · 16:30 · 22 turns</div>
+        <span class="si2-tag">Tied Off</span>
+      </div>
+      <div class="spool-item">
+        <div class="si2-title">东南亚跨境电商物流时效</div>
+        <div class="si2-meta">21 JUN · 10:08 · 6 turns</div>
+      </div>
+      <div class="spool-item">
+        <div class="si2-title">锂电池产能过剩预警模型</div>
+        <div class="si2-meta">18 JUN · 14:22 · 19 turns</div>
+        <span class="si2-tag">Tied Off</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中：工作台 -->
+  <main class="col-mid">
+    <div class="board-head">
+      <div class="eb">Loom · Evidence Board</div>
+      <h1>光伏逆变器出口差额归因</h1>
+      <p class="lede">把 23% 的缺口编织成可追溯的证据链 —— 每个结论都由右侧的黄铜丝牵回它所依赖的数据源。</p>
+      <div class="meta-row">
+        <span>Lens · Deep</span><span>Threads · 7</span><span>Last · 3m ago</span><span>Status · Looming</span>
+      </div>
+    </div>
+
+    <div class="stream">
+
+      <!-- 用户 -->
+      <div class="turn user fade-up">
+        <div class="note-user">
+          <div class="nu-eb">Inquiry — 11:42</div>
+          6 月欧洲海关的逆变器进口量和国内前五大厂商报关出口对不上，差额约 23%。查一下这个差额来自哪里——转口、口径，还是瞒报？
+        </div>
+      </div>
+
+      <!-- AI -->
+      <div class="turn ai fade-up">
+        <div class="ai-eb">Loom · 11:42</div>
+        <!-- 思考（完整，需求2a） -->
+        <div class="scroll-think open" id="st1">
+          <div class="scroll-think-head" onclick="document.getElementById('st1').classList.toggle('open')">
+            <span class="sth-label">◈ Reasoning</span>
+            <span class="sth-spark"></span>
+            <span class="sth-toggle">▾ 展开</span>
+          </div>
+          <div class="scroll-think-body">
+            23% 的差额不像单一原因。先穷举来源：转口贸易（荷/土中转，原产地规则差）、统计口径（HS 8504 整机 vs 拆分报关）、FOB/CIF 时点差、瞒报（最敏感）。<br><br>
+            策略：先证伪可量化的口径与转口，瞒报留最后用间接证据。需要 Eurostat 细项、转口国数据、厂商季报区域披露。把每条结论都牵回到具体证据，让用户能顺着铜丝追溯到原始数据。
+          </div>
+        </div>
+
+        <!-- 工具卡 -->
+        <div class="gauge ok">
+          <div class="gauge-head" onclick="this.parentElement.classList.toggle('open')">
+            <span class="gauge-name">SEARCH</span>
+            <span class="gauge-args">eurostat inverter import 8504.50 2026 H1</span>
+            <span class="gauge-status ok">✓ 4.2s</span>
+          </div>
+          <div class="gauge-body">命中 Eurostat Comext 4 条 HS 8504.50 细项，覆盖 2026 H1 欧盟 27 国进口。</div>
+        </div>
+        <div class="gauge ok">
+          <div class="gauge-head" onclick="this.parentElement.classList.toggle('open')">
+            <span class="gauge-name">RSS</span>
+            <span class="gauge-args">china customs exporter top5 inverter Q2</span>
+            <span class="gauge-status ok">✓ 2.8s</span>
+          </div>
+          <div class="gauge-body">抓取前五大厂商 Q2 季报区域营收，已与报关口径对齐。</div>
+        </div>
+
+        <!-- markdown 正文（引用标记 = 黄铜线头，连右侧证据，需求7） -->
+        <div class="md">
+<p>23% 的差额不太可能由单一原因造成。我把它拆成三层，按<strong>可量化程度</strong>排序：</p>
+<h2>口径差异（约 9–11 个百分点）</h2>
+<p>欧盟海关按 <code>HS 8504.50</code> 整机归类，国内厂商报关时把逆变器与组件"拆分合并"申报<sup class="thread" onclick="flashEvidence(1)">①</sup><sup class="thread" onclick="flashEvidence(2)">②</sup>。这是<em>技术性偏差</em>。</p>
+<blockquote>结构性差额，连续四季度稳定在 8–12% 区间，不构成瞒报证据。</blockquote>
+<h2>转口贸易（约 7–9 个百分点）</h2>
+<p>经鹿特丹、伊斯坦布尔中转的货量，在欧方记为"自原产地进口"，在中方记为"对荷/土出口"<sup class="thread" onclick="flashEvidence(3)">③</sup><sup class="thread" onclick="flashEvidence(4)">④</sup>。</p>
+<h3>剩余约 3–5 个百分点</h3>
+<p>扣除上述两项后仍有 <strong>3–5pp</strong> 无法解释，落在瞒报可疑区间<sup class="thread" onclick="flashEvidence(5)">⑤</sup>。hover 引用标记可见其证据源高亮。</p>
+        </div>
+
+        <!-- 报告卡片 -->
+        <div class="report-pin" onclick="openReport()">
+          <div class="rp-top"><span>Case Report · Draft</span><span>02 JUL · 11:58</span></div>
+          <div class="rp-body">
+            <h3>逆变器出口差额归因报告</h3>
+            <p class="rp-lede">把 23% 缺口拆解为口径、转口、瞒报三层，附证据链。</p>
+          </div>
+          <div class="rp-foot">
+            <span>3 sections</span><span>7 sources</span><span>1,840 words</span>
+            <span class="open-hint">在工作台内查阅 →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第二轮（持续对话，需求4） -->
+      <div class="turn user fade-up">
+        <div class="note-user">
+          <div class="nu-eb">Inquiry — 11:59</div>
+          想进一步缩小"瞒报"那 3–5 个点的范围，建议补什么数据？越具体越好。
+        </div>
+      </div>
+      <div class="turn ai fade-up">
+        <div class="ai-eb">Loom · 11:59</div>
+        <div class="scroll-think" id="st2">
+          <div class="scroll-think-head" onclick="document.getElementById('st2').classList.toggle('open')">
+            <span class="sth-label">◈ Reasoning</span>
+            <span class="sth-spark"></span>
+            <span class="sth-toggle">▸ 展开</span>
+          </div>
+          <div class="scroll-think-body">
+            缩小瞒报区间要靠"物理侧"对账"票据侧"。电力并网数据是金标准——装了多少逆变器，电网最清楚；其次是港口吞吐。两者都能绕开报关单，形成三角验证。
+          </div>
+        </div>
+        <div class="gauge running">
+          <div class="gauge-head">
+            <span class="gauge-name">CRAWL</span>
+            <span class="gauge-args">entso-e transparency installed pv inverter capacity</span>
+            <span class="gauge-status running"><span class="spin">◐</span> 6.1s</span>
+          </div>
+        </div>
+        <div class="md">
+<p>建议从两条独立链路对账：</p>
+<ol>
+<li><strong>电力并网侧</strong>：ENTSO-E 透明度平台按国别光伏装机增量，是绕开海关的地面真值。</li>
+<li><strong>物流侧</strong>：鹿特丹、汉堡港集装箱吞吐与品名清单，还原实际到货量。</li>
+</ol>
+<p>两相交叉后，剩余不可解释部分即可视为瞒报的<strong>上限估计</strong>。</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 输入 -->
+    <div class="composer-wrap">
+      <div class="composer">
+        <textarea placeholder="给这根线索续接新的追问…   (⌘K 聚焦 · ⌘↵ 发送)"></textarea>
+        <div class="composer-foot">
+          <span class="cm-meta">Lens · Deep</span>
+          <span class="cm-meta">·</span>
+          <span class="cm-meta">Context 41%</span>
+          <button class="send-btn">Weave ↵</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右：证据板（仅数据源 · 签名面板，需求7） -->
+  <aside class="col-right">
+    <div class="r-head">
+      <div class="r-eb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M3 21L21 3M12 3v18M3 12h18"/></svg>
+        Evidence Board
+      </div>
+      <div class="r-title">证据板</div>
+      <div class="r-count">7 条数据源 · 仅收录可追溯条目</div>
+    </div>
+    <div class="r-note">本板只钉<b>数据源</b>。工具执行记录见正文仪器卡。引用标记 <span style="color:var(--brass-deep);font-weight:700">①</span> 与此板一一对应。</div>
+    <div class="r-list">
+      <div class="evidence" id="ev1">
+        <span class="ev-no">① EXHIBIT</span>
+        <div class="ev-src"><span class="dot ev-dot-search"></span>SEARCH · Eurostat</div>
+        <div class="ev-title">EU imports of static converters, H1 2026</div>
+        <div class="ev-sum">按成员国与月份拆分的进口金额、数量与原产地，覆盖 27 国。已提取意、德、荷。</div>
+        <div class="ev-foot"><span>2026-07-02</span><span>eurostat.ec.europa.eu</span></div>
+      </div>
+      <div class="evidence" id="ev2">
+        <span class="ev-no">② EXHIBIT</span>
+        <div class="ev-src"><span class="dot ev-dot-rss"></span>RSS · 中国海关总署</div>
+        <div class="ev-title">6 月重点商品出口量值表</div>
+        <div class="ev-sum">逆变器(8504)类目前五大厂商报关汇总，按目的国口径统计。</div>
+        <div class="ev-foot"><span>2026-06-30</span><span>customs.gov.cn</span></div>
+      </div>
+      <div class="evidence" id="ev3">
+        <span class="ev-no">③ EXHIBIT</span>
+        <div class="ev-src"><span class="dot ev-dot-crawl"></span>CRAWL · Dutch Customs</div>
+        <div class="ev-title">Rotterdam transit & re-export Q2</div>
+        <div class="ev-sum">鹿特丹港 Q2 中转与转口统计，含原产地变更记录。</div>
+        <div class="ev-foot"><span>2026-07-01</span><span>douane.nl</span></div>
+      </div>
+      <div class="evidence" id="ev4">
+        <span class="ev-no">④ EXHIBIT</span>
+        <div class="ev-src"><span class="dot ev-dot-crawl"></span>CRAWL · TurkStat</div>
+        <div class="ev-title">Türkiye transit trade, electrical machinery</div>
+        <div class="ev-sum">土耳其统计署电气机械类转口数据，伊斯坦布尔枢纽 +34%。</div>
+        <div class="ev-foot"><span>2026-06-28</span><span>turkstat.gov.tr</span></div>
+      </div>
+      <div class="evidence" id="ev5">
+        <span class="ev-no">⑤ EXHIBIT</span>
+        <div class="ev-src"><span class="dot ev-dot-rss"></span>RSS · 阳光电源 IR</div>
+        <div class="ev-title">Sungrow Q2 2026 earnings disclosure</div>
+        <div class="ev-sum">季报披露对欧洲区域营收与出货量，含逆变器与储能拆分。</div>
+        <div class="ev-foot"><span>2026-06-25</span><span>sungrowpower.com</span></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- 报告弹窗 -->
+<div class="modal-veil" id="reportModal" onclick="if(event.target===this)closeReport()">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="m-eb">Case Report · Draft</div>
+        <h2>逆变器出口差额归因报告</h2>
+      </div>
+      <button class="modal-close" onclick="closeReport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="md">
+<h1>逆变器出口差额归因：23% 缺口的拆解</h1>
+<p><em>审查备忘录 · 机密 · 02 JUL 2026</em></p>
+<h2>摘要</h2>
+<p>2026 年 6 月，欧盟海关公布的逆变器进口量与国内前五大厂商报关出口额出现 <strong>约 23 个百分点</strong>的背离。本备忘录将该缺口拆解为三层，并逐层附证据。</p>
+<h2>一、统计口径差异（9–11 pp）</h2>
+<p>欧方按 <code>HS 8504.50</code> 整机归类，中方报关存在整机与组件拆分合并申报。此为<em>结构性技术偏差</em>，连续四季度稳定在 8–12% 区间。</p>
+<h2>二、转口贸易（7–9 pp）</h2>
+<p>经鹿特丹、伊斯坦布尔中转的货量，在双方统计中归属不同。荷兰 Q2 转口同比 +18%，土耳其 +34%。</p>
+<h2>三、剩余可疑区间（3–5 pp）</h2>
+<p>扣除前两项后仍有 <strong>3–5 个百分点</strong>无法用技术与转口解释，落在瞒报可疑区间。建议以电力并网数据与港口吞吐进行三角对账，逼近上限估计。</p>
+<blockquote>结论不构成对任何主体的指控。瞒报判定需发票流或电网侧旁证，本案仅提供差额归因框架。</blockquote>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeReport()">关闭</button>
+      <button class="btn">下载 HTML</button>
+      <button class="btn primary" style="margin-left:auto">下载 PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openReport(){document.getElementById('reportModal').classList.add('open')}
+function closeReport(){document.getElementById('reportModal').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReport()})
+// hover/点击引用标记 → 高亮对应证据（黄铜活线的交互体现）
+function flashEvidence(n){
+  const el=document.getElementById('ev'+n);
+  if(!el)return;
+  el.style.boxShadow='0 0 0 2px var(--brass-bright),0 4px 12px rgba(0,0,0,.4)';
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>{el.style.boxShadow=''},1600);
+}
+</script>
+</body>
+</html>
