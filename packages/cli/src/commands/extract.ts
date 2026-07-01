@@ -18,7 +18,11 @@ import { parseEngineFlags } from "../engine-flags.js";
 
 export async function extractCommand(argv: string[], cfg: EngineConfig): Promise<number> {
   const allEngineIds = listExtractEngineIds();
-  const { rest } = parseEngineFlags(argv, new Set(allEngineIds), {});
+  const { rest, errors: nsErrors } = parseEngineFlags(argv, new Set(allEngineIds), {});
+  if (nsErrors.length) {
+    for (const e of nsErrors) console.error(`error: ${e}`);
+    return 1;
+  }
 
   const { values, positionals } = parseArgs({
     args: rest,

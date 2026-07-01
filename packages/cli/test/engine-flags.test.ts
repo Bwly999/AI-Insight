@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseEngineFlags, describeParams } from "../src/engine-flags.js";
-import { arxivParamsSchema } from "@ai-insight/datasources";
+import { arxivParamsSchema, exaParamsSchema } from "@ai-insight/datasources";
 
 const enabledAll = new Set(["arxiv", "exa", "ddg", "firecrawl"]);
 
@@ -27,13 +27,31 @@ describe("engine-flags: 命名空间 flag 解析（约定 b）", () => {
     expect(rest).toEqual(["--engines", "arxiv"]);
   });
 
-  it("逗号分隔值自动转数组", () => {
+  it("数组型参数（schema 声明）逗号分隔自动转数组", () => {
     const { engineParams } = parseEngineFlags(
       ["--arxiv.categories=cs.AI,cs.CL"],
       enabledAll,
-      {},
+      { arxiv: arxivParamsSchema },
     );
     expect(engineParams.arxiv.categories).toEqual(["cs.AI", "cs.CL"]);
+  });
+
+  it("数组型参数空格分隔也自动转数组（兼容 pnpm exec 透传）", () => {
+    const { engineParams } = parseEngineFlags(
+      ["--arxiv.categories=cs.AI cs.CL"],
+      enabledAll,
+      { arxiv: arxivParamsSchema },
+    );
+    expect(engineParams.arxiv.categories).toEqual(["cs.AI", "cs.CL"]);
+  });
+
+  it("标量型参数（schema 非 array）不拆分，保持原值", () => {
+    const { engineParams } = parseEngineFlags(
+      ["--exa.type=neural keyword"],
+      enabledAll,
+      { exa: exaParamsSchema },
+    );
+    expect(engineParams.exa.type).toBe("neural keyword");
   });
 
   it("布尔/数字值自动推断", () => {
@@ -46,10 +64,10 @@ describe("engine-flags: 命名空间 flag 解析（约定 b）", () => {
     expect(engineParams.exa.num).toBe(42);
   });
 
-  it("未启用引擎的命名空间 flag 抛错（静态校验）", () => {
-    expect(() =>
-      parseEngineFlags(["--unknown.param=x"], enabledAll, {}),
-    ).toThrow(/未知或未启用的引擎命名空间/);
+  it("未启用引擎的命名空间 flag 收集到 errors（不抛异常）", () => {
+    const { errors } = parseEngineFlags(["--unknown.param=x"], enabledAll, {});
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/未知或未启用的引擎命名空间/);
   });
 
   it("无命名空间 flag 时 rest 保留全部 argv", () => {

@@ -8,6 +8,7 @@
  *   aiinsight search "LLM" --engines arxiv --arxiv.categories cs.AI,cs.CL
  */
 import { parseArgs } from "node:util";
+import type { TSchema } from "@sinclair/typebox";
 import {
   createSearchEngines,
   fanoutSearch,
@@ -16,13 +17,24 @@ import {
   type SearchEngine,
 } from "@ai-insight/datasources";
 import { parseEngineFlags, describeParams } from "../engine-flags.js";
+import { parseListArg } from "../args.js";
 
 export async function searchCommand(argv: string[], cfg: EngineConfig): Promise<number> {
   // 引擎 id 列表（用于命名空间校验 & 帮助）
   const allEngineIds = listSearchEngineIds();
 
+  // 构造全部引擎实例（轻量，不触发网络）以获取各引擎 paramsSchema，
+  // 供 parseEngineFlags 判断哪些参数是数组型（需逗号/空格拆分）。
+  const allEngines = createSearchEngines(cfg);
+  const schemaByEngine: Record<string, TSchema | undefined> = {};
+  for (const e of allEngines) schemaByEngine[e.name] = e.paramsSchema;
+
   // 先剥离命名空间 flag，剩下的给 parseArgs
-  const { engineParams, rest } = parseEngineFlags(argv, new Set(allEngineIds), {});
+  const { engineParams, rest, errors: nsErrors } = parseEngineFlags(argv, new Set(allEngineIds), schemaByEngine);
+  if (nsErrors.length) {
+    for (const e of nsErrors) console.error(`error: ${e}`);
+    return 1;
+  }
 
   const { values, positionals } = parseArgs({
     args: rest,
@@ -45,8 +57,7 @@ export async function searchCommand(argv: string[], cfg: EngineConfig): Promise<
   }
 
   if (values["list-engines"]) {
-    const engines = createSearchEngines(cfg);
-    for (const e of engines) {
+    for (const e of allEngines) {
       const params = describeParams((e as SearchEngine).paramsSchema);
       const paramStr = params.length ? `  params: ${params.map((p) => `--${e.name}.${p.name}`).join(", ")}` : "";
       const cfgFlag = e.isConfigured() ? "" : "  (未配置)";
@@ -61,11 +72,9 @@ export async function searchCommand(argv: string[], cfg: EngineConfig): Promise<
     return 1;
   }
 
-  // 解析 --engines（逗号分隔；空 = 全部已配置）
+  // 解析 --engines（逗号或空格分隔；空 = 全部已配置）
   const enginesArg = (values.engines as string) ?? "";
-  const selected = enginesArg
-    ? enginesArg.split(",").map((s) => s.trim()).filter(Boolean)
-    : undefined; // undefined = 全部已配置
+  const selected = enginesArg ? parseListArg(enginesArg) : undefined; // undefined = 全部已配置
 
   // 校验选中的引擎 id 合法
   if (selected) {
@@ -76,8 +85,8 @@ export async function searchCommand(argv: string[], cfg: EngineConfig): Promise<
     }
   }
 
-  // 构造引擎实例（按 cfg），筛选选中的 + 已配置的
-  const engines = createSearchEngines(cfg).filter(
+  // 筛选选中的 + 已配置的（复用已构造的 allEngines）
+  const engines = allEngines.filter(
     (e) => e.isConfigured() && (!selected || selected.includes(e.name)),
   );
 
@@ -88,7 +97,7 @@ export async function searchCommand(argv: string[], cfg: EngineConfig): Promise<
 
   const timeRange = (values.time as string) || undefined;
   const tagsStr = (values.tags as string) ?? "";
-  const tags = tagsStr ? tagsStr.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+  const tags = tagsStr ? parseListArg(tagsStr) : undefined;
 
   const result = await fanoutSearch(
     {

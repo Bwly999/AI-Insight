@@ -53,7 +53,7 @@ aiinsight search "<query>" [options]
 
 | 选项 | 说明 |
 |------|------|
-| `-e, --engines <id,id>` | 引擎 id（逗号分隔）；默认全部已配置。已知：`ddg, exa, firecrawl, arxiv` |
+| `-e, --engines <id,id>` | 引擎 id（逗号或空格分隔）；默认全部已配置。已知：`ddg, exa, firecrawl, arxiv` |
 | `-t, --time <range>` | 时间窗：`1d 3d 1w 1m 6m 1y all` |
 | `-l, --limit <n>` | 每引擎取多少条（默认 8） |
 | `--tags <t,t>` | 标签过滤（general/news/academic/tech/...） |
@@ -90,7 +90,7 @@ aiinsight config path                # 显示配置文件路径
 
 ## 引擎命名空间 flag（约定 b）
 
-引擎特有参数以 `--<engine>.<param>` 形式传递，**仅当引擎在 `--engines` 中才合法**（静态校验）。逗号分隔值自动转数组。
+引擎特有参数以 `--<engine>.<param>` 形式传递，**仅当引擎在 `--engines` 中才合法**（静态校验）。数组型参数（schema 声明为数组）的值按逗号或空格自动拆分，标量型参数保持原值。
 
 ```bash
 aiinsight search "LLM" --engines arxiv --arxiv.categories cs.AI,cs.CL

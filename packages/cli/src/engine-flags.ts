@@ -7,6 +7,7 @@
  * `--<engine>.<param>` 仅当 engine 在启用列表中才合法（静态校验）。
  */
 import type { TSchema } from "@sinclair/typebox";
+import { parseListArg } from "./args.js";
 
 /**
  * 从 argv 中解析命名空间 flag `--<engine>.<param>=value` 或 `--<engine>.<param> value`。
@@ -23,9 +24,12 @@ export function parseEngineFlags(
 ): {
   engineParams: Record<string, Record<string, unknown>>;
   rest: string[];
+  /** 解析过程中遇到的错误（如未知引擎命名空间）；不抛异常，交由命令决定 exit code。 */
+  errors: string[];
 } {
   const engineParams: Record<string, Record<string, unknown>> = {};
   const rest: string[] = [];
+  const errors: string[] = [];
   const nsRe = /^--([a-z0-9_-]+)\.([a-z0-9_-]+)=(.*)$/i;
   const nsReSpace = /^--([a-z0-9_-]+)\.([a-z0-9_-]+)$/i;
 
@@ -36,7 +40,7 @@ export function parseEngineFlags(
     const m1 = arg && nsRe.exec(arg);
     if (m1) {
       const [, engineId, param, value] = m1;
-      collectParam(engineParams, engineId, param, parseValue(value), enabledEngineIds, schemaByEngine);
+      collectParam(engineParams, engineId, param, parseValue(value), enabledEngineIds, schemaByEngine, errors);
       continue;
     }
 
@@ -47,7 +51,7 @@ export function parseEngineFlags(
       const next = argv[i + 1];
       // 下一个 token 当作值：存在且不是 flag（--xxx 或 -x，但允许负数 -5）
       if (next !== undefined && !isFlagToken(next)) {
-        collectParam(engineParams, engineId, param, parseValue(next), enabledEngineIds, schemaByEngine);
+        collectParam(engineParams, engineId, param, parseValue(next), enabledEngineIds, schemaByEngine, errors);
         i++; // 消费 value
         continue;
       }
@@ -57,10 +61,10 @@ export function parseEngineFlags(
     if (arg) rest.push(arg);
   }
 
-  return { engineParams, rest };
+  return { engineParams, rest, errors };
 }
 
-/** 把单值写入对应引擎的 params；同时做引擎/参数合法性校验。 */
+/** 把单值写入对应引擎的 params；同时做引擎/参数合法性校验。错误推入 errors（不抛）。 */
 function collectParam(
   out: Record<string, Record<string, unknown>>,
   engineId: string,
@@ -68,9 +72,11 @@ function collectParam(
   value: unknown,
   enabledEngineIds: Set<string>,
   schemaByEngine: Record<string, TSchema | undefined>,
+  errors: string[],
 ): void {
   if (!enabledEngineIds.has(engineId)) {
-    throw new Error(`未知或未启用的引擎命名空间: --${engineId}.${param}（引擎 ${engineId} 不在 --engines 中）`);
+    errors.push(`未知或未启用的引擎命名空间: --${engineId}.${param}（引擎 ${engineId} 不在 --engines 中）`);
+    return;
   }
   const schema = schemaByEngine[engineId];
   const knownParams = schema && isObjectSchema(schema) ? Object.keys(schema.properties) : [];
@@ -79,9 +85,11 @@ function collectParam(
     console.warn(`[warn] 引擎 ${engineId} 无参数 ${param}（已知: ${knownParams.join(", ")}）`);
   }
 
-  // 逗号分隔 → 数组（如 --arxiv.categories=cs.AI,cs.CL）
-  if (typeof value === "string" && value.includes(",")) {
-    value = value.split(",").map((s) => s.trim());
+  // 数组型参数（schema 声明为数组）→ 用 parseListArg 拆分（逗号或空格）。
+  // 标量型参数（如 --exa.type=neural）保持原值不拆。
+  const paramSchema = schema && isObjectSchema(schema) ? schema.properties[param] : undefined;
+  if (typeof value === "string" && isArrayParam(paramSchema)) {
+    value = parseListArg(value);
   }
 
   if (!out[engineId]) out[engineId] = {};
@@ -111,6 +119,22 @@ function isFlagToken(token: string): boolean {
 /** TypeBox 对象 schema 判定（运行时检查 .properties 字段）。 */
 function isObjectSchema(s: TSchema | undefined | null): s is TSchema & { properties: Record<string, TSchema> } {
   return !!s && typeof s === "object" && "properties" in s;
+}
+
+/**
+ * 判断 TypeBox 参数 schema 是否为数组型（Type.Array 或其 Optional 包装）。
+ * 用于决定是否对 flag 值做逗号/空格拆分。
+ */
+function isArrayParam(s: TSchema | undefined): boolean {
+  if (!s) return false;
+  const type = (s as { type?: string }).type;
+  if (type === "array") return true;
+  // Optional(Type.Array(...)) 包装：检查 anyOf 中是否有 array
+  const anyOf = (s as { anyOf?: TSchema[] }).anyOf;
+  if (Array.isArray(anyOf)) {
+    return anyOf.some((m) => (m as { type?: string }).type === "array");
+  }
+  return false;
 }
 
 /**
