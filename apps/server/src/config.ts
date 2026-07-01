@@ -36,6 +36,21 @@ if (envLocal) {
 }
 dotenv.config(); // 兜底 .env
 
+/**
+ * 定位仓库根（含 pnpm-workspace.yaml）。server 可能在 apps/server 或仓库根启动。
+ * 找不到则回退 startDir。用于解析 dev 下随仓库入库的 ai-insight skill 目录。
+ */
+function resolveRepoRoot(startDir: string): string {
+  let dir = startDir;
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(resolve(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return startDir;
+}
+
 function required(key: string, fallback?: string): string {
   const v = process.env[key] ?? fallback;
   if (v === undefined) {
@@ -72,6 +87,12 @@ export const config = {
   runConcurrency: parseInt(process.env.RUN_CONCURRENCY ?? "3", 10),
   rssPollCron: process.env.RSS_POLL_CRON ?? "*/30 * * * *",
   rssRetentionDays: parseInt(process.env.RSS_RETENTION_DAYS ?? "90", 10),
+
+  // ai-insight skill 目录：loader 渐进披露 + 沙箱 read 的根。
+  // dev 默认仓库根下 .agents/skills/ai-insight（已入 git）；prod 用 AIINSIGHT_SKILL_DIR 覆盖。
+  skillDir:
+    process.env.AIINSIGHT_SKILL_DIR ??
+    resolve(resolveRepoRoot(process.cwd()), ".agents/skills/ai-insight"),
 };
 
 export type AppConfig = typeof config;

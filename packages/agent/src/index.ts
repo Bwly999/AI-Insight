@@ -6,6 +6,7 @@ export {
   createInsightSession,
   resetSessionCache,
   type AgentProviderConfig,
+  type InsightSessionOptions,
 } from "./session-factory.js";
 export {
   createInsightTools,

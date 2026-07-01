@@ -134,7 +134,10 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
     });
 
     // 建 session（每 run 独立；provider 惰性读取支持热切换）
-    const session = await createInsightSession(deps.getProvider(), tools);
+    // skillDir：让 ai-insight skill 经 loader 渐进披露（见 ADR-0006）
+    const session = await createInsightSession(deps.getProvider(), tools, {
+      skillDir: config.skillDir,
+    });
 
     // 事件桥接 → emit AgentEvent
     const unsubscribe = bridgeSessionEvents(session, ctx.runId, (ev: AgentEvent) => {

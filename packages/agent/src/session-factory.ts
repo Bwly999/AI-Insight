@@ -7,17 +7,20 @@
  *  - 无工作区：cwd 指空临时目录
  *  - SessionManager.inMemory（持久化归 DB 管，见 §3.2）
  */
-import { mkdtempSync } from "node:fs";
+import { constants, mkdtempSync } from "node:fs";
+import { access as fsAccess, readFile as fsReadFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import {
   createAgentSession,
+  createReadToolDefinition,
   DefaultResourceLoader,
   SessionManager,
   SettingsManager,
   AuthStorage,
   ModelRegistry,
   type AgentSession,
+  type ReadOperations,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { INSIGHT_SYSTEM_PROMPT } from "./system-prompt.js";
@@ -30,6 +33,44 @@ export interface AgentProviderConfig {
   apiKey: string;
   /** model id（如 deepseek-v4-flash） */
   model: string;
+}
+
+/** createInsightSession 的可选配置。 */
+export interface InsightSessionOptions {
+  /**
+   * ai-insight skill 目录（含 SKILL.md + references/）。
+   * 提供后：注入沙箱 read 工具（让模型按需读 skill body / references），
+   * 并让 loader 仅加载该 skill（noSkills:true + additionalSkillPaths，不扫全局）。
+   * 不提供则退化为旧行为（无 skill、无 read）。
+   */
+  skillDir?: string;
+}
+
+/**
+ * 构造沙箱 read 工具：只允许读 skillDir 子树内的文件。
+ * 用 ReadOperations 钩子在 filesystem 级拦截越界路径——不靠 prompt 约束。
+ * 该工具名 "read"，使 buildSystemPrompt 的 customPromptHasRead 闸门通过 → skill 元数据进 prompt。
+ */
+function createSandboxedReadTool(skillDir: string): ToolDefinition {
+  const root = resolve(skillDir);
+  const assertWithin = (absolutePath: string) => {
+    // relative(root, abs)：同根下返回相对路径（不以 .. 开头）；越界返回 ../... 或绝对路径
+    const rel = relative(root, resolve(absolutePath));
+    if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
+      throw new Error(`Permission denied: read 沙箱仅限 skill 目录（${absolutePath}）`);
+    }
+  };
+  const operations: ReadOperations = {
+    readFile: async (p) => {
+      assertWithin(p);
+      return await fsReadFile(p);
+    },
+    access: async (p) => {
+      assertWithin(p);
+      await fsAccess(p, constants.R_OK);
+    },
+  };
+  return createReadToolDefinition(root, { operations }) as ToolDefinition;
 }
 
 /**
@@ -60,9 +101,19 @@ function sharedAgentDir(): string {
 export async function createInsightSession(
   provider: AgentProviderConfig,
   customTools: ToolDefinition[],
+  opts?: InsightSessionOptions,
 ): Promise<AgentSession> {
   const cwd = sharedCwd();
   const aDir = sharedAgentDir();
+
+  // 接入 ai-insight skill（见 ADR-0006）：
+  //  - 注入沙箱 read 工具（名 "read"）→ buildSystemPrompt 的 customPromptHasRead 闸门通过
+  //    → skill 元数据进 prompt，模型用 read 按需打开 SKILL.md / references（渐进披露）
+  //  - additionalSkillPaths + noSkills:true → loader 只加载该 skill，不扫 ~/.agents/skills/
+  const skillDir = opts?.skillDir;
+  const tools = skillDir
+    ? [...customTools, createSandboxedReadTool(skillDir)]
+    : customTools;
 
   const authStorage = AuthStorage.inMemory();
   const modelRegistry = ModelRegistry.create(authStorage, undefined as never);
@@ -98,7 +149,8 @@ export async function createInsightSession(
     agentDir: aDir,
     settingsManager: SettingsManager.inMemory(),
     noExtensions: true,
-    noSkills: true,
+    noSkills: true, // 不扫默认位置（含 ~/.agents/skills/），杜绝全局 skill 泄漏
+    additionalSkillPaths: skillDir ? [skillDir] : [], // 仅显式加载 ai-insight
     noPromptTemplates: true,
     noThemes: true,
     noContextFiles: true,
@@ -113,8 +165,8 @@ export async function createInsightSession(
     resourceLoader,
     sessionManager: SessionManager.inMemory(cwd),
     settingsManager: SettingsManager.inMemory(),
-    noTools: "builtin", // 禁全部内置 read/bash/edit/write
-    customTools,
+    noTools: "builtin", // 禁 bash/edit/write；read 以 customTool 形式注入（见 createSandboxedReadTool）
+    customTools: tools,
   });
   return session;
 }
