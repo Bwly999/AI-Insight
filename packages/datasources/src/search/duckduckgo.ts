@@ -1,21 +1,24 @@
 /**
- * 搜索引擎统一接口 + DuckDuckGo 实现（基于 duck-duck-scrape 库）。
+ * 搜索引擎统一接口 + DuckDuckGo 实现（基于 needle + html 端点）。
  *
  * 接口设计（改进自 union-search：原项目无统一接口，引擎各自散落）：
  *   search(input): Promise<DataSourceItem[]>
  * 归一化到 DataSourceItem（强制在引擎边界归一，而非合并时）。
  *
- * DuckDuckGo 用 duck-duck-scrape（基于 needle，非 undici）：
- *   - 绕开 undici ProxyAgent 在 Windows 上的 UV_HANDLE_CLOSING 原生崩溃
- *   - 用 DDG 内部 API 端点，返回结构化结果（非 HTML 抓取），更稳定
- *   - 代理通过 needleOptions.proxy 透传（needle 的 CONNECT 隧道）
+ * DuckDuckGo 用 needle 直请求 html.duckduckgo.com/html/ 端点：
+ *   - 用 needle（原生 http.Agent）而非 undici，绕开 Windows 上
+ *     undici ProxyAgent 的 UV_HANDLE_CLOSING 原生崩溃
+ *   - 用 html 端点（反爬远轻于 links.duckduckgo.com/d.js，后者会被
+ *     anomalyDetectionBlock 拦截）；duck-duck-scrape 库即因走 d.js 端点
+ *     100% 被反爬拦截而弃用
+ *   - 浏览器级 headers（Chrome UA + Accept + Accept-Language）规避反爬
+ *   - proxy 通过 needle 的 proxy 选项透传（CONNECT 隧道）
  *
  * 引擎接受注入的 EngineConfig（不再直读 process.env），
  * 使 CLI（JSON 注入）与 server（DB/env 注入）共用同一份代码。
  */
 import type { TSchema } from "@sinclair/typebox";
-import { search as ddgSearch, SafeSearchType, SearchTimeType } from "duck-duck-scrape";
-import type { NeedleOptions } from "needle";
+import needle from "needle";
 import type { DataSourceItem, DataSourceTag, TimeRange } from "@ai-insight/shared-types";
 import { timeRangeToDuckDf } from "../time-range.js";
 import type { EngineConfig } from "../config.js";
@@ -51,32 +54,53 @@ export interface SearchEngine {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DuckDuckGo — 基于 duck-duck-scrape（needle），绕开 undici Windows 崩溃
+// DuckDuckGo — needle + html 端点（绕开 undici 崩溃 + 反爬）
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** TimeRange → duck-duck-scrape 的 SearchTimeType（d/w/m，all→a）。 */
-function timeRangeToSearchTimeType(range: TimeRange): SearchTimeType {
-  const df = timeRangeToDuckDf(range); // d/w/m/y
-  switch (df) {
-    case "d":
-      return SearchTimeType.DAY;
-    case "w":
-      return SearchTimeType.WEEK;
-    case "m":
-      return SearchTimeType.MONTH;
-    default:
-      return SearchTimeType.ALL;
+const DDG_URL = "https://html.duckduckgo.com/html/";
+
+/** 浏览器级 headers（规避反爬：模拟真实浏览器，而非裸 fetch）。 */
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+  // 避免 DDG 反爬把请求当机器
+  Referer: "https://duckduckgo.com/",
+};
+
+/**
+ * 解包 DDG 重定向 URL（//duckduckgo.com/l/?uddg=<encoded> → 真实 URL）。
+ * 移植自 ref/ddg-demo/search.js 的 unwrapRedirect。
+ */
+function unwrapRedirect(href: string | undefined): string {
+  if (!href) return "";
+  try {
+    const full = href.startsWith("//") ? "https:" + href : href;
+    if (full.includes("uddg=")) {
+      const u = new URL(full);
+      const uddg = u.searchParams.get("uddg");
+      if (uddg) return uddg;
+    }
+  } catch {
+    /* fall through */
   }
+  return href;
 }
 
 export class DuckDuckGoEngine implements SearchEngine {
   readonly name = "ddg";
   readonly label = "DuckDuckGo";
-  /** needle options：透传 proxy（绕开 undici，用 needle 的 CONNECT 隧道）。 */
-  private needleOptions: NeedleOptions;
+  /** needle 请求选项：透传 proxy（绕开 undici，用 needle 的 CONNECT 隧道）。 */
+  private needleOpts: needle.NeedleOptions;
 
   constructor(cfg: EngineConfig = {}) {
-    this.needleOptions = cfg.proxyUrl ? { proxy: cfg.proxyUrl } : {};
+    this.needleOpts = {
+      headers: BROWSER_HEADERS,
+      follow: 5, // 跟随重定向
+      timeout: 15000,
+      ...(cfg.proxyUrl ? { proxy: cfg.proxyUrl } : {}),
+    };
   }
 
   isConfigured(): boolean {
@@ -85,31 +109,54 @@ export class DuckDuckGoEngine implements SearchEngine {
 
   async search(input: SearchInput): Promise<DataSourceItem[]> {
     const limit = Math.min(input.limit ?? 10, 10);
-    const time = input.timeRange ? timeRangeToSearchTimeType(input.timeRange) : undefined;
+    const df = input.timeRange ? timeRangeToDuckDf(input.timeRange) : undefined;
 
-    const results = await ddgSearch(
-      input.query,
-      {
-        safeSearch: SafeSearchType.MODERATE,
-        ...(time ? { time } : {}),
-      },
-      this.needleOptions,
-    );
+    // DDG lite 用 POST + form data；df=d/w/m/y 控制时间窗
+    const data: Record<string, string> = { q: input.query, b: "", l: "wt-wt" };
+    if (df) data.df = df;
 
-    if (results.noResults || !results.results?.length) return [];
+    const res = await needle("post", DDG_URL, data, this.needleOpts);
+    const body = typeof res.body === "string" ? res.body : String(res.body);
 
+    if (res.statusCode !== 200) {
+      throw new Error(`DuckDuckGo returned HTTP ${res.statusCode}`);
+    }
+    // 反爬检测：DDG 返回 anomalyDetectionBlock 页面而非结果
+    if (body.includes("anomalyDetectionBlock")) {
+      throw new Error("DuckDuckGo anomaly block detected (rate limited?)");
+    }
+
+    // 动态 import cheerio（避免顶层 import 影响其他不用 cheerio 的引擎）
+    const cheerioMod = await import("cheerio");
+    const $ = cheerioMod.load(body);
+    const items: DataSourceItem[] = [];
     const now = new Date().toISOString();
-    return results.results.slice(0, limit).map<DataSourceItem>((r) => ({
-      id: `search:duckduckgo:${r.url}`,
-      sourceType: "search",
-      sourceName: this.label,
-      sourceId: r.url,
-      title: r.title || r.url,
-      url: r.url,
-      // rawDescription 不含加粗标签的干扰（description 含 <b> 标签）
-      summary: r.rawDescription || r.description || undefined,
-      tags: input.tags ?? [],
-      fetchedAt: now,
-    }));
+
+    $("div.result").each((_, el) => {
+      if (items.length >= limit) return false;
+      const $el = $(el);
+      // 过滤广告：DDG 给广告 result 标记 class "result--ad"
+      // （真实结果 class 含 "web-result"，无 "result--ad"）
+      const cls = $el.attr("class") ?? "";
+      if (cls.includes("result--ad")) return;
+      const $a = $el.find("h2 a").first();
+      const title = $a.text().trim();
+      const href = unwrapRedirect($a.attr("href"));
+      const snippet = $el.find("a.result__snippet").first().text().trim();
+      if (!title || !href) return;
+      items.push({
+        id: `search:duckduckgo:${href}`,
+        sourceType: "search",
+        sourceName: this.label,
+        sourceId: href,
+        title,
+        url: href,
+        summary: snippet || undefined,
+        tags: input.tags ?? [],
+        fetchedAt: now,
+      });
+    });
+
+    return items;
   }
 }

@@ -28,7 +28,6 @@
     "@ai-insight/shared-types": "workspace:*",
     "@sinclair/typebox": "^0.34.14",
     "cheerio": "^1.0.0",
-    "duck-duck-scrape": "^2.2.7",
     "fast-xml-parser": "^4.5.1",
     "firecrawl": "^1.13.3",
     "needle": "^3.5.0",
