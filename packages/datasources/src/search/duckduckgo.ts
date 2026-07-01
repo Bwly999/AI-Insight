@@ -94,13 +94,22 @@ export class DuckDuckGoEngine implements SearchEngine {
       let href = $a.attr("href") ?? "";
       const snippet = $el.find(".result__snippet, a.result__snippet").text().trim();
 
-      // DDG 的 href 可能是 /l/?uddg= 重定向，解包
+      // DDG 的 href 可能是 /l/?uddg=<encoded> 重定向，解包成真实 URL。
+      // 先补全相对路径（/l/?uddg=... → https://duckduckgo.com/l/?uddg=...），
+      // 再解包 uddg query 参数拿到真正的目标 URL。
       if (href && !href.startsWith("http")) {
         try {
           href = new URL(href, "https://duckduckgo.com").toString();
         } catch {
           /* keep */
         }
+      }
+      try {
+        const u = new URL(href);
+        const uddg = u.searchParams.get("uddg");
+        if (uddg) href = decodeURIComponent(uddg);
+      } catch {
+        /* 非法 URL，保持原样 */
       }
       if (!title || !href) return;
 

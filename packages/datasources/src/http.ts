@@ -77,6 +77,14 @@ export async function rawFetch(
       throw new HttpError(res.status, res.statusText, url);
     }
     return res;
+  } catch (e) {
+    // 网络层错误（连接超时/DNS/拒绝）— fetch 抛 TypeError: fetch failed，
+    // 原始 cause 在 e.cause（如 UND_ERR_CONNECT_TIMEOUT）。包裹后向上抛，
+    // 避免下游只看到笼统的 "fetch failed" 无法诊断。
+    if (e instanceof HttpError) throw e;
+    const cause = (e as { cause?: { code?: string; message?: string } }).cause;
+    const reason = cause?.code ?? cause?.message ?? (e as Error).message;
+    throw new Error(`fetch failed @ ${url}: ${reason}`, { cause: e });
   } finally {
     clearTimeout(timeout);
   }
