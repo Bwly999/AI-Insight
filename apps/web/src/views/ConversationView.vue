@@ -4,6 +4,7 @@
  * 左栏(会话列表) + 主区(conv-head + 历史/运行流/报告卡 + composer) + 右栏(数据源)。
  */
 import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
+import { ChevronDown } from "@lucide/vue";
 import { useRouter } from "vue-router";
 import {
   type Conversation, type ConversationConfig, type AgentMessage, type TimeRange, type Report, type ReportSummary,
@@ -115,6 +116,35 @@ async function scrollToBottom() {
   if (el) el.scrollTop = el.scrollHeight;
 }
 
+// ─── 滚动到底部悬浮按钮 ───────────────────────────────────────────────────
+/** 距底部阈值（px）：小于此值视为"已到底"。 */
+const SCROLL_BOTTOM_THRESHOLD = 48;
+/** 当前对话是否未滚动到底部（用于决定悬浮按钮显隐）。 */
+const notAtBottom = ref(false);
+/** 用户是否曾向上滚动（避免流式 auto-scroll 与用户阅读打架）。 */
+const userScrolledUp = ref(false);
+
+function onConvoScroll() {
+  const el = convoScroll.value;
+  if (!el) return;
+  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  const atBottom = distFromBottom <= SCROLL_BOTTOM_THRESHOLD;
+  notAtBottom.value = !atBottom;
+  userScrolledUp.value = !atBottom;
+}
+
+/** 程序化滚到底：重置 flag 并滚到底（用于流式追加 auto-scroll）。 */
+async function autoStickToBottom() {
+  if (userScrolledUp.value) return; // 用户在向上阅读，不打扰
+  await scrollToBottom();
+}
+
+function jumpToBottom() {
+  userScrolledUp.value = false;
+  notAtBottom.value = false;
+  scrollToBottom();
+}
+
 async function onSend(text: string) {
   if (!currentConv.value) return;
 
@@ -178,23 +208,9 @@ async function downloadReport(id: string) {
   await downloadReportHtml(id, filename);
 }
 
-// ─── 引用联动：点击 .cite 高亮右栏对应来源 ─────────────────────────────────
-function onStreamClick(e: MouseEvent) {
-  const target = e.target as HTMLElement;
-  if (target.classList?.contains("cite")) {
-    const n = target.getAttribute("data-cite");
-    if (!n) return;
-    const el = document.getElementById("src" + n);
-    if (el) {
-      el.style.borderColor = "var(--accent)";
-      el.style.boxShadow = "0 0 0 2px var(--accent-soft)";
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => {
-        el.style.borderColor = "";
-        el.style.boxShadow = "";
-      }, 1500);
-    }
-  }
+// ─── 引用：聊天流内 .cite-link 点击暂不弹窗（无 citations 上下文），数字①在 ReportModal 内交互 ──
+function onStreamClick(_e: MouseEvent) {
+  // 聊天流过程性文字里的 [n] 回退为纯 ①（无链接）；完整引用交互在报告弹窗内。
 }
 
 // 工具调用（从 blocks 派生 → 传给 EvidencePanel，仅兼容签名）
@@ -207,8 +223,11 @@ const sourceCount = computed(() => {
 });
 void sourceCount;
 
-watch(() => run.report, () => scrollToBottom());
-watch(() => run.status, () => scrollToBottom());
+watch(() => run.report, () => autoStickToBottom());
+watch(() => run.status, () => autoStickToBottom());
+// 流式追加新 block / 新消息时，若用户未上滑，跟随到底部
+watch(() => run.blocks.value.length, () => autoStickToBottom());
+watch(() => messages.value.length, () => autoStickToBottom());
 
 // run 完成或失败时刷新消息：把本轮落库的思考/工具/文本并入历史。
 // 解决"第二次发送清空第一次回应"——上轮内容固化进 messages 后，新一轮 subscribe
@@ -233,13 +252,18 @@ onMounted(() => {
     run.subscribe("ux-run");
   }
   loadConversations();
-  loadConversation(props.id);
+  // 加载完成后默认贴底
+  loadConversation(props.id).then(() => autoStickToBottom());
 });
+// 滚动监听在模板 @scroll 上绑定，随组件销毁自动解绑。
 
 watch(
   () => props.id,
   (id) => {
-    if (id) loadConversation(id);
+    if (!id) return;
+    userScrolledUp.value = false;
+    notAtBottom.value = false;
+    loadConversation(id).then(() => autoStickToBottom());
   },
 );
 </script>
@@ -272,31 +296,43 @@ watch(
           </div>
         </div>
 
-        <div class="stream scroll" ref="convoScroll" @click="onStreamClick">
-          <MessageList
-            :messages="messages"
-            :reports="historyReports"
-            :idle="run.status.value === 'idle'"
-            :loading="loading"
-            @open-report="openReportModal"
-            @download-report="downloadReport" />
+        <div class="stream-wrap">
+          <div class="stream scroll" ref="convoScroll" @click="onStreamClick" @scroll="onConvoScroll">
+            <MessageList
+              :messages="messages"
+              :reports="historyReports"
+              :idle="run.status.value === 'idle'"
+              :loading="loading"
+              @open-report="openReportModal"
+              @download-report="downloadReport" />
 
-          <RunStream
-            :status="run.status.value"
-            :blocks="run.blocks.value"
-            :lens="run.lens.value" />
+            <RunStream
+              :status="run.status.value"
+              :blocks="run.blocks.value"
+              :lens="run.lens.value" />
 
-          <ClarifyCard
-            v-if="run.clarification.value"
-            :question="run.clarification.value.question"
-            :options="run.clarification.value.options"
-            @reply="(text: string) => run.reply(text)" />
+            <ClarifyCard
+              v-if="run.clarification.value"
+              :question="run.clarification.value.question"
+              :options="run.clarification.value.options"
+              @reply="(text: string) => run.reply(text)" />
 
-          <ReportCard
-            v-if="run.report.value"
-            :report="run.report.value"
-            @open="openReportModal"
-            @download="downloadReport" />
+            <ReportCard
+              v-if="run.report.value"
+              :report="run.report.value"
+              @open="openReportModal"
+              @download="downloadReport" />
+          </div>
+
+          <button
+            v-if="notAtBottom"
+            class="scroll-bottom-btn"
+            type="button"
+            title="滚动到底部"
+            aria-label="滚动到底部"
+            @click="jumpToBottom">
+            <ChevronDown :size="20" :stroke-width="2.2" />
+          </button>
         </div>
 
         <Composer
@@ -343,7 +379,37 @@ watch(
 .conv-head .lede { font-size: 13.5px; color: var(--text-3); max-width: 60ch; margin: 0; }
 .conv-head .meta { margin-top: 11px; display: flex; gap: 16px; font-size: 11.5px; color: var(--text-3); font-weight: 500; }
 
+.stream-wrap {
+  flex: 1; min-height: 0; position: relative; display: flex;
+}
+
 .stream {
   flex: 1; overflow-y: auto; padding: 24px 44px 24px;
+}
+
+/* 滚动到底部悬浮按钮 */
+.scroll-bottom-btn {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 20px;
+  width: 38px; height: 38px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: transform var(--t-fast, .15s), box-shadow var(--t-fast, .15s), color var(--t-fast, .15s);
+  z-index: 10;
+}
+.scroll-bottom-btn:hover {
+  color: var(--text);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+.scroll-bottom-btn:active {
+  transform: translateX(-50%) translateY(0);
 }
 </style>

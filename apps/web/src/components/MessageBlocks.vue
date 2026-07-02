@@ -310,10 +310,11 @@ const hasContent = computed(() => props.blocks.length > 0);
 .tool-status.running { background: var(--amber-soft); color: var(--amber); }
 .tool-status .spin { display: inline-block; animation: spin 1s linear infinite; }
 
-/* 工具结果：默认展开，最大高度限制 + 滚动；收起时隐藏 */
+/* 工具结果：默认展开；不建立嵌套滚动容器（max-height + overflow 会劫持滚轮，
+   导致鼠标悬停在工具内容上时无法滚动外层对话）。长度已由 TOOL_RESULT_MAX_CHARS
+   字数截断控制，这里只负责排版，不再单独滚动。 */
 .tool-body-wrap {
   border-top: 1px solid var(--border);
-  max-height: 220px; overflow-y: auto; overscroll-behavior: contain;
 }
 .tool-body-wrap:not(.open) { display: none; }
 .tool-body {
