@@ -200,7 +200,7 @@ const hasContent = computed(() => props.blocks.length > 0);
           <span class="tool-args">{{ toolArgsPreview(b.args) }}</span>
           <span class="th-right">
             <span v-if="toolStatusKey(b) === 'ok'" class="tool-status ok">
-              <Check :size="12" :stroke-width="2.5" /><span v-if="b.found != null"> {{ b.found }} 条</span><span v-if="b.durationMs"> · {{ (b.durationMs / 1000).toFixed(1) }}s</span>
+              <Check :size="12" :stroke-width="2.5" /><span v-if="b.found != null">{{ b.found }} 条</span><span v-if="b.durationMs"> · {{ (b.durationMs / 1000).toFixed(1) }}s</span>
             </span>
             <span v-else-if="toolStatusKey(b) === 'fail'" class="tool-status fail"><X :size="12" :stroke-width="2.5" /> 失败</span>
             <span v-else class="tool-status running"><Loader :size="12" :stroke-width="2.5" class="spin" /> 运行中</span>
@@ -301,6 +301,7 @@ const hasContent = computed(() => props.blocks.length > 0);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .tool-status {
+  display: inline-flex; align-items: center; gap: 3px;
   font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
   letter-spacing: 0.02em; font-family: var(--mono); white-space: nowrap;
 }
