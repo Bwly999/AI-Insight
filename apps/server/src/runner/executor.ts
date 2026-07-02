@@ -8,14 +8,14 @@
  *  - save_report 工具回调 → 渲染 standalone HTML → 写 reports 行。
  */
 import type { RunExecutor, RunContext } from "./index.js";
-import type { AgentEvent, DataSourceItem, DataSourceTag, TimeRange } from "@ai-insight/shared-types";
+import type { AgentEvent, DataSourceItem } from "@ai-insight/shared-types";
 import {
   createInsightSession,
   createInsightTools,
   bridgeSessionEvents,
   type AgentProviderConfig,
 } from "@ai-insight/agent";
-import { createDefaultEngines, createDefaultCrawlers, fetchRss, type EngineConfig } from "@ai-insight/datasources";
+import { createDefaultEngines, type EngineConfig } from "@ai-insight/datasources";
 import { config } from "../config.js";
 import * as repo from "../repo.js";
 import { renderReportHtml, extractStandfirst } from "../report-renderer.js";
@@ -66,52 +66,6 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       });
     };
 
-    // 启用的爬虫平台（从 data_sources 取）
-    const enabledPlatforms = repo.getEnabledCrawlerPlatforms();
-    // RSS 源（从 data_sources 取 type=rss）
-    const rssFeeds = repo
-      .listDataSources("rss")
-      .filter((d) => d.enabled)
-      .map((d) => ({
-        feedUrl: (d.config as { feedUrl?: string }).feedUrl ?? "",
-        sourceName: d.name,
-        tags: d.tags,
-      }))
-      .filter((f) => f.feedUrl);
-
-    // RSS 索引检索：FTS5 优先；零结果且有关键词 → 回退即时 fetch 并写回索引（自愈）
-    const searchRssIndex = async (opts: {
-      keywords?: string[];
-      tags?: DataSourceTag[];
-      timeRange?: TimeRange;
-      limit?: number;
-    }): Promise<DataSourceItem[]> => {
-      const ftsItems = repo.searchDataSourceItemsFts({
-        keywords: opts.keywords,
-        timeRange: opts.timeRange,
-        tags: opts.tags,
-        limit: opts.limit,
-      });
-      if (ftsItems.length) return ftsItems;
-      if (!opts.keywords?.length) return [];
-      const all: DataSourceItem[] = [];
-      await Promise.all(
-        rssFeeds.map((f) =>
-          fetchRss(f.feedUrl, {
-            sourceName: f.sourceName,
-            tags: (opts.tags ?? []) as never,
-            timeRange: opts.timeRange,
-            keywords: opts.keywords,
-            limit: opts.limit,
-          })
-            .then((its) => all.push(...its))
-            .catch(() => {}),
-        ),
-      );
-      if (all.length) repo.upsertDataSourceItems(all);
-      return all;
-    };
-
     // 显式构造 EngineConfig（数据源 key 来自 server env config，见 ADR-0004 / 设计 §4.1）
     // 与 CLI 的 JSON config 永不相交（模型 B：分层真相源）。
     const engineConfig: EngineConfig = {
@@ -125,11 +79,7 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
     const tools = createInsightTools({
       config: run.config,
       engines: createDefaultEngines(engineConfig),
-      crawlers: createDefaultCrawlers(),
-      rssFeeds,
-      enabledPlatforms,
       saveReport,
-      searchRssIndex,
       onItems: (items, toolName) =>
         collectedItems.push(...items.map((item) => ({ item, toolName }))),
       // ask 工具：暂停运行等待用户澄清（Claude-Code 式）。回复经 pending-inputs 传递。
