@@ -35,6 +35,14 @@ function inline(t: string): string {
     });
 }
 
+/**
+ * 仅渲染 inline markdown（**bold** / *italic* / `code` / 链接 / 引用），不产生块级元素。
+ * 用于标题、卡片等只允许内联标记的场景：先 esc() 转义，再应用 inline 规则，安全用于 v-html。
+ */
+export function mdInline(t: string): string {
+  return inline(t);
+}
+
 /** 解析 GFM 管道表格块（lines 已是该表格的连续行）。 */
 function tableToHtml(lines: string[]): string {
   const rows = lines.map((l) =>

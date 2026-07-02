@@ -5,7 +5,7 @@
  * Phase 4：从 Phase 3 的极简版升级为 editorial 版式。
  */
 import type { Report } from "@ai-insight/shared-types";
-import { renderReportStandalone } from "@ai-insight/shared-ui";
+import { renderReportStandalone, stripReportHeader } from "@ai-insight/shared-ui";
 
 /** 极简 markdown → HTML（覆盖标题/列表/链接/引用/代码）。 */
 export function markdownToHtml(md: string): string {
@@ -80,6 +80,9 @@ export function markdownToHtml(md: string): string {
 
 /**
  * 渲染 standalone HTML 报告（editorial 版式，可独立打开/下载）。
+ *
+ * title / standfirst 在 masthead 报头单独渲染，故需从正文 markdown 中剔除
+ * 否则会出现"标题/导语在报头与正文各出现一次"的重复。
  */
 export async function renderReportHtml(opts: {
   title: string;
@@ -87,7 +90,7 @@ export async function renderReportHtml(opts: {
   standfirst?: string;
   meta?: { issueNo?: string; createdAt?: string; signalCount?: number; sourceCount?: number };
 }): Promise<string> {
-  const bodyHtml = markdownToHtml(opts.markdown);
+  const bodyHtml = markdownToHtml(stripReportHeader(opts.markdown, opts.title, opts.standfirst));
   return renderReportStandalone({
     title: opts.title,
     standfirst: opts.standfirst,

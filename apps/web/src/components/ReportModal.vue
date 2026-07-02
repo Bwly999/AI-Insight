@@ -1,15 +1,15 @@
 <script setup lang="ts">
 /**
  * ReportModal — 报告弹窗（替代 ReportView 全屏页）。
- * 遮罩模糊 + 880px 卡片；正文区采用 editorial 版式（与下载 HTML 一致，固定浅色）；
- * head 含标题 + 下载图标 + 关闭（ESC / 点遮罩关闭）。
+ * 遮罩模糊 + 880px 卡片；标题并入 editorial paper 作为 report-masthead 报头
+ * （与下载 HTML 同款单一来源版式，固定浅色）；右上角浮动下载 / 关闭按钮。
  */
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { Download, X } from "@lucide/vue";
 import { reportHtmlUrl } from "@ai-insight/api-client";
 import type { Report } from "@ai-insight/shared-types";
-import { editorialColors } from "@ai-insight/shared-ui";
-import { mdToHtml } from "../utils/markdown";
+import { editorialColors, stripReportHeader } from "@ai-insight/shared-ui";
+import { mdToHtml, mdInline } from "../utils/markdown";
 
 const props = defineProps<{ report: Report | null }>();
 const emit = defineEmits<{ close: [] }>();
@@ -18,7 +18,11 @@ const emit = defineEmits<{ close: [] }>();
 const colors = editorialColors;
 
 const open = computed(() => !!props.report);
-const bodyHtml = computed(() => (props.report ? mdToHtml(props.report.markdown) : ""));
+const bodyHtml = computed(() =>
+  props.report ? mdToHtml(stripReportHeader(props.report.markdown, props.report.title, props.report.standfirst)) : "",
+);
+const titleHtml = computed(() => (props.report ? mdInline(props.report.title) : ""));
+const standfirstHtml = computed(() => (props.report?.standfirst ? mdInline(props.report.standfirst) : ""));
 const htmlUrl = computed(() => (props.report ? reportHtmlUrl(props.report.id) : "#"));
 
 /** 下载文件名：报告标题 + ".html"（净化文件名非法字符）。 */
@@ -26,6 +30,9 @@ const downloadName = computed(() => {
   const t = props.report?.title ?? "report";
   return `${t.replace(/[\\/:*?"<>|]/g, "").trim() || "report"}.html`;
 });
+
+/** 报头发布日期（YYYY-MM-DD），与下载 HTML 的 pub-date 一致。 */
+const pubDate = computed(() => (props.report?.createdAt ?? new Date().toISOString()).slice(0, 10));
 
 function onKey(e: KeyboardEvent) {
   if (e.key === "Escape" && open.value) emit("close");
@@ -45,29 +52,35 @@ onUnmounted(() => {
 <template>
   <div v-if="report" class="modal-veil open" @click.self="emit('close')">
     <div class="modal">
-      <div class="modal-head">
-        <div>
-          <div class="m-eb">分析报告 · 草稿</div>
-          <h2>{{ report.title }}</h2>
-        </div>
-        <div class="head-actions">
-          <a
-            class="icon-btn"
-            :href="htmlUrl"
-            :download="downloadName"
-            target="_blank"
-            rel="noopener"
-            title="下载 HTML"
-            aria-label="下载 HTML">
-            <Download :size="16" :stroke-width="2" />
-          </a>
-          <button class="icon-btn" title="关闭" aria-label="关闭" @click="emit('close')"><X :size="16" :stroke-width="2" /></button>
-        </div>
+      <!-- 右上浮动操作（下载 / 关闭）：脱离 editorial 排版，悬浮于 paper 之上 -->
+      <div class="head-actions">
+        <a
+          class="icon-btn"
+          :href="htmlUrl"
+          :download="downloadName"
+          target="_blank"
+          rel="noopener"
+          title="下载 HTML"
+          aria-label="下载 HTML">
+          <Download :size="16" :stroke-width="2" />
+        </a>
+        <button class="icon-btn" title="关闭" aria-label="关闭" @click="emit('close')"><X :size="16" :stroke-width="2" /></button>
       </div>
 
       <div class="modal-body scroll">
         <article class="editorial-paper">
-          <p v-if="report.standfirst" class="editorial-standfirst drop-cap">{{ report.standfirst }}</p>
+          <!-- 报头（与下载 HTML 的 report-masthead 同款单一来源版式） -->
+          <header class="report-masthead">
+            <div class="masthead-meta">
+              <span class="kicker">AI-Insight · 洞察报告</span>
+              <span class="pub-date">{{ pubDate }}</span>
+            </div>
+            <div class="double-rule masthead-rule"></div>
+            <!-- eslint-disable-next-line vue/no-v-html -- mdInline 先 esc() 再应用 inline 规则，安全 -->
+            <h1 class="report-title" v-html="titleHtml"></h1>
+          </header>
+          <!-- eslint-disable-next-line vue/no-v-html -- mdInline 先 esc() 再应用 inline 规则，安全 -->
+          <p v-if="standfirstHtml" class="editorial-standfirst drop-cap" v-html="standfirstHtml"></p>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="editorial-body" v-html="bodyHtml"></div>
         </article>
@@ -85,25 +98,27 @@ onUnmounted(() => {
   z-index: 200; padding: 28px;
 }
 .modal {
+  position: relative; /* 锚定右上角浮动操作层 */
   background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
   width: min(880px, 100%); max-height: 88vh; overflow: hidden;
   box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
 }
-.modal-head {
-  padding: 16px 24px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 14px;
+/* 右上角浮动操作（下载 / 关闭）：脱离 editorial 排版，悬浮于 paper 之上 */
+.head-actions {
+  position: absolute; top: 12px; right: 14px; z-index: 5;
+  display: flex; align-items: center; gap: 6px;
 }
-.modal-head h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; margin: 0; color: var(--text); }
-.m-eb { font-size: 11px; font-weight: 600; color: var(--text-3); margin-bottom: 2px; letter-spacing: 0.04em; }
-.head-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .head-actions .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
-  border: 1px solid transparent; background: transparent;
-  color: var(--text-2); text-decoration: none; transition: var(--t-fast);
-  font-size: 14px; line-height: 1;
+  border: 1px solid rgba(26, 22, 18, 0.15); background: rgba(244, 239, 230, 0.85);
+  color: var(--ink-2); text-decoration: none; transition: var(--t-fast);
+  font-size: 14px; line-height: 1; backdrop-filter: blur(4px);
 }
-.head-actions .icon-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-2); }
+.head-actions .icon-btn:hover {
+  border-color: var(--vermillion); color: var(--vermillion);
+  background: var(--paper);
+}
 
 .modal-body { flex: 1; overflow-y: auto; padding: 0; background: var(--surface-2); }
 
@@ -129,6 +144,31 @@ onUnmounted(() => {
   font-family: "Inter Tight", -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   line-height: 1.7;
   border-radius: 0;
+}
+
+/* —— 报头 report-masthead（与下载 HTML 同款单一来源版式，editorial-ssr.ts 对齐）—— */
+.report-masthead {
+  border-bottom: 3px solid var(--rule); /* double-rule 由 .double-rule 提供 */
+  padding-bottom: 20px; margin-bottom: 28px;
+}
+.masthead-meta {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.kicker {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  text-transform: uppercase; letter-spacing: 0.16em;
+  font-size: 11px; color: var(--vermillion); font-weight: 600;
+}
+.pub-date {
+  margin-left: auto; font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; color: var(--ink-3);
+}
+.double-rule { border-top: 3px double var(--rule); }
+.masthead-rule { margin-bottom: 6px; }
+.report-title {
+  font-family: "Fraunces", Georgia, serif; font-weight: 900;
+  font-size: 36px; line-height: 1.08; letter-spacing: -0.015em;
+  color: var(--ink); margin: 6px 0 0;
 }
 .editorial-standfirst {
   font-family: "Fraunces", Georgia, serif;
