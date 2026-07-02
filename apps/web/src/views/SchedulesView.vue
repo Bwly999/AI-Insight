@@ -5,7 +5,7 @@
  */
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { Plus, Trash2 } from "@lucide/vue";
+import { Plus, Trash2, Sun, Moon, ArrowLeft, CalendarClock } from "@lucide/vue";
 import {
   listSchedules,
   createSchedule,
@@ -134,8 +134,8 @@ function relTime(iso?: string): string {
               <Plus :size="15" :stroke-width="2.2" />
               新洞察
             </button>
-            <button class="icon-btn" @click="toggle" title="切换主题">◑</button>
-            <button class="icon-btn" @click="router.push('/c/new')" title="返回工作台">←</button>
+            <button class="icon-btn" @click="toggle" :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"><Moon v-if="theme === 'dark'" :size="16" :stroke-width="1.8" /><Sun v-else :size="16" :stroke-width="1.8" /></button>
+            <button class="icon-btn" @click="router.push('/c/new')" title="返回工作台"><ArrowLeft :size="16" :stroke-width="1.8" /></button>
           </div>
         </div>
         <div class="rule"></div>
@@ -179,7 +179,7 @@ function relTime(iso?: string): string {
 
       <div v-if="loading" class="state">加载中…</div>
       <div v-else-if="!schedules.length" class="empty">
-        <div class="empty-glyph">◔</div>
+        <div class="empty-glyph"><CalendarClock :size="48" :stroke-width="1.4" /></div>
         <div class="big">还没有定时洞察</div>
         <p>把一次洞察 prompt 固化为定时任务，到点自动跑全流程。</p>
       </div>
@@ -251,7 +251,7 @@ function relTime(iso?: string): string {
 
 .state { color: var(--text-3); padding: 60px; text-align: center; font-family: var(--mono); }
 .empty { padding: 60px 40px; text-align: center; color: var(--text-3); }
-.empty-glyph { font-family: var(--mono); font-size: 48px; color: var(--text-4); opacity: 0.5; margin-bottom: 14px; }
+.empty-glyph { display: flex; color: var(--text-4); opacity: 0.5; margin-bottom: 14px; }
 .big { font-size: 24px; font-weight: 700; color: var(--text-2); letter-spacing: -0.01em; }
 .empty p { margin-top: 8px; }
 
