@@ -1,8 +1,10 @@
 /**
- * 6 个自定义工具 — defineTool(TypeBox 参数)。
+ * 自定义工具 — defineTool(TypeBox 参数)。
  *
  * 每个工具是工厂函数，闭包绑定该 Run 的上下文（config、report 回调）。
  * 返回 ToolDefinition[]，注入 createInsightSession 的 customTools。
+ * 当前启用 5 个：search / extract_content / list_datasources / save_report / ask。
+ * crawlTool / rssTool 实现保留但暂未返回（createInsightTools 末尾），便于后续恢复。
  *
  * 工具返回 AgentToolResult：{ content: [{type:"text", text}], details }。
  */
@@ -31,8 +33,8 @@ export interface ToolContext {
   engines?: SearchEngine[];
   /** 爬虫适配器实例。 */
   crawlers?: CrawlerAdapter[];
-  /** RSS 源：feedUrl → { sourceName, tags }。MVP 从 data_sources 取。 */
-  rssFeeds: { feedUrl: string; sourceName: string; tags: DataSourceTag[] }[];
+  /** RSS 源：feedUrl → { sourceName, tags }。MVP 从 data_sources 取。（crawl/rss 暂停，可选） */
+  rssFeeds?: { feedUrl: string; sourceName: string; tags: DataSourceTag[] }[];
   /** 启用的爬虫平台 id 列表。 */
   enabledPlatforms?: string[];
   /** save_report 回调：把报告落库（由 server 注入）。 */
@@ -46,6 +48,12 @@ export interface ToolContext {
   }) => Promise<DataSourceItem[]>;
   /** 工具命中信号收集（供证据面板/统计）。 */
   onItems?: (items: DataSourceItem[], toolName: string) => void;
+  /**
+   * 分配全局引用编号（per-conversation 累加）：给 count 个 item 预留连续编号，返回起始编号（0-based）。
+   * formatItems 显示 startNo + i + 1，并写回 item.citeNo。LLM 据此在报告里写 [n]。
+   * server 注入：首次调用时从 Pi 会话历史派生基数，后续递增。不注入时回退为 per-call 0（仅测试）。
+   */
+  nextCiteNoBase?: (count: number) => number;
   /**
    * 暂停运行以向用户请求澄清（Claude-Code 式暂停/恢复）。
    * server 注入：emit clarification_needed + 进 awaiting_input，返回用户回复文本。
@@ -116,8 +124,9 @@ export function createInsightTools(ctx: ToolContext) {
       );
       ctx.onItems?.(items, "search");
       const summary = `搜索「${params.query}」命中 ${items.length} 条（${Object.entries(perEngine).map(([k, v]) => `${k}:${v}`).join(", ")}）`;
+      const startNo = ctx.nextCiteNoBase?.(items.length) ?? 0;
       return {
-        content: [{ type: "text" as const, text: formatItems("search", summary, items) }],
+        content: [{ type: "text" as const, text: formatItems("search", summary, items, startNo) }],
         details: { found: items.length, perEngine },
       };
     },
@@ -141,8 +150,9 @@ export function createInsightTools(ctx: ToolContext) {
       );
       ctx.onItems?.(items, "crawl");
       const summary = `抓取热点命中 ${items.length} 条（${Object.entries(perPlatform).map(([k, v]) => `${k}:${v}`).join(", ")}）`;
+      const startNo = ctx.nextCiteNoBase?.(items.length) ?? 0;
       return {
-        content: [{ type: "text" as const, text: formatItems("crawl", summary, items) }],
+        content: [{ type: "text" as const, text: formatItems("crawl", summary, items, startNo) }],
         details: { found: items.length, perPlatform },
       };
     },
@@ -170,7 +180,7 @@ export function createInsightTools(ctx: ToolContext) {
         // 无注入（测试/独立运行）：回退即时 fetch
         items = [];
         await Promise.all(
-          ctx.rssFeeds.map((f) =>
+          (ctx.rssFeeds ?? []).map((f) =>
             fetchRss(f.feedUrl, {
               sourceName: f.sourceName,
               tags,
@@ -184,10 +194,12 @@ export function createInsightTools(ctx: ToolContext) {
         );
       }
       ctx.onItems?.(items, "fetch_rss");
-      const summary = `RSS 检索命中 ${items.length} 条（${ctx.rssFeeds.length} 源）`;
+      const feeds = ctx.rssFeeds ?? [];
+      const summary = `RSS 检索命中 ${items.length} 条（${feeds.length} 源）`;
+      const startNo = ctx.nextCiteNoBase?.(items.length) ?? 0;
       return {
-        content: [{ type: "text" as const, text: formatItems("rss", summary, items) }],
-        details: { found: items.length, sourceCount: ctx.rssFeeds.length },
+        content: [{ type: "text" as const, text: formatItems("rss", summary, items, startNo) }],
+        details: { found: items.length, sourceCount: feeds.length },
       };
     },
   });
@@ -210,14 +222,12 @@ export function createInsightTools(ctx: ToolContext) {
   const listTool = defineTool({
     name: "list_datasources",
     label: "列出数据源",
-    description: "列出当前可用的数据源（搜索引擎 / 爬虫平台 / RSS 源），帮助决定调用哪些工具。",
+    description: "列出当前可用的数据源（搜索引擎），帮助决定调用哪些工具。",
     promptSnippet: "list_datasources(): 列出可用数据源",
     parameters: listDatasourcesParams,
     async execute() {
       const lines: string[] = ["## 可用数据源", ""];
       lines.push("**搜索引擎（search）**：DuckDuckGo, Exa, Firecrawl");
-      lines.push(`**爬虫平台（crawl）**：${(ctx.enabledPlatforms ?? []).join(", ") || "(无)"}`);
-      lines.push(`**RSS 源（fetch_rss）**：${ctx.rssFeeds.map((f) => `${f.sourceName}`).join(", ") || "(无)"}`);
       lines.push(`**当前时间窗**：${ctx.config.timeRange}`);
       return {
         content: [{ type: "text" as const, text: lines.join("\n") }],
@@ -273,20 +283,24 @@ export function createInsightTools(ctx: ToolContext) {
     },
   });
 
-  return [searchTool, crawlTool, rssTool, extractTool, listTool, saveReportTool, askTool];
+  // crawlTool / rssTool 暂停启用（实现保留，便于后续恢复）。返回 5 个工具。
+  return [searchTool, extractTool, listTool, saveReportTool, askTool];
 }
 
-/** 把 DataSourceItem[] 格式化为给 LLM 看的紧凑文本。 */
-function formatItems(tool: string, summary: string, items: DataSourceItem[]): string {
+/** 把 DataSourceItem[] 格式化为给 LLM 看的紧凑文本。
+ *  startNo：全局引用编号基数（0-based），序号显示为 startNo + i + 1 并写回 item.citeNo。 */
+function formatItems(tool: string, summary: string, items: DataSourceItem[], startNo = 0): string {
   if (items.length === 0) return `${summary}\n\n(无结果)`;
   const rows = items
     .slice(0, 30)
     .map((it, i) => {
+      it.citeNo = startNo + i + 1; // 写回全局编号，供后续 citeNo 派生/渲染对齐
       const heat = it.heat != null ? ` [热度${it.heat}]` : "";
       const date = it.publishedAt ? ` (${it.publishedAt.slice(0, 10)})` : "";
       const src = `「${it.sourceName}」`;
-      const summary = it.summary ? ` — ${it.summary.slice(0, 120)}` : "";
-      return `${i + 1}. ${src}${it.title}${heat}${date}${summary}\n   ${it.url}`;
+      // summary 去换行保证反解析稳定（citations.ts parseFormatItems 按行拆分）
+      const sm = it.summary ? ` — ${it.summary.slice(0, 120).replace(/[\r\n]+/g, " ")}` : "";
+      return `${startNo + i + 1}. ${src}${it.title}${heat}${date}${sm}\n   ${it.url}`;
     })
     .join("\n");
   return `${summary}\n\n${rows}`;

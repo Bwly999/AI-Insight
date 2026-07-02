@@ -2,28 +2,21 @@
 
 洞察的数据来自采集，不靠记忆。同一套数据源能力有**两张调用面孔**——按你当前所在环境选用：
 
-- **server 环境（有原生工具）**：直接调用 `search` / `crawl` / `fetch_rss` / `extract_content` 工具。时间窗与标签偏好由本轮 Run 配置**自动应用**，你只需给 query/keywords，不必传 time/tags。
+- **server 环境（有原生工具）**：直接调用 `search` / `extract_content` 工具。时间窗与标签偏好由本轮 Run 配置**自动应用**，你只需给 query，不必传 time/tags。
 - **ZCode / 仅 Bash 环境**：用 `aiinsight` CLI（见下文），需显式传 `--time` / `--engines` 等参数。
 
 两套面孔背后是同一个引擎 registry，能力等价；区别只在调用方式与本轮配置是否自动注入。
 
-## 四个能力（契约）
+## 两个能力（契约）
 
 ### search — 聚合搜索
 扇出多搜索引擎、去重、按时间过滤。适合找特定主题的最新进展、产品、论文。
 - 参数：`query`（查询词，建议英文/中英混合提高命中率）、`tags?`（标签偏好，覆盖默认）、`limit?`（每引擎上限，默认 8）。
 
-### crawl — 抓取热点平台
-抓取 HN / GitHub Trending / 微博 / 知乎 / 少数派 / 腾讯新闻的实时热点。适合发现正在发酵的热点、社区讨论。
-- 参数：`keywords?`（标题关键词过滤，不传=全部）、`platforms?`（平台 id，不传=全部启用）、`limit?`（每平台上限，默认 8）。
-
-### fetch_rss — 检索 RSS
-检索已启用的 RSS 订阅源，按关键词/时间过滤。适合权威媒体的近期条目。
-- 参数：`keywords?`、`tags?`、`limit?`（每源上限，默认 10）。
-
 ### extract_content — 正文提取
 对某个 URL 深读，拿 markdown 正文。对决定结论的关键来源用，不要只靠搜索摘要片段下判断。
 - 参数：`url`。
+- fallback 链：`jina → firecrawl → local`，逐个尝试，任一成功即返回。jina 无 key 也能用（走官方 `r.jina.ai`），firecrawl 缺 key 则跳过，local 永远兜底。因此**默认先走 jina**，无需显式指定。
 
 ---
 

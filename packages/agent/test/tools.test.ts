@@ -48,7 +48,7 @@ async function callTool(
 }
 
 describe("createInsightTools", () => {
-  it("返回 7 个工具，名字正确", () => {
+  it("返回 5 个工具，名字正确（crawl/fetch_rss 暂停启用）", () => {
     const tools = createInsightTools({
       config: CFG,
       rssFeeds: [],
@@ -57,9 +57,7 @@ describe("createInsightTools", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       "ask",
-      "crawl",
       "extract_content",
-      "fetch_rss",
       "list_datasources",
       "save_report",
       "search",
@@ -98,7 +96,7 @@ describe("createInsightTools", () => {
     expect(saved).toEqual({ title: "周报", markdown: "# 周报\n正文" });
   });
 
-  it("list_datasources 列出引擎/平台/RSS 源", async () => {
+  it("list_datasources 列出搜索引擎（不再含平台/RSS）", async () => {
     const tools = createInsightTools({
       config: CFG,
       enabledPlatforms: ["hackernews", "weibo"],
@@ -110,7 +108,8 @@ describe("createInsightTools", () => {
     const res = await callTool(tools, "list_datasources", {});
     const text = res.content[0].text;
     expect(text).toContain("DuckDuckGo");
-    expect(text).toContain("hackernews");
-    expect(text).toContain("ExampleFeed");
+    expect(text).toContain("当前时间窗");
+    expect(text).not.toContain("hackernews");
+    expect(text).not.toContain("ExampleFeed");
   });
 });
