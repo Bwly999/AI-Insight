@@ -1,59 +1,245 @@
 <script setup lang="ts">
 /**
  * ReportCard — 对话内的报告预览卡（点击触发弹窗，不跳路由）。
+ * 版式参考 prototype C方案（Console 情报台）：眉栏 + 衬线标题 + 三宫格统计 + 操作行，
+ * 配色改用项目翠绿 token，light/dark 双主题自洽。
  */
 import { computed } from "vue";
-import { ArrowRight } from "@lucide/vue";
+import { ArrowRight, Download, FileText } from "@lucide/vue";
 import type { Report } from "@ai-insight/shared-types";
 
 const props = defineProps<{ report: Report }>();
 const emit = defineEmits<{ open: [id: string]; download: [id: string] }>();
 
-// 简单统计：章节数（## 计数）、字数
+// 由 markdown 派生的卡片统计（Report 类型本身不带 stat 字段）
 const chapterCount = computed(() => (props.report.markdown.match(/^#{1,3}\s/gm) || []).length);
 const wordCount = computed(() => props.report.markdown.length);
+// 紧凑展示：>=1000 折成 5.2k
+const wordLabel = computed(() => {
+  const n = wordCount.value;
+  return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n);
+});
+// 阅读时长估：约 500 字/分钟
+const readMin = computed(() => Math.max(1, Math.round(wordCount.value / 500)));
 const timeLabel = computed(() => {
   const d = new Date(props.report.createdAt);
   return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(/\//g, " ");
 });
+
+function open() {
+  emit("open", props.report.id);
+}
+// 卡片本身可获焦、键盘可达；按钮获焦时交给按钮自身处理
+function onKey(e: KeyboardEvent) {
+  if (e.currentTarget !== e.target) return;
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    open();
+  }
+}
 </script>
 
 <template>
-  <div class="report-card" @click="emit('open', report.id)">
-    <div class="rc-top">
-      <span>分析报告 · 草稿</span>
-      <span>{{ timeLabel }}</span>
+  <div
+    class="report-card"
+    role="button"
+    tabindex="0"
+    @click="open"
+    @keydown="onKey">
+    <!-- 眉栏：报告标识 + 状态 -->
+    <div class="rc-eyebrow">
+      <span class="rc-label"><FileText :size="12" :stroke-width="2.2" /> 分析报告</span>
+      <span class="rc-meta">
+        <span class="rc-draft">草稿</span>
+        <span class="rc-time">{{ timeLabel }}</span>
+      </span>
     </div>
+
+    <!-- 标题 + 导语 -->
     <div class="rc-body">
-      <h3>{{ report.title }}</h3>
+      <h3 class="rc-title">{{ report.title }}</h3>
       <p v-if="report.standfirst" class="rc-lede">{{ report.standfirst }}</p>
     </div>
-    <div class="rc-foot">
-      <span>{{ chapterCount }} 章节</span>
-      <span>{{ wordCount }} 字</span>
-      <span class="hint">点击在弹窗内查阅 <ArrowRight :size="11" :stroke-width="2.2" /></span>
+
+    <!-- 三宫格统计 -->
+    <div class="rc-stats">
+      <div class="rc-stat">
+        <span class="rc-stat-num">{{ chapterCount }}</span>
+        <span class="rc-stat-label">章节</span>
+      </div>
+      <div class="rc-stat">
+        <span class="rc-stat-num">{{ wordLabel }}</span>
+        <span class="rc-stat-label">字数</span>
+      </div>
+      <div class="rc-stat">
+        <span class="rc-stat-num">{{ readMin }}<span class="rc-unit">min</span></span>
+        <span class="rc-stat-label">阅读</span>
+      </div>
+    </div>
+
+    <!-- 操作行 -->
+    <div class="rc-actions">
+      <span class="rc-open-hint">点击查阅完整报告 <ArrowRight :size="12" :stroke-width="2.2" /></span>
+      <button
+        class="rc-dl"
+        type="button"
+        title="下载 HTML 报告"
+        @click.stop="emit('download', report.id)">
+        <Download :size="12" :stroke-width="2.2" /> 下载
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped>
 .report-card {
-  margin: 14px 0; border: 1px solid var(--border); border-radius: 12px;
-  overflow: hidden; background: var(--surface);
-  box-shadow: var(--shadow-md); cursor: pointer; transition: var(--t-fast);
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: border-color var(--t-mid), transform var(--t-mid), box-shadow var(--t-mid);
 }
-.report-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.rc-top {
-  background: var(--surface-3); color: var(--text-2);
-  padding: 6px 15px; display: flex; justify-content: space-between;
-  font-size: 11px; font-weight: 600; border-bottom: 1px solid var(--border);
+.report-card:hover {
+  border-color: var(--accent-line);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), 0 0 22px var(--accent-soft);
 }
-.rc-body { padding: 15px 17px; }
-.rc-body h3 { font-size: 17px; font-weight: 700; margin: 0 0 3px; letter-spacing: -0.01em; color: var(--text); }
-.rc-lede { font-size: 13px; color: var(--text-3); margin: 0; line-height: 1.5; }
-.rc-foot {
-  padding: 8px 17px; border-top: 1px solid var(--border);
-  font-size: 11px; color: var(--text-3); display: flex; gap: 16px;
+.report-card:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
-.rc-foot .hint { margin-left: auto; color: var(--accent-text); font-weight: 600; }
+
+/* 眉栏 */
+.rc-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 16px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent-line);
+}
+.rc-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.rc-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.rc-draft {
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.rc-time {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+/* 标题 + 导语 */
+.rc-body { padding: 16px 18px 14px; }
+.rc-title {
+  margin: 0 0 6px;
+  font-family: var(--frau);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.rc-lede {
+  margin: 0;
+  font-family: var(--frau);
+  font-style: italic;
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+/* 三宫格统计 */
+.rc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px 18px 14px;
+}
+.rc-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+}
+.rc-stat + .rc-stat { border-left: 1px solid var(--border); }
+.rc-stat-num {
+  font-family: var(--frau);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+}
+.rc-unit {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.rc-stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+/* 操作行 */
+.rc-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+}
+.rc-open-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.rc-dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: var(--t-fast);
+}
+.rc-dl:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
 </style>

@@ -151,6 +151,20 @@ function openReportModal(id: string) {
 function closeReportModal() {
   modalReport.value = null;
 }
+// 下载报告：优先用 standalone html，落盘 .html
+function downloadReport(id: string) {
+  const r = run.report.value;
+  if (!r || r.id !== id) return;
+  const blob = new Blob([r.html || r.markdown], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(r.title || "insight-report").replace(/[\\/:*?"<>|]/g, "_")}.html`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 // ─── 引用联动：点击 .cite 高亮右栏对应来源 ─────────────────────────────────
 function onStreamClick(e: MouseEvent) {
@@ -256,7 +270,7 @@ watch(
             v-if="run.report.value"
             :report="run.report.value"
             @open="openReportModal"
-            @download="() => {}" />
+            @download="downloadReport" />
         </div>
 
         <Composer
