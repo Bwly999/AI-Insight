@@ -6,6 +6,7 @@
  * 兼容旧数据：单条 text assistant 消息 → 含单个 TextBlock 的 turn。
  */
 import { computed } from "vue";
+import { Sparkles } from "@lucide/vue";
 import type { Message } from "@ai-insight/shared-types";
 import { fromMessages } from "../composables/blocks";
 import MessageBlocks from "./MessageBlocks.vue";
@@ -41,7 +42,7 @@ function timeLabel(iso: string): string {
   </template>
 
   <div v-if="!messages.length && idle && !loading" class="empty">
-    <div class="hero-glyph">◎</div>
+    <div class="hero-glyph"><Sparkles :size="56" :stroke-width="1.4" /></div>
     <div class="big">发起一次洞察</div>
     <p>描述你想了解的赛道或问题，Agent 会自主调度数据源（搜索 · RSS · 爬虫）并综合成报告。</p>
     <div class="hero-hints">
@@ -75,7 +76,7 @@ function timeLabel(iso: string): string {
 
 .empty { padding: 8vh 40px 40px; }
 .hero-glyph {
-  font-family: var(--mono); font-size: 56px; color: var(--accent);
+  display: flex; color: var(--accent);
   opacity: 0.5; margin-bottom: 12px;
 }
 .empty p { margin-top: 8px; max-width: 420px; line-height: 1.6; }

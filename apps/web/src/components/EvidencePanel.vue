@@ -4,6 +4,7 @@
  * 仅收录数据源条目（带序号 ①②③，对应正文 cite 标记）；工具调用记录已移至正文 RunStream。
  */
 import { ref, watch } from "vue";
+import { ArrowUpRight, Loader, Inbox } from "@lucide/vue";
 import type { ToolCallState } from "./types";
 import { listRunItems } from "@ai-insight/api-client";
 import type { RunItem } from "@ai-insight/shared-types";
@@ -79,17 +80,17 @@ function domainOf(url: string): string {
           <div v-if="it.summary" class="s-sum">{{ it.summary }}</div>
           <div class="s-foot">
             <span>{{ it.publishedAt ? it.publishedAt.slice(0, 10) : it.fetchedAt.slice(0, 10) }}</span>
-            <span class="s-domain">{{ domainOf(it.url) }} ↗</span>
+            <span class="s-domain">{{ domainOf(it.url) }} <ArrowUpRight :size="11" :stroke-width="2.2" /></span>
           </div>
         </div>
       </template>
 
       <div v-else-if="loadingItems" class="empty" style="height: 120px">
-        <div class="empty-glyph spin">◎</div>
+        <div class="empty-glyph spin"><Loader :size="36" :stroke-width="1.6" /></div>
         <p>加载来源条目…</p>
       </div>
       <div v-else class="empty" style="height: 200px">
-        <div class="empty-glyph">◎</div>
+        <div class="empty-glyph"><Inbox :size="36" :stroke-width="1.4" /></div>
         <p>本轮引用的来源将在此展示</p>
       </div>
     </div>
@@ -146,6 +147,6 @@ function domainOf(url: string): string {
 }
 .source:hover .s-domain { text-decoration: underline; }
 
-.empty-glyph { font-family: var(--mono); font-size: 36px; color: var(--text-4); opacity: 0.5; margin-bottom: 8px; }
+.empty-glyph { display: flex; color: var(--text-4); opacity: 0.5; margin-bottom: 8px; }
 .empty-glyph.spin { animation: spin 1.4s linear infinite; }
 </style>
