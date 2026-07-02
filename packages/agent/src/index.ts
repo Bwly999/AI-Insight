@@ -17,3 +17,4 @@ export {
   type EmitFn,
 } from "./event-bridge.js";
 export { loadAgentMessages } from "./session-loader.js";
+export { deriveCitationsFromMessages, parseFormatItems } from "./citations.js";

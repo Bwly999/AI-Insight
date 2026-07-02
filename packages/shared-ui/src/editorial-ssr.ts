@@ -13,11 +13,13 @@ import {
   editorialFontLink,
 } from "./tokens.js";
 import { mdInline } from "./report-markdown.js";
+import type { Citation } from "@ai-insight/shared-types";
 
 export interface RenderReportInput {
   title: string;
   standfirst?: string;
   bodyHtml: string;
+  citations?: Citation[];
   meta?: {
     issueNo?: string;
     createdAt?: string;
@@ -96,6 +98,11 @@ export async function renderReportStandalone(
   });
   const bodyContent = await renderToString(app);
 
+  // 引用数据 + 🔗弹窗交互（仅有 citations 时注入；数字①是 <a> 无需 JS）
+  const citationsBlock = input.citations?.length
+    ? buildCitationsBlock(input.citations)
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -118,12 +125,71 @@ ${editorialComponentCss}
 .report-standfirst{font-size:18px;color:var(--ink-2);margin:14px 0 0;font-style:italic;}
 .report-footer{margin-top:40px;padding-top:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 .footer-meta{font-size:11px;color:var(--ink-3);}
+.cite-overlay{position:fixed;inset:0;background:rgba(26,22,18,.45);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.cite-modal{background:#fdfcf8;border-radius:10px;max-width:520px;max-height:70vh;overflow-y:auto;padding:24px 28px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.cite-modal-item{padding:10px 0;border-bottom:1px solid rgba(26,22,18,.08);}
+.cite-modal-item:last-child{border-bottom:none;}
+.cite-modal-title{font-weight:600;color:var(--ink);text-decoration:none;display:block;margin-bottom:4px;font-size:14px;}
+.cite-modal-title:hover{color:var(--vermillion);}
+.cite-modal-summary{font-size:12.5px;color:var(--ink-2);line-height:1.55;margin:0;}
+.cite-modal-close{position:absolute;top:6px;right:12px;border:none;background:none;font-size:22px;cursor:pointer;color:var(--ink-3);line-height:1;}
 </style>
 </head>
 <body>
 ${bodyContent}
+${citationsBlock}
 </body>
 </html>`;
+}
+
+/**
+ * 烘焙引用数据 JSON + 🔗弹窗 vanilla JS 到 standalone HTML。
+ * 数字①是 <a target=_blank> 无需 JS；🔗点击读 JSON 弹模态框列出 summary。
+ */
+function buildCitationsBlock(citations: Citation[]): string {
+  // escape </script> 防注入
+  const json = JSON.stringify(citations).replace(/</g, "\\u003c");
+  return `<script type="application/json" id="citations">${json}</script>
+<script>
+document.addEventListener('click', function(e) {
+  var link = e.target.closest('.cite-link');
+  if (!link) return;
+  e.preventDefault();
+  var nums = link.getAttribute('data-cites').split(',').map(Number);
+  var raw = document.getElementById('citations');
+  if (!raw) return;
+  var data = JSON.parse(raw.textContent);
+  var items = nums.map(function(n) {
+    return data.find(function(c) { return c.citeNo === n; });
+  }).filter(Boolean);
+  if (!items.length) return;
+  var overlay = document.createElement('div');
+  overlay.className = 'cite-overlay';
+  var box = document.createElement('div');
+  box.className = 'cite-modal';
+  items.forEach(function(it) {
+    var row = document.createElement('div');
+    row.className = 'cite-modal-item';
+    var t = document.createElement('a');
+    t.href = it.url; t.target = '_blank'; t.rel = 'noopener noreferrer';
+    t.textContent = it.title; t.className = 'cite-modal-title';
+    row.appendChild(t);
+    if (it.summary) {
+      var s = document.createElement('p');
+      s.textContent = it.summary; s.className = 'cite-modal-summary';
+      row.appendChild(s);
+    }
+    box.appendChild(row);
+  });
+  var close = document.createElement('button');
+  close.className = 'cite-modal-close'; close.textContent = '\\u00d7';
+  close.onclick = function() { document.body.removeChild(overlay); };
+  box.appendChild(close);
+  overlay.appendChild(box);
+  overlay.onclick = function(ev) { if (ev.target === overlay) document.body.removeChild(overlay); };
+  document.body.appendChild(overlay);
+});
+</script>`;
 }
 
 function escapeHtml(s: string): string {

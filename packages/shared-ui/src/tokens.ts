@@ -69,7 +69,13 @@ export const editorialComponentCss = `
 .editorial-body table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.95em;}
 .editorial-body th,.editorial-body td{border:1px solid rgba(26,22,18,.18);padding:6px 10px;text-align:left;}
 .editorial-body th{background:rgba(26,22,18,.05);font-weight:600;}
-.editorial-body .cite{color:var(--vermillion);font-weight:600;cursor:default;font-size:.8em;}
+.editorial-body .cite{color:var(--vermillion);font-weight:600;cursor:pointer;font-size:.8em;}
+.editorial-body .cite-num{color:var(--vermillion);text-decoration:none;cursor:pointer;}
+.editorial-body .cite-num sup{font-weight:600;font-size:.8em;}
+.editorial-body .cite-num:hover sup{text-decoration:underline;}
+.editorial-body .cite-link{color:var(--vermillion);font-weight:600;cursor:pointer;font-size:.8em;}
+.editorial-body .cite-link:hover{text-decoration:underline;}
+.editorial-body .cite-missing{color:var(--ink-3);font-weight:400;font-size:.75em;font-family:var(--mono);}
 `;
 
 export const editorialFontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">

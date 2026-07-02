@@ -50,12 +50,6 @@ watch(
 const sourceDot = (t: string) =>
   t === "search" ? "var(--src-search)" : t === "rss" ? "var(--src-rss)" : "var(--src-crawl)";
 
-// 圆圈数字 1→① …（>20 用 [n]）
-const circled = (n: number): string => {
-  const map = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳"];
-  return n >= 1 && n <= 20 ? map[n - 1] : `[${n}]`;
-};
-
 function domainOf(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
 }
@@ -72,8 +66,7 @@ function domainOf(url: string): string {
 
     <div class="r-list scroll">
       <template v-if="items.length">
-        <div v-for="(it, i) in items" :key="it.id" class="source" :id="'src' + (i + 1)" :data-source-no="i + 1">
-          <span class="s-no">{{ circled(i + 1) }}</span>
+        <div v-for="it in items" :key="it.id" class="source">
           <div class="s-src"><span class="dot" :style="{ background: sourceDot(it.sourceType) }"></span>{{ it.sourceType.toUpperCase() }} · {{ it.sourceName }}</div>
           <!-- 拉伸链接：标题为锚点，::after 覆盖整张卡，点击任意位置在新标签页打开原网页 -->
           <a class="s-title" :href="it.url" target="_blank" rel="noopener noreferrer">{{ it.title }}</a>

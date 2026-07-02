@@ -4,10 +4,11 @@
  * 遮罩模糊 + 880px 卡片；标题并入 editorial paper 作为 report-masthead 报头
  * （与下载 HTML 同款单一来源版式，固定浅色）；右上角浮动下载 / 关闭按钮。
  */
-import { computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { Download, X } from "@lucide/vue";
-import type { Report, ReportSummary } from "@ai-insight/shared-types";
+import type { Report, ReportSummary, Citation } from "@ai-insight/shared-types";
 import { editorialColors, stripReportHeader } from "@ai-insight/shared-ui";
+import { getReport } from "@ai-insight/api-client";
 import { mdToHtml, mdInline } from "../utils/markdown";
 import { downloadReportHtml } from "../utils/download";
 
@@ -17,27 +18,57 @@ const emit = defineEmits<{ close: [] }>();
 // editorial 色板（@ai-insight/shared-ui 单一来源）——局部持有以便 CSS v-bind 稳定捕获。
 const colors = editorialColors;
 
+// 完整报告（含 citations）：SSE/list 传入的 report 无 citations，按需从 API 取
+const fullReport = ref<Report | null>(null);
+watch(
+  () => props.report?.id,
+  async (id) => {
+    fullReport.value = null;
+    if (!id) return;
+    try {
+      fullReport.value = await getReport(id);
+    } catch {
+      /* 降级：用 props.report（无 citations，[n] 回退为纯 ①） */
+    }
+  },
+  { immediate: true },
+);
+
+// 优先用 fullReport（有 citations），否则回退 props.report
+const eff = computed(() => fullReport.value ?? props.report);
+
 const open = computed(() => !!props.report);
 const bodyHtml = computed(() =>
-  props.report ? mdToHtml(stripReportHeader(props.report.markdown, props.report.title, props.report.standfirst)) : "",
+  eff.value ? mdToHtml(stripReportHeader(eff.value.markdown, eff.value.title, eff.value.standfirst), eff.value.citations) : "",
 );
-const titleHtml = computed(() => (props.report ? mdInline(props.report.title) : ""));
-const standfirstHtml = computed(() => (props.report?.standfirst ? mdInline(props.report.standfirst) : ""));
+const titleHtml = computed(() => (eff.value ? mdInline(eff.value.title) : ""));
+const standfirstHtml = computed(() => (eff.value?.standfirst ? mdInline(eff.value.standfirst) : ""));
+
+// 🔗 引用弹窗：点击 .cite-link 读 data-cites，从 report.citations 查对应条目展示摘要
+const citePopup = ref<Citation[] | null>(null);
+function onBodyClick(e: MouseEvent) {
+  const link = (e.target as HTMLElement).closest(".cite-link") as HTMLElement | null;
+  if (!link) return;
+  e.preventDefault();
+  const nums = (link.getAttribute("data-cites") ?? "").split(",").map(Number).filter(Boolean);
+  const all = eff.value?.citations ?? [];
+  citePopup.value = nums.map((n) => all.find((c) => c.citeNo === n)).filter(Boolean) as Citation[];
+}
 
 /** 下载文件名：报告标题 + ".html"（净化文件名非法字符）。 */
 const downloadName = computed(() => {
-  const t = props.report?.title ?? "report";
+  const t = eff.value?.title ?? "report";
   return `${t.replace(/[\\/:*?"<>|]/g, "").trim() || "report"}.html`;
 });
 
 /** 下载：经鉴权 fetch 取 on-demand 渲染的 standalone HTML 落盘（与卡片下载共用 helper）。 */
 async function onDownload() {
-  if (!props.report) return;
-  await downloadReportHtml(props.report.id, downloadName.value);
+  if (!eff.value) return;
+  await downloadReportHtml(eff.value.id, downloadName.value);
 }
 
 /** 报头发布日期（YYYY-MM-DD），与下载 HTML 的 pub-date 一致。 */
-const pubDate = computed(() => (props.report?.createdAt ?? new Date().toISOString()).slice(0, 10));
+const pubDate = computed(() => (eff.value?.createdAt ?? new Date().toISOString()).slice(0, 10));
 
 function onKey(e: KeyboardEvent) {
   if (e.key === "Escape" && open.value) emit("close");
@@ -85,8 +116,19 @@ onUnmounted(() => {
           <!-- eslint-disable-next-line vue/no-v-html -- mdInline 先 esc() 再应用 inline 规则，安全 -->
           <p v-if="standfirstHtml" class="editorial-standfirst drop-cap" v-html="standfirstHtml"></p>
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <div class="editorial-body" v-html="bodyHtml"></div>
+          <div class="editorial-body" v-html="bodyHtml" @click="onBodyClick"></div>
         </article>
+      </div>
+    </div>
+
+    <!-- 🔗 引用摘要弹窗 -->
+    <div v-if="citePopup" class="cite-overlay" @click.self="citePopup = null">
+      <div class="cite-modal">
+        <button class="cite-modal-close" @click="citePopup = null">×</button>
+        <div v-for="c in citePopup" :key="c.citeNo" class="cite-modal-item">
+          <a :href="c.url" target="_blank" rel="noopener noreferrer" class="cite-modal-title">{{ c.title }}</a>
+          <p v-if="c.summary" class="cite-modal-summary">{{ c.summary }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -231,7 +273,33 @@ onUnmounted(() => {
 }
 .editorial-paper .editorial-body th { background: rgba(26, 22, 18, 0.05); font-weight: 600; }
 .editorial-paper .editorial-body .cite {
-  color: var(--vermillion); font-weight: 600; cursor: default; font-size: 0.8em;
+  color: var(--vermillion); font-weight: 600; cursor: pointer; font-size: 0.8em;
+}
+.editorial-paper .editorial-body .cite-num { color: var(--vermillion); text-decoration: none; cursor: pointer; }
+.editorial-paper .editorial-body .cite-num sup { font-weight: 600; font-size: 0.8em; }
+.editorial-paper .editorial-body .cite-num:hover sup { text-decoration: underline; }
+.editorial-paper .editorial-body .cite-link { color: var(--vermillion); font-weight: 600; cursor: pointer; font-size: 0.8em; }
+.editorial-paper .editorial-body .cite-link:hover { text-decoration: underline; }
+.editorial-paper .editorial-body .cite-missing { color: var(--ink-3); font-weight: 400; font-size: 0.75em; font-family: var(--mono); }
+
+/* 🔗 引用摘要弹窗 */
+.cite-overlay {
+  position: fixed; inset: 0; background: rgba(26, 22, 18, 0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 210;
+}
+.cite-modal {
+  background: var(--surface); border-radius: 10px; max-width: 520px; width: min(520px, 90vw);
+  max-height: 70vh; overflow-y: auto; padding: 24px 28px; position: relative;
+  box-shadow: var(--shadow-lg);
+}
+.cite-modal-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.cite-modal-item:last-child { border-bottom: none; }
+.cite-modal-title { font-weight: 600; color: var(--ink); text-decoration: none; display: block; margin-bottom: 4px; font-size: 14px; }
+.cite-modal-title:hover { color: var(--accent); }
+.cite-modal-summary { font-size: 12.5px; color: var(--text-2); line-height: 1.55; margin: 0; }
+.cite-modal-close {
+  position: absolute; top: 6px; right: 12px; border: none; background: none;
+  font-size: 22px; cursor: pointer; color: var(--text-3); line-height: 1;
 }
 
 /* drop-cap 导语首字母大写 */

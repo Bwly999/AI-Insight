@@ -8,6 +8,7 @@
  * 故系统内渲染逻辑变更对历史/新报告均即时生效。
  */
 import { renderReportStandalone, stripReportHeader, mdToHtml } from "@ai-insight/shared-ui";
+import type { Citation } from "@ai-insight/shared-types";
 
 /**
  * 渲染 standalone HTML 报告（editorial 版式，可独立打开/下载）。
@@ -19,13 +20,15 @@ export async function renderReportHtml(opts: {
   title: string;
   markdown: string;
   standfirst?: string;
+  citations?: Citation[];
   meta?: { issueNo?: string; createdAt?: string; signalCount?: number; sourceCount?: number };
 }): Promise<string> {
-  const bodyHtml = mdToHtml(stripReportHeader(opts.markdown, opts.title, opts.standfirst));
+  const bodyHtml = mdToHtml(stripReportHeader(opts.markdown, opts.title, opts.standfirst), opts.citations);
   return renderReportStandalone({
     title: opts.title,
     standfirst: opts.standfirst,
     bodyHtml,
+    citations: opts.citations,
     meta: opts.meta,
   });
 }

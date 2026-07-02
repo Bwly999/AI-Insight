@@ -10,11 +10,17 @@
  *
  * 纯函数、无依赖，server（SSR/tsx）与 web（Vite）运行时皆可安全加载。
  */
+import type { Citation } from "@ai-insight/shared-types";
 
 // ─── 内联层（esc + inline 规则）─────────────────────────────────────────────
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** 转义 href 属性值（防引号/& 注入）。 */
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 /** 1→① 2→② …（>20 回退为 [n]） */
@@ -23,32 +29,69 @@ function circledNum(n: number): string {
   return n >= 1 && n <= 20 ? map[n - 1] : `[${n}]`;
 }
 
-function inline(t: string): string {
+/** 构建 citeNo → Citation 查找表。 */
+function buildCiteMap(citations?: Citation[]): Map<number, Citation> | undefined {
+  if (!citations?.length) return undefined;
+  const m = new Map<number, Citation>();
+  for (const c of citations) m.set(c.citeNo, c);
+  return m;
+}
+
+/**
+ * 渲染引用标记 [n] 或 [n,m,...]：
+ *  - 有 citations 上下文时：hasContent→数字①（<a> 点击跳转原文）；summary-only→🔗（data-cites 聚合，点击弹窗）
+ *  - 无 citations 上下文（兼容旧调用/无来源场景）：回退为纯 ① 数字
+ *  - 编号不存在（LLM 编错号）：渲染灰色 [n]，不造假链接
+ */
+function renderCiteToken(nums: string, citeMap?: Map<number, Citation>): string {
+  const ns = nums.split(",").map((s) => parseInt(s.trim(), 10));
+  if (!citeMap) {
+    return ns.map((n) => `<sup class="cite" data-cite="${n}">${circledNum(n)}</sup>`).join("");
+  }
+  const numParts: string[] = [];
+  const linkParts: number[] = [];
+  for (const n of ns) {
+    const c = citeMap.get(n);
+    if (!c) {
+      numParts.push(`<sup class="cite-missing">[${n}]</sup>`);
+    } else if (c.hasContent) {
+      numParts.push(
+        `<a class="cite-num" href="${escapeAttr(c.url)}" target="_blank" rel="noopener noreferrer"><sup>${circledNum(n)}</sup></a>`,
+      );
+    } else {
+      linkParts.push(n);
+    }
+  }
+  let out = numParts.join("");
+  if (linkParts.length) {
+    out += `<sup class="cite-link" data-cites="${linkParts.join(",")}">🔗</sup>`;
+  }
+  return out;
+}
+
+function inline(t: string, citeMap?: Map<number, Citation>): string {
   return esc(t)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     // 链接 [text](url) 必须先于 [n] 引用，避免误伤
     .replace(/\[(.+?)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    // 引用标记 [n] → ①（仅匹配纯数字方括号，且前面不是 ] 以排除链接残余）
-    .replace(/\[(\d+)\]/g, (_, n) => {
-      const num = parseInt(n, 10);
-      return `<sup class="cite" data-cite="${num}">${circledNum(num)}</sup>`;
-    });
+    // 引用标记 [n] 或 [n,m,...] → 数字①/🔗（仅匹配纯数字+逗号方括号）
+    .replace(/\[(\d+(?:,\s*\d+)*)\]/g, (_, nums: string) => renderCiteToken(nums, citeMap));
 }
 
 /**
  * 仅渲染 inline markdown（**bold** / *italic* / `code` / 链接 / 引用），不产生块级元素。
  * 用于标题、导语、卡片等只允许内联标记的场景：先 esc() 转义，再应用 inline 规则，安全用于 v-html / innerHTML。
  */
-export function mdInline(t: string): string {
-  return inline(t);
+export function mdInline(t: string, citations?: Citation[]): string {
+  return inline(t, buildCiteMap(citations));
 }
 
 // ─── 块级层（mdToHtml）──────────────────────────────────────────────────────
 
 /** 解析 GFM 管道表格块（lines 已是该表格的连续行）。 */
-function tableToHtml(lines: string[]): string {
+function tableToHtml(lines: string[], citeMap?: Map<number, Citation>): string {
   const rows = lines.map((l) =>
     l
       .replace(/^\s*\|/, "")
@@ -56,12 +99,12 @@ function tableToHtml(lines: string[]): string {
       .split("|")
       .map((c) => c.trim()),
   );
-  if (rows.length < 2) return lines.map((l) => `<p>${inline(l)}</p>`).join("");
+  if (rows.length < 2) return lines.map((l) => `<p>${inline(l, citeMap)}</p>`).join("");
   const header = rows[0];
   const body = rows.slice(1).filter((r) => !r.every((c) => /^:?-+:?$/.test(c)));
-  const thead = `<thead><tr>${header.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead>`;
+  const thead = `<thead><tr>${header.map((c) => `<th>${inline(c, citeMap)}</th>`).join("")}</tr></thead>`;
   const tbody = `<tbody>${body
-    .map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`)
+    .map((r) => `<tr>${r.map((c) => `<td>${inline(c, citeMap)}</td>`).join("")}</tr>`)
     .join("")}</tbody>`;
   return `<table>${thead}${tbody}</table>`;
 }
@@ -72,7 +115,8 @@ function tableToHtml(lines: string[]): string {
  * 覆盖：标题 / 水平分隔线 / 引用块 / 有序+无序列表 / GFM 管道表格 / 段落合并 / [n] 引用→①。
  * server standalone HTML 与 web 客户端预览共用本函数，确保下载 HTML 与系统内一致。
  */
-export function mdToHtml(md: string): string {
+export function mdToHtml(md: string, citations?: Citation[]): string {
+  const citeMap = buildCiteMap(citations);
   const rawLines = md.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];
   let i = 0;
@@ -94,14 +138,14 @@ export function mdToHtml(md: string): string {
         tbl.push(rawLines[i]);
         i++;
       }
-      out.push(tableToHtml(tbl));
+      out.push(tableToHtml(tbl, citeMap));
       continue;
     }
 
     // 标题
     const h = trimmed.match(/^(#{1,4})\s+(.*)$/);
     if (h) {
-      out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`);
+      out.push(`<h${h[1].length}>${inline(h[2], citeMap)}</h${h[1].length}>`);
       i++;
       continue;
     }
@@ -115,7 +159,7 @@ export function mdToHtml(md: string): string {
 
     // 引用块
     if (trimmed.startsWith("> ")) {
-      out.push(`<blockquote>${inline(trimmed.slice(2))}</blockquote>`);
+      out.push(`<blockquote>${inline(trimmed.slice(2), citeMap)}</blockquote>`);
       i++;
       continue;
     }
@@ -124,7 +168,7 @@ export function mdToHtml(md: string): string {
     if (/^\d+\.\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < rawLines.length && /^\s*\d+\.\s+/.test(rawLines[i])) {
-        items.push(`<li>${inline(rawLines[i].replace(/^\s*\d+\.\s+/, ""))}</li>`);
+        items.push(`<li>${inline(rawLines[i].replace(/^\s*\d+\.\s+/, ""), citeMap)}</li>`);
         i++;
       }
       out.push(`<ol>${items.join("")}</ol>`);
@@ -135,7 +179,7 @@ export function mdToHtml(md: string): string {
     if (/^\s*[-*]\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < rawLines.length && /^\s*[-*]\s+/.test(rawLines[i])) {
-        items.push(`<li>${inline(rawLines[i].replace(/^\s*[-*]\s+/, ""))}</li>`);
+        items.push(`<li>${inline(rawLines[i].replace(/^\s*[-*]\s+/, ""), citeMap)}</li>`);
         i++;
       }
       out.push(`<ul>${items.join("")}</ul>`);
@@ -157,7 +201,7 @@ export function mdToHtml(md: string): string {
       para.push(rawLines[i]);
       i++;
     }
-    out.push(`<p>${inline(para.join(" "))}</p>`);
+    out.push(`<p>${inline(para.join(" "), citeMap)}</p>`);
   }
 
   return out.join("\n");

@@ -209,6 +209,19 @@ export interface InsightRun {
   createdAt: string;
 }
 
+/**
+ * Citation（引用条目）：报告来源标注的运行时派生结构（不落 DB）。
+ * citeNo = 全局序号（per-conversation 跨 run 累加），对应正文 [n] 标记。
+ * hasContent = 是否 extract_content 深读过原文（true→渲染数字①点击跳转；false→渲染🔗点击弹窗摘要）。
+ */
+export interface Citation {
+  citeNo: number;
+  url: string;
+  title: string;
+  summary?: string;
+  hasContent: boolean;
+}
+
 /** Report（报告）：Insight Run 的核心交付产物，一等公民。 */
 export interface Report {
   id: string;
@@ -218,6 +231,8 @@ export interface Report {
   standfirst?: string; // 导语
   markdown: string;
   html: string; // standalone HTML（editorial 版式）
+  /** 引用列表（运行时从 Pi 会话文件派生注入，非 DB 列）。渲染 [n] 标记时查此表。 */
+  citations?: Citation[];
   createdAt: string;
 }
 
@@ -247,6 +262,9 @@ export interface DataSourceItem {
   tags: DataSourceTag[];
   heat?: number; // 0-100 热度（结构化，区别于 newsnow 的 freeform extra.info）
   fetchedAt: string; // ISO
+  /** 全局引用编号（运行时 onItems/formatItems 分配，per-conversation 累加；不落 DB）。
+   * LLM 在工具结果里看到此编号，报告 [n] 引用它；渲染时查 Citation 表映射。 */
+  citeNo?: number;
 }
 
 /** RunItem（本轮工具命中的来源条目，落 run_items 表）：供证据面板展开展示。 */

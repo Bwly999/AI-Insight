@@ -13,6 +13,8 @@ import {
   createInsightSession,
   createInsightTools,
   bridgeSessionEvents,
+  loadAgentMessages,
+  deriveCitationsFromMessages,
   type AgentProviderConfig,
 } from "@ai-insight/agent";
 import { createDefaultEngines, type EngineConfig } from "@ai-insight/datasources";
@@ -75,6 +77,17 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       // jinaUrl / proxyUrl：server 路径不设（代理已在 main.ts 全局 configureProxy）
     };
 
+    // 取 conversation 的 sessionFile（首条消息时为空，后续运行时恢复历史）。
+    // 提前到 createInsightTools 之前：需要据此派生 citeNo 基数注入工具。
+    const conversation = repo.getConversation(run.conversationId);
+    const existingSessionFile = conversation?.sessionFile;
+    // citeNo 基数：从 Pi 会话历史派生既有 citations 数（per-conversation 跨 run 累加）。
+    // 首次运行为 0；后续运行继承历史编号，保证 LLM 看到的序号与最终渲染一致。
+    const baseCiteNo = existingSessionFile
+      ? deriveCitationsFromMessages(loadAgentMessages(existingSessionFile)).length
+      : 0;
+    let citeNoCounter = baseCiteNo;
+
     // 自定义工具
     const tools = createInsightTools({
       config: run.config,
@@ -82,6 +95,13 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       saveReport,
       onItems: (items, toolName) =>
         collectedItems.push(...items.map((item) => ({ item, toolName }))),
+      // 全局引用编号分配：每次工具命中 count 条 item，预留 [base+1 .. base+count]。
+      // formatItems 读此编号显示并写回 item.citeNo，LLM 据此在报告写 [n]。
+      nextCiteNoBase: (count: number) => {
+        const start = citeNoCounter;
+        citeNoCounter += count;
+        return start;
+      },
       // ask 工具：暂停运行等待用户澄清（Claude-Code 式）。回复经 pending-inputs 传递。
       // 落库由 Pi SessionManager 自动处理：ask 作为普通 tool_call 进 .jsonl，
       // 用户回复作为 ToolResultMessage.content 自动 appendMessage（question/options 在 args 里）。
@@ -91,10 +111,6 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
         return resolveAwaiting(ctx.runId, inputId);
       },
     });
-
-    // 取 conversation 的 sessionFile（首条消息时为空，后续运行时恢复历史）
-    const conversation = repo.getConversation(run.conversationId);
-    const existingSessionFile = conversation?.sessionFile;
 
     // 建 session（每 run 独立；provider 惰性读取支持热切换）
     // skillDir：让 ai-insight skill 经 loader 渐进披露（见 ADR-0006）
@@ -178,10 +194,10 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       emit({ type: "run_failed", runId: ctx.runId, error: msg });
     } finally {
       ctx.signal.removeEventListener("abort", onAbort);
-      // 持久化本轮采集的信号条目（无论成败，供证据面板/调试；上限 50）
+      // 持久化本轮采集的信号条目（无论成败，供证据面板/调试；无上限，保留全部引用来源）
       if (collectedItems.length) {
         try {
-          repo.recordRunItems(ctx.runId, collectedItems.slice(0, 50));
+          repo.recordRunItems(ctx.runId, collectedItems);
         } catch {
           // 落库失败不阻断 run 结束流程
         }
