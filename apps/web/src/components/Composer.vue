@@ -8,6 +8,7 @@ import {
   TIME_RANGE_OPTIONS, ALL_TAGS, TAG_LABELS,
   type TimeRange, type DataSourceTag,
 } from "@ai-insight/shared-types";
+import { SquareArrowUp, SquarePause } from "@lucide/vue";
 
 const props = defineProps<{
   status: "idle" | "running" | "completed" | "failed" | "awaiting_input";
@@ -27,6 +28,8 @@ const ta = ref<HTMLTextAreaElement | null>(null);
 
 // 上下文占用（mock：按草稿长度估算，0-100%）
 const ctxPct = computed(() => Math.min(100, Math.round((draft.value.length / 4000) * 100) || (props.status === "running" ? 41 : 0)));
+// 运行中（含等待澄清）：按钮转为停止态，点击调用 abort → POST /api/runs/:id/abort
+const isRunning = computed(() => props.status === "running" || props.status === "awaiting_input");
 
 async function autoGrow() {
   await nextTick();
@@ -69,11 +72,15 @@ function submit() {
         <span class="ctx-ring" :style="{ background: `conic-gradient(var(--accent) 0 ${ctxPct}%, var(--border-2) ${ctxPct}% 100%)` }" :title="`上下文 ${ctxPct}%`"></span>
         <span class="cm-meta">Deep · 上下文 {{ ctxPct }}%</span>
 
-        <button v-if="status === 'running' || status === 'awaiting_input'" type="button" class="stop-btn" @click="emit('abort')" title="中止运行">
-          <span style="display: block; width: 11px; height: 11px; background: currentColor; border-radius: 2px"></span>
-        </button>
-        <button v-else type="button" class="send-btn" :class="draft.trim() ? 'on' : 'off'" :disabled="!draft.trim()" @click="submit">
-          发送 ↵
+        <button
+          type="button"
+          class="send-btn"
+          :class="{ stop: isRunning }"
+          :disabled="!isRunning && !draft.trim()"
+          :title="isRunning ? '中止运行' : '发送 (⌘↵)'"
+          @click="isRunning ? emit('abort') : submit()">
+          <SquarePause v-if="isRunning" :size="22" :stroke-width="2.2" />
+          <SquareArrowUp v-else :size="22" :stroke-width="2.2" />
         </button>
       </div>
     </div>
@@ -109,16 +116,14 @@ function submit() {
 .cm-meta { font-size: 11.5px; color: var(--text-3); font-weight: 500; }
 
 .send-btn {
-  margin-left: auto; background: var(--accent); color: var(--on-accent);
-  border: none; border-radius: 8px; padding: 8px 16px;
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--t-fast);
+  margin-left: auto; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: none; border-radius: 8px;
+  background: transparent; color: var(--accent);
+  cursor: pointer; transition: var(--t-fast);
 }
-.send-btn.on:hover { background: var(--accent-hover); }
-.send-btn.off { background: var(--surface-3); color: var(--text-4); cursor: not-allowed; }
-.stop-btn {
-  margin-left: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px;
-  background: var(--surface); color: var(--rose); font-size: 13px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; transition: var(--t-fast);
-}
-.stop-btn:hover { background: var(--rose-soft); border-color: var(--rose); }
+.send-btn:hover:not(:disabled):not(.stop) { background: var(--accent-soft); }
+.send-btn:disabled { color: var(--text-4); cursor: not-allowed; }
+.send-btn.stop { color: var(--rose); }
+.send-btn.stop:hover { background: var(--rose-soft); }
 </style>
