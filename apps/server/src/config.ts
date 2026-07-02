@@ -62,6 +62,11 @@ function required(key: string, fallback?: string): string {
 export const config = {
   port: parseInt(process.env.PORT ?? "4166", 10),
   databaseUrl: process.env.DATABASE_URL ?? "./data/insight.db",
+  /**
+   * Pi SessionManager 持久化根目录（每个 conversation 一个子目录）。
+   * 与 DB 同级放在 data/ 下（非 tmpdir，避免被 OS 清理）。
+   */
+  sessionDir: process.env.PI_SESSION_DIR ?? "./data/sessions",
 
   // LLM（兼容 .env.local 的 OPENAI_* 命名 + 设计的 LLM_* 命名）
   llm: {

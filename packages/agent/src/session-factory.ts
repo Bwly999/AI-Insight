@@ -5,9 +5,9 @@
  *  - DefaultResourceLoader 全 no* + 自定义 systemPrompt（禁 skills/extensions/context）
  *  - noTools: "builtin"（禁 read/bash/edit/write；仅 customTools 生效）
  *  - 无工作区：cwd 指空临时目录
- *  - SessionManager.inMemory（持久化归 DB 管，见 §3.2）
+ *  - SessionManager 走 Pi 原生持久化（.jsonl，每个 conversation 一个文件）
  */
-import { constants, mkdtempSync } from "node:fs";
+import { constants, mkdtempSync, mkdirSync } from "node:fs";
 import { access as fsAccess, readFile as fsReadFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
@@ -61,6 +61,19 @@ export interface InsightSessionOptions {
    * 每个 Lens 在一次 session 内只触发一次（避免重复）。server 据此 emit lens_selected。
    */
   onLensSelected?: (lens: LensKey) => void;
+  /**
+   * Pi SessionManager 持久化根目录（每个 conversation 一个子目录，存 .jsonl）。
+   * 提供后：开启 Pi 原生持久化——首次运行用 SessionManager.create 新建文件，
+   * 后续传入 sessionFile 时用 SessionManager.open 恢复历史。
+   * 不提供则退化为 inMemory（无持久化，仅测试用）。
+   */
+  sessionDir?: string;
+  /**
+   * 既有 session 文件绝对路径（恢复对话历史用）。
+   * 提供时用 SessionManager.open(sessionFile, sessionDir) 恢复；
+   * 不提供时用 SessionManager.create(cwd, sessionDir) 新建。
+   */
+  sessionFile?: string;
 }
 
 /**
@@ -200,12 +213,34 @@ export async function createInsightSession(
     modelRegistry,
     authStorage,
     resourceLoader,
-    sessionManager: SessionManager.inMemory(cwd),
+    // Pi 原生 SessionManager：有 sessionDir 则走 .jsonl 持久化（恢复对话历史用），
+    // 否则退化为 inMemory（仅测试用）。createAgentSession 内部会用
+    // buildSessionContext() 注水历史到 agent.state.messages——与正常对话时一致。
+    sessionManager: buildSessionManager(cwd, opts),
     settingsManager: SettingsManager.inMemory(),
     noTools: "builtin", // 禁 bash/edit/write；read 以 customTool 形式注入（见 createSandboxedReadTool）
     customTools: tools,
   });
   return session;
+}
+
+/**
+ * 构造 Pi SessionManager：
+ *  - 有 sessionFile：open 既有文件（恢复历史）
+ *  - 有 sessionDir 无 sessionFile：create 新建（首次运行，executor 运行后回写路径到 DB）
+ *  - 都没有：inMemory（仅测试，无持久化）
+ */
+function buildSessionManager(cwd: string, opts?: InsightSessionOptions): SessionManager {
+  const sessionDir = opts?.sessionDir;
+  const sessionFile = opts?.sessionFile;
+  if (sessionFile) {
+    return SessionManager.open(sessionFile, sessionDir);
+  }
+  if (sessionDir) {
+    mkdirSync(sessionDir, { recursive: true });
+    return SessionManager.create(cwd, sessionDir);
+  }
+  return SessionManager.inMemory(cwd);
 }
 
 /**

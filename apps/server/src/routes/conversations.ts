@@ -92,15 +92,13 @@ export async function conversationRoutes(app: FastifyInstance): Promise<void> {
       repo.patchConversation(id, { title: deriveTitle(prompt) });
     }
 
-    // 建 user message
-    const userMsg = repo.addMessage(id, "user", { kind: "text", text: prompt });
-
-    // 建 run(queued)
-    const run = repo.createRun(id, userMsg.id, prompt, config, config.lens);
+    // 建 run(queued)：user message 由 Pi SessionManager 在 prompt() 时自动 appendMessage 到 .jsonl，
+    // 无需在 DB 旁路建 message 行。
+    const run = repo.createRun(id, prompt, config, config.lens);
 
     // 入队（main.ts 注册 Runner 后注入；未注册时 run 停在 queued，不阻塞路由）
     if (_enqueueRun) _enqueueRun(run.id, id);
 
-    return reply.code(201).send({ run, message: userMsg });
+    return reply.code(201).send({ run });
   });
 }

@@ -1,13 +1,12 @@
 /**
  * 仓储层 — DB 行 ↔ DTO 映射 + CRUD。
  *
- * DB 是 JSON 字符串字段（config/content/tags/toolCall），DTO 是结构化对象。
- * 消息历史以 DB 为唯一真相源（设计 §3.2）。
+ * DB 是 JSON 字符串字段（config/content/tags），DTO 是结构化对象。
+ * 对话历史改由 Pi SessionManager 的 .jsonl 持久化（原生格式，回放与正常对话一致）。
  */
 import { getDb, getRawSqlite } from "./db/index.js";
 import {
   conversations,
-  messages,
   insightRuns,
   reports,
   runItems,
@@ -19,6 +18,7 @@ import {
 import { eq, desc, and, isNull, sql } from "drizzle-orm";
 import { randomId } from "./util.js";
 import { timeRangeToStartDate } from "@ai-insight/datasources";
+import { loadAgentMessages } from "@ai-insight/agent";
 import type {
   Conversation,
   ConversationConfig,
@@ -28,14 +28,11 @@ import type {
   DataSourceTag,
   InsightRun,
   LensKey,
-  Message,
-  MessageContent,
   Report,
   ReportSummary,
   RunStatus,
   Schedule,
   TimeRange,
-  ToolCallRecord,
 } from "@ai-insight/shared-types";
 
 const db = () => getDb();
@@ -101,55 +98,26 @@ export function softDeleteConversation(id: string): boolean {
 export function getConversationWithMessages(id: string): ConversationWithMessages | undefined {
   const conv = getConversation(id);
   if (!conv) return undefined;
-  const msgs = listMessages(id);
+  // 消息历史从 Pi 原生 .jsonl 加载（buildSessionContext 与正常对话时一致）
+  const msgs = loadAgentMessages(conv.sessionFile);
   const lastRun = getLastRun(id);
   const reportSummaries = listReportSummaries(id);
   return { ...conv, messages: msgs, lastRun, reports: reportSummaries };
 }
 
-// ─── Messages ─────────────────────────────────────────────────────────────
-export function addMessage(
-  conversationId: string,
-  role: Message["role"],
-  content: MessageContent,
-  opts: { runId?: string; toolCall?: ToolCallRecord } = {},
-): Message {
-  const id = randomId("msg");
+// ─── Conversation Session File ────────────────────────────────────────────
+/** 把 Pi SessionManager 分配的 .jsonl 路径回写到 conversations.session_file。 */
+export function updateConversationSessionFile(id: string, sessionFile: string): void {
   db()
-    .insert(messages)
-    .values({
-      id,
-      conversationId,
-      role,
-      content: JSON.stringify(content),
-      toolCall: opts.toolCall ? JSON.stringify(opts.toolCall) : null,
-      runId: opts.runId ?? null,
-    })
+    .update(conversations)
+    .set({ sessionFile, updatedAt: new Date().toISOString() })
+    .where(eq(conversations.id, id))
     .run();
-  // 触发 conversation updatedAt
-  db().update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conversationId)).run();
-  return getMessage(id)!;
-}
-
-export function getMessage(id: string): Message | undefined {
-  const row = db().select().from(messages).where(eq(messages.id, id)).all()[0];
-  return row ? toMessageDto(row) : undefined;
-}
-
-export function listMessages(conversationId: string): Message[] {
-  return db()
-    .select()
-    .from(messages)
-    .where(eq(messages.conversationId, conversationId))
-    .orderBy(messages.createdAt)
-    .all()
-    .map(toMessageDto);
 }
 
 // ─── Insight Runs ─────────────────────────────────────────────────────────
 export function createRun(
   conversationId: string,
-  triggerMessageId: string,
   prompt: string,
   config: ConversationConfig,
   lens?: ConversationConfig["lens"],
@@ -160,7 +128,6 @@ export function createRun(
     .values({
       id,
       conversationId,
-      triggerMessageId,
       status: "queued",
       lens,
       config: JSON.stringify(config),
@@ -656,20 +623,9 @@ function toConversationDto(row: typeof conversations.$inferSelect): Conversation
     userId: row.userId,
     title: row.title,
     config: JSON.parse(row.config),
+    sessionFile: row.sessionFile ?? undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-  };
-}
-
-function toMessageDto(row: typeof messages.$inferSelect): Message {
-  return {
-    id: row.id,
-    conversationId: row.conversationId,
-    role: row.role as Message["role"],
-    content: JSON.parse(row.content) as MessageContent,
-    toolCall: row.toolCall ? (JSON.parse(row.toolCall) as ToolCallRecord) : undefined,
-    runId: row.runId ?? undefined,
-    createdAt: row.createdAt,
   };
 }
 
@@ -677,7 +633,7 @@ function toRunDto(row: typeof insightRuns.$inferSelect): InsightRun {
   return {
     id: row.id,
     conversationId: row.conversationId,
-    triggerMessageId: row.triggerMessageId,
+    triggerMessageId: row.triggerMessageId ?? undefined,
     status: row.status as RunStatus,
     lens: (row.lens as InsightRun["lens"]) ?? undefined,
     config: JSON.parse(row.config),

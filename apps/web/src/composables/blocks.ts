@@ -9,9 +9,19 @@
  *   - tool_call_start：总是 push 新 tool block
  *   - tool_call_end：按 toolCallId 找到对应 tool block，就地回填 found/ok/durationMs（不产生新块）
  *
- * 实时流（applyEvent）与历史回看（fromMessages）共用同一套 Block 类型与渲染组件。
+ * 实时流（applyEvent）与历史回看（fromAgentMessages）共用同一套 Block 类型与渲染组件。
  */
-import type { AgentEvent, Message, ReportSummary } from "@ai-insight/shared-types";
+import type {
+  AgentEvent,
+  AgentMessage,
+  AssistantMessage,
+  ReportSummary,
+  TextContent,
+  ThinkingContent,
+  ToolCall,
+  ToolResultMessage,
+  UserMessage,
+} from "@ai-insight/shared-types";
 
 /** 工具块（也兼作证据面板的 ToolCallState）。 */
 export interface ToolBlock {
@@ -152,34 +162,28 @@ export interface Turn {
 }
 
 /**
- * 把 DB 历史 Message[] 聚合成 turns。
+ * 把 Pi 原生 AgentMessage[] 聚合成 turns（历史回放，与实时流共用 Block 模型）。
  *
- * 历史回看策略：按 createdAt 顺序，相邻 assistant 消息归并进同一个 turn，
- * 其 content 按 kind 映射成 block，保持持久化时的顺序：
- *   - thinking     → ThinkingBlock
- *   - tool_result  → ToolBlock（toolCallId 用 message id；ask 澄清也走此分支）
- *   - text         → TextBlock
- * user 消息独立成一个 user turn。
+ * Pi 消息流结构（一次 prompt 可能产出多条）：
+ *   UserMessage → (AssistantMessage → ToolResultMessage)* → AssistantMessage(最终回复)
+ * 归并规则：
+ *   - UserMessage → 独立 user turn
+ *   - 连续的 AssistantMessage + 其后的 ToolResultMessage 归并进同一个 assistant turn，
+ *     直到遇到下一个 UserMessage 才新开 turn。
+ *   - AssistantMessage.content 按 type 映射：thinking→ThinkingBlock / text→TextBlock / toolCall→ToolBlock
+ *   - ToolResultMessage 按 toolCallId 回填对应 ToolBlock 的 found/ok（details.found）
  *
- * 兼容旧数据：单个 text assistant 消息 → 含单个 TextBlock 的 turn。
+ * 报告卡归位：Pi 的 AgentMessage 不带 runId，按时间线匹配——
+ * 把报告 createdAt（ISO）转 ms，挂到「最后一个 maxTimestamp ≤ 报告时间 的 assistant turn」末尾。
  */
-export function fromMessages(messages: Message[], reports: ReportSummary[] = []): Turn[] {
+export function fromAgentMessages(messages: AgentMessage[], reports: ReportSummary[] = []): Turn[] {
   const turns: Turn[] = [];
-  let current: (Turn & { _runId?: string }) | null = null;
-  // runId → report，便于 flush 时按 turn 归属的 run 匹配报告
-  const reportByRun = new Map(reports.map((r) => [r.runId, r]));
+  let current: (Turn & { _maxTs?: number }) | null = null;
 
   const flush = () => {
     if (current) {
-      // 按该 turn 的 runId 匹配报告（报告卡归位到产生它的 run 的消息序列末尾）
-      const runId = current._runId;
-      const { _runId, ...turn } = current;
-      void _runId;
-      if (runId && reportByRun.has(runId)) {
-        turn.report = reportByRun.get(runId);
-        reportByRun.delete(runId); // 每报告只挂一次
-      }
-      // 空 blocks 的 assistant turn（理论上不会出现）不丢弃，保留为空 turn
+      const { _maxTs, ...turn } = current;
+      void _maxTs;
       turns.push(turn);
       current = null;
     }
@@ -189,52 +193,117 @@ export function fromMessages(messages: Message[], reports: ReportSummary[] = [])
     if (m.role === "user") {
       flush();
       turns.push({
-        id: m.id,
+        id: `u-${m.timestamp}`,
         role: "user",
-        at: m.createdAt,
-        text: m.content.kind === "text" ? m.content.text : "",
+        at: new Date(m.timestamp).toISOString(),
+        text: userText(m),
       });
       continue;
     }
 
     if (m.role === "assistant") {
-      // 续接当前 assistant turn（相邻 assistant 消息归并），否则新开
+      // 续接当前 assistant turn；遇到新 user turn 之后的首条 assistant 则新开
       if (!current || current.role !== "assistant") {
         flush();
-        current = { id: m.id, role: "assistant", at: m.createdAt, blocks: [], _runId: m.runId };
+        current = { id: `a-${m.timestamp}`, role: "assistant", at: new Date(m.timestamp).toISOString(), blocks: [] };
       }
-      const block = messageContentToBlock(m);
-      if (block) current.blocks!.push(block);
+      for (const block of assistantContentToBlocks(m)) {
+        current.blocks!.push(block);
+      }
+      current._maxTs = Math.max(current._maxTs ?? 0, m.timestamp);
       continue;
     }
 
-    // role === 'tool'：当前未单独持久化 tool role 消息，忽略
+    if (m.role === "toolResult") {
+      // 回填同 turn 内对应 ToolBlock（按 toolCallId）
+      if (current && current.role === "assistant" && current.blocks) {
+        backfillToolResult(current.blocks, m);
+        current._maxTs = Math.max(current._maxTs ?? 0, m.timestamp);
+      }
+      continue;
+    }
   }
   flush();
+
+  // 报告卡按时间线归位到 assistant turn（createdAt ≤ turn 末尾时间）
+  attachReportsByTimeline(turns, reports);
   return turns;
 }
 
-/** 把单条 Message 的 content 映射成一个 Block（无法映射时返回 null）。 */
-function messageContentToBlock(m: Message): Block | null {
-  const c = m.content;
-  switch (c.kind) {
-    case "thinking":
-      return { kind: "thinking", id: m.id, text: c.text };
-    case "text":
-      return { kind: "text", id: m.id, text: c.text };
-    case "tool_result":
-      return {
+/** 提取 UserMessage 的纯文本（content 可能是 string 或 TextContent[]）。 */
+function userText(m: UserMessage): string {
+  if (typeof m.content === "string") return m.content;
+  return m.content
+    .filter((c): c is TextContent => c.type === "text")
+    .map((c) => c.text)
+    .join("");
+}
+
+/** 把一条 AssistantMessage 的 content 数组映射成有序 Block[]。 */
+function assistantContentToBlocks(m: AssistantMessage): Block[] {
+  const blocks: Block[] = [];
+  for (const c of m.content) {
+    if (c.type === "thinking") {
+      const tc = c as ThinkingContent;
+      if (tc.thinking) blocks.push({ kind: "thinking", id: `t-${m.timestamp}-${blocks.length}`, text: tc.thinking });
+    } else if (c.type === "text") {
+      const tc = c as TextContent;
+      if (tc.text) blocks.push({ kind: "text", id: `x-${m.timestamp}-${blocks.length}`, text: tc.text });
+    } else if (c.type === "toolCall") {
+      const tc = c as ToolCall;
+      blocks.push({
         kind: "tool",
-        id: m.id,
-        toolCallId: m.id,
-        toolName: c.toolName,
-        args: m.toolCall?.args ?? {},
-        found: c.found,
-        ok: true,
-        durationMs: m.toolCall?.durationMs,
-      };
-    default:
-      return null;
+        id: `o-${tc.id}`,
+        toolCallId: tc.id,
+        toolName: tc.name,
+        args: tc.arguments,
+      });
+    }
+  }
+  return blocks;
+}
+
+/** 用 ToolResultMessage 回填同 turn 内对应 ToolBlock 的 found/ok。 */
+function backfillToolResult(blocks: Block[], m: ToolResultMessage): void {
+  const idx = blocks.findIndex((b) => b.kind === "tool" && b.toolCallId === m.toolCallId);
+  if (idx < 0) return;
+  const b = blocks[idx];
+  if (b.kind !== "tool") return;
+  // details.found 是搜索类工具的命中数（非搜索类工具无此字段）
+  const found = (m.details as { found?: number } | undefined)?.found;
+  blocks[idx] = {
+    ...b,
+    ...(found != null && { found }),
+    ok: !m.isError,
+  };
+}
+
+/** 报告卡按 createdAt 时间线归位：挂到「最后一个 maxTimestamp ≤ 报告时间 的 assistant turn」。 */
+function attachReportsByTimeline(turns: Turn[], reports: ReportSummary[]): void {
+  if (!reports.length) return;
+  // 升序遍历报告；每个报告找到时间匹配的 turn 后挂载并消费，避免重复
+  const sorted = [...reports].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const pending = new Map(sorted.map((r) => [r.id, r]));
+  for (const t of turns) {
+    if (t.role !== "assistant") continue;
+    const turnTs = new Date(t.at).getTime();
+    // 挂所有 createdAt ≤ turnTs 且尚未挂载的报告
+    for (const r of sorted) {
+      if (!pending.has(r.id)) continue;
+      if (new Date(r.createdAt).getTime() <= turnTs) {
+        t.report = r;
+        pending.delete(r.id);
+      }
+    }
+  }
+  // 剩余未匹配的报告（时间晚于所有 turn）：挂到最后一个 assistant turn
+  if (pending.size) {
+    const lastAssistant = [...turns].reverse().find((t) => t.role === "assistant");
+    if (lastAssistant && !lastAssistant.report) {
+      // 只挂第一个剩余（避免一个 turn 塞多份报告卡）
+      const first = sorted.find((r) => pending.has(r.id));
+      if (first) lastAssistant.report = first;
+    }
   }
 }
 

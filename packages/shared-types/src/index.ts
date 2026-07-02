@@ -97,6 +97,8 @@ export interface Conversation {
   userId: string;
   title: string;
   config: ConversationConfig;
+  /** Pi SessionManager 持久化的 .jsonl 文件绝对路径（首条消息后由 executor 写入）。 */
+  sessionFile?: string;
   createdAt: string; // ISO
   updatedAt: string; // ISO
 }
@@ -107,45 +109,94 @@ export interface ConversationConfig {
   lens?: LensKey; // 默认 deep
 }
 
-/** Message（消息）：对话历史的一条，DB 为唯一真相源。 */
-export interface Message {
+// ─────────────────────────────────────────────────────────────────────────────
+// Pi 原生消息类型（与 @earendil-works/pi-ai 对齐，序列化进 .jsonl 后无损还原）
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TextContent {
+  type: "text";
+  text: string;
+  textSignature?: string;
+}
+
+export interface ThinkingContent {
+  type: "thinking";
+  thinking: string;
+  thinkingSignature?: string;
+  redacted?: boolean;
+}
+
+export interface ImageContent {
+  type: "image";
+  data: string;
+  mimeType: string;
+}
+
+export interface ToolCall {
+  type: "toolCall";
   id: string;
-  conversationId: string;
-  role: MessageRole;
-  content: MessageContent;
-  toolCall?: ToolCallRecord;
-  runId?: string;
-  createdAt: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  thoughtSignature?: string;
 }
 
-export type MessageContent =
-  | { kind: "text"; text: string }
-  | { kind: "thinking"; text: string }
-  // 工具调用结果（落库以便历史回看按 AgentLoop 顺序还原；found 对非搜索类工具可缺省）
-  | {
-      kind: "tool_result";
-      toolName: string;
-      summary: string;
-      found?: number;
-      args?: Record<string, unknown>;
-      durationMs?: number;
-    }
-  // Agent 反问用户（落库以便历史回看；回复作为普通 user msg 落库）
-  | { kind: "clarification"; inputId: string; question: string; options?: string[] };
+export interface Usage {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  reasoning?: number;
+  totalTokens: number;
+  cost: {
+    input: number;
+    output: number;
+    cacheRead: number;
+    cacheWrite: number;
+    total: number;
+  };
+}
 
-/** 工具调用记录（落 message 行）。 */
-export interface ToolCallRecord {
+export interface UserMessage {
+  role: "user";
+  content: string | (TextContent | ImageContent)[];
+  timestamp: number;
+}
+
+export interface AssistantMessage {
+  role: "assistant";
+  content: (TextContent | ThinkingContent | ToolCall)[];
+  provider: string;
+  model: string;
+  responseModel?: string;
+  responseId?: string;
+  usage: Usage;
+  stopReason: "stop" | "length" | "toolUse" | "error" | "aborted";
+  errorMessage?: string;
+  timestamp: number;
+}
+
+export interface ToolResultMessage {
+  role: "toolResult";
+  toolCallId: string;
   toolName: string;
-  args: Record<string, unknown>;
-  found?: number; // 命中条数
-  durationMs?: number;
+  content: (TextContent | ImageContent)[];
+  details?: unknown;
+  isError: boolean;
+  timestamp: number;
 }
+
+/**
+ * AgentMessage：Pi 原生消息联合体（对话历史的真相源，存于 .jsonl）。
+ * 与正常对话时一致：buildSessionContext() 输出即此类型，前端按 role+content.type 渲染。
+ */
+export type AgentMessage = UserMessage | AssistantMessage | ToolResultMessage;
 
 /** Insight Run（洞察运行）：Insight 的一次执行。 */
 export interface InsightRun {
   id: string;
   conversationId: string;
-  triggerMessageId: string;
+  /** 旧库兼容：消息历史已迁移至 Pi .jsonl，不再有对应 message 行，新库恒为 undefined。 */
+  triggerMessageId?: string;
   status: RunStatus;
   lens?: LensKey;
   config: ConversationConfig;
@@ -274,7 +325,8 @@ export interface ApiError {
 export type ReportSummary = Omit<Report, "html">;
 
 export interface ConversationWithMessages extends Conversation {
-  messages: Message[];
+  /** Pi 原生 AgentMessage[]：由 SessionManager.open(...).buildSessionContext().messages 加载。 */
+  messages: AgentMessage[];
   lastRun?: InsightRun;
   /** 该对话的全部报告（按 createdAt 升序），用于历史回放按 runId 归位渲染报告卡。 */
   reports?: ReportSummary[];

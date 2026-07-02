@@ -40,8 +40,7 @@ describe("conversations 软删", () => {
 describe("runs + run_items", () => {
   it("run 生命周期 + tokens 写入 + collectedItems 持久化", () => {
     const conv = repo.createConversation(userId, "run 测试", CFG);
-    const msg = repo.addMessage(conv.id, "user", { kind: "text", text: "hi" });
-    const run = repo.createRun(conv.id, msg.id, "hi", CFG, "deep");
+    const run = repo.createRun(conv.id, "hi", CFG, "deep");
     expect(repo.getRun(run.id)?.status).toBe("queued");
     expect(repo.getLastRun(conv.id)?.id).toBe(run.id);
 
@@ -100,8 +99,7 @@ describe("schedules CRUD", () => {
 describe("reconcileInterruptedRuns", () => {
   it("把 running 标记为 interrupted", () => {
     const conv = repo.createConversation(userId, "reconcile 测试", CFG);
-    const msg = repo.addMessage(conv.id, "user", { kind: "text", text: "x" });
-    const run = repo.createRun(conv.id, msg.id, "x", CFG, "deep");
+    const run = repo.createRun(conv.id, "x", CFG, "deep");
     repo.updateRun(run.id, { status: "running", startedAt: new Date().toISOString() });
 
     const n = repo.reconcileInterruptedRuns();

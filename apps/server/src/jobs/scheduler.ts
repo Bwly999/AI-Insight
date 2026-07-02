@@ -68,8 +68,8 @@ function fire(scheduleId: string): void {
   if (!s || !s.enabled) return;
   try {
     const conv = repo.createConversation(s.userId, `[定时] ${deriveTitle(s.prompt)}`, s.config);
-    const msg = repo.addMessage(conv.id, "user", { kind: "text", text: s.prompt });
-    const run = repo.createRun(conv.id, msg.id, s.prompt, s.config, s.lens);
+    // user message 由 Pi SessionManager 在 prompt() 时自动 appendMessage 到 .jsonl（与交互路径一致）
+    const run = repo.createRun(conv.id, s.prompt, s.config, s.lens);
     _enqueue(run.id, conv.id);
     repo.updateScheduleRunTimes(s.id, {
       lastRunAt: new Date().toISOString(),

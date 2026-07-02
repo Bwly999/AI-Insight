@@ -108,9 +108,9 @@ export async function runRoutes(app: FastifyInstance): Promise<void> {
     const delivered = submitRunInput(id, inputId, text);
     if (!delivered) return reply.code(409).send({ error: "input_mismatch" });
 
-    // 恢复运行态；用户回复作为普通 user 消息落库（历史回看 + 下一轮注水）
+    // 恢复运行态。用户回复经 ask 工具的 execute 返回为 ToolResult content，
+    // Pi SessionManager 会在 message_end 时自动 appendMessage 到 .jsonl（无需旁路写 DB）。
     repo.updateRun(id, { status: "running" });
-    repo.addMessage(run.conversationId, "user", { kind: "text", text });
     return { ok: true };
   });
 

@@ -1,21 +1,20 @@
 <script setup lang="ts">
 /**
  * MessageList — 历史消息（Workbench 风格）。
- * 用 fromMessages 把 DB 历史 Message[] + 报告 聚合成 turns：
+ * 用 fromAgentMessages 把 Pi 原生 AgentMessage[] + 报告 聚合成 turns：
  *   user turn → 右对齐气泡；assistant turn → AI 头像 + MessageBlocks（有序思考/工具/回复块）。
- *   turn.report（若该轮 run 产出了报告）→ ReportCard，归位到该 turn 末尾。
- * 兼容旧数据：单条 text assistant 消息 → 含单个 TextBlock 的 turn。
+ *   turn.report（若该轮 run 产出了报告）→ ReportCard，按时间线归位到该 turn 末尾。
  */
 import { computed } from "vue";
 import { Sparkles } from "@lucide/vue";
-import type { Message, ReportSummary } from "@ai-insight/shared-types";
-import { fromMessages } from "../composables/blocks";
+import type { AgentMessage, ReportSummary } from "@ai-insight/shared-types";
+import { fromAgentMessages } from "../composables/blocks";
 import MessageBlocks from "./MessageBlocks.vue";
 import ReportCard from "./ReportCard.vue";
 
 const props = defineProps<{
-  messages: Message[];
-  /** 该对话的全部历史报告（按 runId 归位到产生它的 turn 末尾渲染）。 */
+  messages: AgentMessage[];
+  /** 该对话的全部历史报告（按时间线归位到产生它的 turn 末尾渲染）。 */
   reports?: ReportSummary[];
   idle: boolean;
   loading: boolean;
@@ -23,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ openReport: [id: string]; downloadReport: [id: string] }>();
 
-const turns = computed(() => fromMessages(props.messages, props.reports ?? []));
+const turns = computed(() => fromAgentMessages(props.messages, props.reports ?? []));
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);

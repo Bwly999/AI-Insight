@@ -50,6 +50,9 @@ export function initSchema(): void {
   sqlite.exec(SCHEMA_SQL);
   // 既有库补列（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列）
   ensureColumn("conversations", "deleted_at", "TEXT");
+  ensureColumn("conversations", "session_file", "TEXT");
+  // 旧库迁移：insight_runs.trigger_message_id 去掉 NOT NULL + FK（消息历史改由 Pi .jsonl 持久化）
+  migrateInsightRunsTriggerColumn();
   // FTS5 虚表（data_source_items 的全文索引）
   sqlite.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS data_source_items_fts USING fts5(
@@ -85,6 +88,57 @@ function ensureColumn(table: string, column: string, ddl: string): void {
   }
 }
 
+/**
+ * 旧库迁移：insight_runs.trigger_message_id 去 NOT NULL + FK。
+ *
+ * 消息历史已迁移至 Pi SessionManager .jsonl，trigger_message_id 不再 FK 到 messages(id)。
+ * 旧库该列是 `TEXT NOT NULL REFERENCES messages(id)`，SQLite 不能直接改约束，
+ * 用 12 步表重建法（SQLite 官方推荐）：建新表 → 拷数据 → 删旧 → 改名 → 重建索引。
+ * 幂等：检测到旧约束（notnull=1 或有 FK）时才执行。
+ */
+function migrateInsightRunsTriggerColumn(): void {
+  const sqlite = getRawSqlite();
+  const cols = sqlite.pragma("table_info(insight_runs)") as { name: string; notnull: number }[];
+  const triggerCol = cols.find((c) => c.name === "trigger_message_id");
+  if (!triggerCol || triggerCol.notnull === 0) return; // 已迁移（新库或已重建）
+
+  // 检测 FK（pragma foreign_key_list）
+  const fks = sqlite.pragma("foreign_key_list(insight_runs)") as { table: string }[];
+  const hasFkToMessages = fks.some((f) => f.table === "messages");
+
+  sqlite.exec("PRAGMA foreign_keys=OFF;");
+  sqlite.exec("BEGIN TRANSACTION;");
+  try {
+    sqlite.exec(`
+      CREATE TABLE insight_runs_new (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id),
+        trigger_message_id TEXT,
+        status TEXT NOT NULL DEFAULT 'queued',
+        lens TEXT,
+        config TEXT NOT NULL DEFAULT '{}',
+        prompt TEXT NOT NULL,
+        started_at TEXT,
+        ended_at TEXT,
+        tokens INTEGER,
+        report_id TEXT,
+        error TEXT,
+        created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+      );
+      INSERT INTO insight_runs_new SELECT * FROM insight_runs;
+      DROP TABLE insight_runs;
+      ALTER TABLE insight_runs_new RENAME TO insight_runs;
+      CREATE INDEX IF NOT EXISTS idx_runs_conv ON insight_runs(conversation_id);
+    `);
+    sqlite.exec("COMMIT;");
+  } catch (e) {
+    sqlite.exec("ROLLBACK;");
+    throw e;
+  } finally {
+    sqlite.exec("PRAGMA foreign_keys=ON;");
+  }
+}
+
 /** 测试用：重置单例，使下一轮 getDb 重新打开（如 :memory: 新库）。 */
 export function resetDbForTest(): void {
   try {
@@ -110,6 +164,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   user_id TEXT NOT NULL REFERENCES users(id),
   title TEXT NOT NULL,
   config TEXT NOT NULL DEFAULT '{}',
+  session_file TEXT,
   created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
   updated_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
   deleted_at TEXT
@@ -127,7 +182,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id);
 CREATE TABLE IF NOT EXISTS insight_runs (
   id TEXT PRIMARY KEY,
   conversation_id TEXT NOT NULL REFERENCES conversations(id),
-  trigger_message_id TEXT NOT NULL REFERENCES messages(id),
+  trigger_message_id TEXT,
   status TEXT NOT NULL DEFAULT 'queued',
   lens TEXT,
   config TEXT NOT NULL DEFAULT '{}',

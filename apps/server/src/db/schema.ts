@@ -24,20 +24,22 @@ export const conversations = sqliteTable("conversations", {
   title: text("title").notNull(),
   // config: { timeRange, lens? } 以 JSON 存
   config: text("config").notNull().default("{}"),
+  // Pi SessionManager 持久化的 .jsonl 文件绝对路径（每会话一个文件）；
+  // 首次运行时由 executor 写入。回放时通过它用 SessionManager.open 重建。
+  sessionFile: text("session_file"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   // 软删标记（null=未删）；list/get 过滤 deleted_at IS NULL
   deletedAt: text("deleted_at"),
 });
 
-// ─── messages（对话历史，真相源）────────────────────────────────────────
+// ─── messages（已废弃：对话历史改由 Pi SessionManager .jsonl 持久化）──────
+// 表结构与既有库保持兼容（initSchema 仍建表），仅不再写入。
 export const messages = sqliteTable("messages", {
   id: text("id").primaryKey(),
   conversationId: text("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   role: text("role", { enum: ["user", "assistant", "tool"] }).notNull(),
-  // content: MessageContent JSON
   content: text("content").notNull(),
-  // toolCall: ToolCallRecord JSON（可空）
   toolCall: text("tool_call"),
   runId: text("run_id"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -47,7 +49,8 @@ export const messages = sqliteTable("messages", {
 export const insightRuns = sqliteTable("insight_runs", {
   id: text("id").primaryKey(),
   conversationId: text("conversation_id").notNull().references(() => conversations.id),
-  triggerMessageId: text("trigger_message_id").notNull().references(() => messages.id),
+  // 不再 FK 到 messages(id)：消息历史已迁移至 Pi .jsonl，此列保留仅为兼容旧库。
+  triggerMessageId: text("trigger_message_id"),
   status: text("status", { enum: ["queued", "running", "awaiting_input", "completed", "failed", "interrupted"] }).notNull().default("queued"),
   lens: text("lens", { enum: ["deep", "dual", "flash", "timeline"] }),
   // run 级配置快照（继承自 conversation）

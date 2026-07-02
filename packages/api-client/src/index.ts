@@ -12,7 +12,6 @@ import type {
   DataSource,
   InsightRun,
   LensKey,
-  Message,
   Report,
   RunItem,
   Schedule,
@@ -97,7 +96,7 @@ export const createConversation = (data: { title?: string; config?: Partial<Conv
 export const patchConversation = (id: string, patch: { title?: string; config?: Partial<ConversationConfig> }) =>
   req<Conversation>(`/api/conversations/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 export const sendMessage = (conversationId: string, text: string, config?: Partial<ConversationConfig>) =>
-  req<{ run: InsightRun; message: Message }>(`/api/conversations/${conversationId}/messages`, {
+  req<{ run: InsightRun }>(`/api/conversations/${conversationId}/messages`, {
     method: "POST",
     body: JSON.stringify({ text, config }),
   });

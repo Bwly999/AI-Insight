@@ -6,7 +6,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import {
-  type Conversation, type ConversationConfig, type Message, type TimeRange, type Report, type ReportSummary,
+  type Conversation, type ConversationConfig, type AgentMessage, type TimeRange, type Report, type ReportSummary,
 } from "@ai-insight/shared-types";
 import { listConversations, createConversation, getConversation, sendMessage } from "@ai-insight/api-client";
 import { useInsightRun } from "../composables/useInsightRun.js";
@@ -41,8 +41,8 @@ async function loadConversations() {
 
 // ─── 当前会话 ─────────────────────────────────────────────────────────────
 const currentConv = ref<Conversation | null>(null);
-const messages = ref<Message[]>([]);
-/** 该对话的历史报告（按 createdAt 升序），用于回放时按 runId 归位渲染报告卡。 */
+const messages = ref<AgentMessage[]>([]);
+/** 该对话的历史报告（按 createdAt 升序），用于回放时按时间线归位渲染报告卡。 */
 const historyReports = ref<ReportSummary[]>([]);
 const loading = ref(false);
 
@@ -87,11 +87,11 @@ async function loadConversation(id: string) {
 
 /**
  * 轻量刷新消息（不动 loading/config/标题）。
- * run 完成后调用：把后端已落库的本轮内容（思考/工具/文本）并入 messages 历史，
+ * run 完成后调用：从后端拉取 Pi SessionManager 已落盘的 .jsonl 重建的 AgentMessage[]，
  * 这样下一轮 subscribe 清空 run.blocks 时，上轮内容已固化为历史、不会消失。
  *
- * 时序安全：SSE 的 run_completed 在后端 persistBlocks+updateRun 之后才 emit，
- * 故收到时 DB 必已写完，直接拉取即可拿到本轮落库的全部块。
+ * 时序安全：SSE 的 run_completed 在 Pi appendMessage（message_end 时）之后才 emit，
+ * 故收到时 .jsonl 必已写完，SessionManager.open + buildSessionContext 即可拿到本轮全部消息。
  */
 async function refreshMessages() {
   const id = currentConv.value?.id;
@@ -124,12 +124,13 @@ async function onSend(text: string) {
     return;
   }
 
+  // 乐观插入临时 user message（Pi 原生 UserMessage 结构）。
+  // 后端 session.prompt() 时 Pi 会自己 appendMessage 真正的 user message，
+  // refreshMessages 拉取后会用权威版本替换这条临时项。
   messages.value.push({
-    id: `temp_${Date.now()}`,
-    conversationId: currentConv.value.id,
     role: "user",
-    content: { kind: "text", text },
-    createdAt: new Date().toISOString(),
+    content: text,
+    timestamp: Date.now(),
   });
   await scrollToBottom();
 
@@ -225,11 +226,9 @@ watch(
 onMounted(() => {
   if (isUxMode()) {
     messages.value.push({
-      id: `temp_${Date.now()}`,
-      conversationId: "ux-conv",
       role: "user",
-      content: { kind: "text", text: "Tell me about AI trends in 2024" },
-      createdAt: new Date().toISOString(),
+      content: "Tell me about AI trends in 2024",
+      timestamp: Date.now(),
     });
     run.subscribe("ux-run");
   }

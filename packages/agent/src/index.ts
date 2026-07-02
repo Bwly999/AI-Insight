@@ -16,3 +16,4 @@ export {
   bridgeSessionEvents,
   type EmitFn,
 } from "./event-bridge.js";
+export { loadAgentMessages } from "./session-loader.js";
