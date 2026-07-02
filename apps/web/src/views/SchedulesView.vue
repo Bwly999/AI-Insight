@@ -5,6 +5,7 @@
  */
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { Plus, Trash2 } from "@lucide/vue";
 import {
   listSchedules,
   createSchedule,
@@ -130,7 +131,7 @@ function relTime(iso?: string): string {
           </div>
           <div class="mast-right">
             <button class="ghost-btn" @click="router.push('/c/new')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              <Plus :size="15" :stroke-width="2.2" />
               新洞察
             </button>
             <button class="icon-btn" @click="toggle" title="切换主题">◑</button>
@@ -200,7 +201,7 @@ function relTime(iso?: string): string {
           <div class="sch-act">
             <button class="switch" :class="{ on: s.enabled }" @click="toggleEnabled(s)" :title="s.enabled ? '已启用' : '已停用'"><span class="knob"></span></button>
             <button class="del-btn" @click="remove(s)" title="删除">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+              <Trash2 :size="15" :stroke-width="2" />
             </button>
           </div>
         </div>

@@ -88,6 +88,13 @@ export function mdToHtml(md: string): string {
       continue;
     }
 
+    // 水平分隔线 --- / *** / ___（≥3 个，可空格，行内仅此内容）
+    if (/^(\s*[-*_]\s*){3,}$/.test(line) && /([-*_])\1\1/.test(line.replace(/\s/g, ""))) {
+      out.push("<hr />");
+      i++;
+      continue;
+    }
+
     // 引用块
     if (trimmed.startsWith("> ")) {
       out.push(`<blockquote>${inline(trimmed.slice(2))}</blockquote>`);
@@ -126,6 +133,7 @@ export function mdToHtml(md: string): string {
       !rawLines[i].trim().startsWith("> ") &&
       !/^\s*[-*]\s+/.test(rawLines[i].trim()) &&
       !/^\s*\d+\.\s+/.test(rawLines[i].trim()) &&
+      !/^(\s*[-*_]\s*){3,}$/.test(rawLines[i]) &&
       !(rawLines[i].trim().includes("|") && rawLines[i + 1] && /^\s*\|?[\s:|-]+\|?\s*$/.test(rawLines[i + 1]) && rawLines[i + 1].includes("-"))
     ) {
       para.push(rawLines[i]);

@@ -21,7 +21,8 @@ import EvidencePanel from "../components/EvidencePanel.vue";
 import ClarifyCard from "../components/ClarifyCard.vue";
 import Composer from "../components/Composer.vue";
 import ReportModal from "../components/ReportModal.vue";
-import type { ToolCallState } from "../components/types";
+import type { ToolBlock } from "../composables/blocks";
+import { toolBlocksOf } from "../composables/blocks";
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
@@ -170,8 +171,8 @@ function onStreamClick(e: MouseEvent) {
   }
 }
 
-// 工具调用（reactive 数组 → 传给子组件）
-const toolCalls = computed<ToolCallState[]>(() => run.toolCalls as unknown as ToolCallState[]);
+// 工具调用（从 blocks 派生 → 传给 EvidencePanel，仅兼容签名）
+const toolCalls = computed<ToolBlock[]>(() => toolBlocksOf(run.blocks.value));
 
 // conv-head meta
 const sourceCount = computed(() => {
@@ -242,9 +243,7 @@ watch(
 
           <RunStream
             :status="run.status.value"
-            :assistant-text="run.assistantText.value"
-            :thinking="run.thinking.value"
-            :tool-calls="toolCalls"
+            :blocks="run.blocks.value"
             :lens="run.lens.value" />
 
           <ClarifyCard

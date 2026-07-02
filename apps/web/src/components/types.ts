@@ -1,6 +1,6 @@
 /**
  * 组件间共享的局部类型（仅 web 组件用）。
- * ToolCallState 单一来源在 composables/useInsightRun，此处 re-export 供组件引用。
+ * ToolCallState 单一来源在 composables/blocks（ToolBlock 别名），此处 re-export 供组件引用。
  */
 export type { ToolCallState } from "../composables/useInsightRun";
 

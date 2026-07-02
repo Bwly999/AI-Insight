@@ -49,6 +49,12 @@ export function markdownToHtml(md: string): string {
       out.push(`<h${level}>${inline(h[2])}</h${level}>`);
       continue;
     }
+    // 水平分隔线 --- / *** / ___（≥3 个同一字符，允许空格）
+    if (/^(\s*[-*_]\s*){3,}$/.test(line) && /([-*_])\1\1/.test(line.replace(/\s/g, ""))) {
+      if (inList) { out.push("</ul>"); inList = false; }
+      out.push("<hr />");
+      continue;
+    }
     if (line.startsWith("> ")) {
       if (inList) { out.push("</ul>"); inList = false; }
       out.push(`<blockquote>${inline(line.slice(2))}</blockquote>`);

@@ -5,6 +5,7 @@
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { Plus, BookOpen, Clock } from "@lucide/vue";
 import type { Conversation } from "@ai-insight/shared-types";
 
 const props = defineProps<{
@@ -45,7 +46,7 @@ function relTime(iso: string): string {
 <template>
   <aside class="col-left">
     <button class="new-btn" @click="emit('newInsight')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+      <Plus :size="14" :stroke-width="2.6" />
       新对话
     </button>
 
@@ -73,11 +74,11 @@ function relTime(iso: string): string {
 
     <div class="side-bottom">
       <div class="nav-link" @click="emit('goReports')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+        <BookOpen :size="16" :stroke-width="1.8" />
         我的报告
       </div>
       <div class="nav-link" @click="goSchedules">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>
+        <Clock :size="16" :stroke-width="1.8" />
         我的定时
       </div>
     </div>

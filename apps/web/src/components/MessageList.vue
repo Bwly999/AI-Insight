@@ -1,16 +1,18 @@
 <script setup lang="ts">
 /**
- * MessageList — 历史消息（用户气泡 / AI 消息，AI 文本走轻量 markdown）。
- * 历史消息不重建工具卡/思考块（未持久化）；仅渲染 markdown 正文。
+ * MessageList — 历史消息（Workbench 风格）。
+ * 用 fromMessages 把 DB 历史 Message[] 聚合成 turns：
+ *   user turn → 右对齐气泡；assistant turn → AI 头像 + MessageBlocks（有序思考/工具/回复块）。
+ * 兼容旧数据：单条 text assistant 消息 → 含单个 TextBlock 的 turn。
  */
 import { computed } from "vue";
 import type { Message } from "@ai-insight/shared-types";
-import { mdToHtml } from "../utils/markdown";
+import { fromMessages } from "../composables/blocks";
+import MessageBlocks from "./MessageBlocks.vue";
 
 const props = defineProps<{ messages: Message[]; idle: boolean; loading: boolean }>();
 
-const visibleMessages = computed(() => props.messages.filter((m) => m.content.kind === "text"));
-const aiHtml = (text: string) => mdToHtml(text);
+const turns = computed(() => fromMessages(props.messages));
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -19,19 +21,21 @@ function timeLabel(iso: string): string {
 </script>
 
 <template>
-  <template v-for="m in visibleMessages" :key="m.id">
-    <div v-if="m.role === 'user'" class="turn user fade-up">
+  <template v-for="t in turns" :key="t.id">
+    <!-- 用户气泡 -->
+    <div v-if="t.role === 'user'" class="turn user fade-up">
       <div class="b-user">
-        <div class="u-eb">你 · {{ timeLabel(m.createdAt) }}</div>
-        {{ m.content.kind === 'text' ? m.content.text : '' }}
+        <div class="u-eb">你 · {{ timeLabel(t.at) }}</div>
+        {{ t.text }}
       </div>
     </div>
-    <div v-else-if="m.role === 'assistant'" class="turn ai fade-up">
+
+    <!-- AI 回复（有序 blocks：思考 / 工具 / 回复） -->
+    <div v-else class="turn ai fade-up">
       <div class="ai-ava">A</div>
       <div class="ai-body">
         <div class="ai-eb">AI-Insight</div>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-if="m.content.kind === 'text'" class="md" v-html="aiHtml(m.content.text)"></div>
+        <MessageBlocks :blocks="t.blocks ?? []" :default-think-open="false" />
       </div>
     </div>
   </template>
@@ -67,7 +71,7 @@ function timeLabel(iso: string): string {
   border: 1px solid var(--border);
 }
 .ai-body { flex: 1; min-width: 0; }
-.ai-eb { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+.ai-eb { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 
 .empty { padding: 8vh 40px 40px; }
 .hero-glyph {

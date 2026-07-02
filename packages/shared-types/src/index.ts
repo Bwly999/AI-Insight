@@ -122,7 +122,15 @@ export interface Message {
 export type MessageContent =
   | { kind: "text"; text: string }
   | { kind: "thinking"; text: string }
-  | { kind: "tool_result"; toolName: string; summary: string; found: number }
+  // 工具调用结果（落库以便历史回看按 AgentLoop 顺序还原；found 对非搜索类工具可缺省）
+  | {
+      kind: "tool_result";
+      toolName: string;
+      summary: string;
+      found?: number;
+      args?: Record<string, unknown>;
+      durationMs?: number;
+    }
   // Agent 反问用户（落库以便历史回看；回复作为普通 user msg 落库）
   | { kind: "clarification"; inputId: string; question: string; options?: string[] };
 

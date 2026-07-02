@@ -21,6 +21,42 @@ import * as repo from "../repo.js";
 import { renderReportHtml, extractStandfirst } from "../report-renderer.js";
 import { resolveAwaiting, rejectPending } from "./pending-inputs.js";
 
+// ─── Block 累积器（与前端 blocks.ts 同构，用于 run 结束时按顺序持久化）─────────
+/** 一个 assistant turn 的有序块（思考 / 回复 / 工具）。 */
+type SrvBlock =
+  | { kind: "thinking"; text: string }
+  | { kind: "text"; text: string }
+  | { kind: "tool"; toolCallId: string; toolName: string; args: Record<string, unknown>; found?: number; ok?: boolean; durationMs?: number };
+
+/** 把 AgentEvent 累积进 blocks（末块同类合并：thinking/text 同类追加、异类新建；tool 新建/就地回填）。 */
+function reduceBlock(blocks: SrvBlock[], ev: AgentEvent): SrvBlock[] {
+  switch (ev.type) {
+    case "thinking_delta":
+    case "text_delta": {
+      const kind = ev.type === "thinking_delta" ? "thinking" : "text";
+      const next = blocks.slice();
+      const last = next[next.length - 1];
+      if (last && last.kind === kind) next[next.length - 1] = { ...last, text: last.text + ev.text };
+      else next.push({ kind, text: ev.text });
+      return next;
+    }
+    case "tool_call_start": {
+      if (blocks.some((b) => b.kind === "tool" && b.toolCallId === ev.toolCallId)) return blocks;
+      return blocks.slice().concat({ kind: "tool", toolCallId: ev.toolCallId, toolName: ev.toolName, args: ev.args });
+    }
+    case "tool_call_end": {
+      const idx = blocks.findIndex((b) => b.kind === "tool" && b.toolCallId === ev.toolCallId);
+      if (idx < 0) return blocks;
+      const next = blocks.slice();
+      const t = next[idx];
+      if (t.kind === "tool") next[idx] = { ...t, found: ev.found, ok: ev.ok, durationMs: ev.durationMs };
+      return next;
+    }
+    default:
+      return blocks;
+  }
+}
+
 export interface ExecutorDeps {
   /** 惰性取 provider（每 run 调用，支持 settings 热切换；apiKey 仍 env-only）。 */
   getProvider: () => AgentProviderConfig;
@@ -159,8 +195,13 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       },
     });
 
-    // 事件桥接 → emit AgentEvent
+    // 事件桥接 → emit AgentEvent + 累积 blocks（run 结束时按顺序持久化，历史回看还原 AgentLoop）
+    const accumulatedBlocks: SrvBlock[] = [];
     const unsubscribe = bridgeSessionEvents(session, ctx.runId, (ev: AgentEvent) => {
+      // 就地累积（reduceBlock 返回新数组，但这里维护同一个数组引用）
+      const reduced = reduceBlock(accumulatedBlocks, ev);
+      accumulatedBlocks.length = 0;
+      accumulatedBlocks.push(...reduced);
       emit(ev);
     });
 
@@ -202,16 +243,67 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
         // getSessionStats 不可用则跳过
       }
 
-      // 提取 agent 本轮的对话文本（非工具调用的 assistant text）
-      const convoText = extractAssistantText(session.messages);
+      // 按顺序持久化本轮累积的 blocks（thinking / tool_result / text），
+      // 让历史回看能还原完整 AgentLoop（思考→工具→回复 一块一块）。全部关联到本 run。
       const lastSaved = saved[saved.length - 1];
       const summaryText = lastSaved
         ? `已交付洞察报告「${lastSaved.title}」`
         : `洞察运行结束（未生成报告）。本轮共采集 ${collectedItems.length} 条信号。`;
-      repo.addMessage(run.conversationId, "assistant", {
-        kind: "text",
-        text: convoText ? `${convoText}\n\n— ${summaryText}` : summaryText,
-      });
+
+      // 兜底：若累积为空（如未桥接上），回退提取最终 assistant 文本
+      if (accumulatedBlocks.length === 0) {
+        const convoText = extractAssistantText(session.messages);
+        repo.addMessage(
+          run.conversationId,
+          "assistant",
+          { kind: "text", text: convoText ? `${convoText}\n\n— ${summaryText}` : summaryText },
+          { runId: ctx.runId },
+        );
+      } else {
+        // 找到最后一个 text block 的索引，用于追加 summary
+        let lastTextIdx = -1;
+        for (let i = accumulatedBlocks.length - 1; i >= 0; i--) {
+          if (accumulatedBlocks[i].kind === "text") {
+            lastTextIdx = i;
+            break;
+          }
+        }
+        accumulatedBlocks.forEach((b, i) => {
+          if (b.kind === "thinking") {
+            repo.addMessage(run.conversationId, "assistant", { kind: "thinking", text: b.text }, { runId: ctx.runId });
+          } else if (b.kind === "tool") {
+            repo.addMessage(
+              run.conversationId,
+              "assistant",
+              {
+                kind: "tool_result",
+                toolName: b.toolName,
+                summary: b.found != null ? `查询到 ${b.found} 条数据` : b.ok ? "完成" : "失败",
+                ...(b.found != null && { found: b.found }),
+                args: b.args,
+                ...(b.durationMs != null && { durationMs: b.durationMs }),
+              },
+              {
+                runId: ctx.runId,
+                toolCall: {
+                  toolName: b.toolName,
+                  args: b.args,
+                  ...(b.found != null && { found: b.found }),
+                  ...(b.durationMs != null && { durationMs: b.durationMs }),
+                },
+              },
+            );
+          } else {
+            // text：最后一个 text block 追加 summary
+            const text = i === lastTextIdx ? `${b.text}\n\n— ${summaryText}` : b.text;
+            repo.addMessage(run.conversationId, "assistant", { kind: "text", text }, { runId: ctx.runId });
+          }
+        });
+        // 若本轮没有任何 text block（纯工具/思考），补一条 summary
+        if (lastTextIdx < 0) {
+          repo.addMessage(run.conversationId, "assistant", { kind: "text", text: summaryText }, { runId: ctx.runId });
+        }
+      }
 
       repo.updateRun(ctx.runId, {
         status: "completed",
@@ -231,10 +323,12 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
         endedAt: new Date().toISOString(),
         error: msg,
       });
-      repo.addMessage(run.conversationId, "assistant", {
-        kind: "text",
-        text: `洞察运行失败：${msg}`,
-      });
+      repo.addMessage(
+        run.conversationId,
+        "assistant",
+        { kind: "text", text: `洞察运行失败：${msg}` },
+        { runId: ctx.runId },
+      );
       emit({ type: "run_failed", runId: ctx.runId, error: msg });
     } finally {
       ctx.signal.removeEventListener("abort", onAbort);

@@ -194,6 +194,11 @@ body {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
 }
+/* 思考时长 tag 跳动（思考进行中） */
+@keyframes dur-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
 
 .reveal, .fade-up { opacity: 0; animation: fu 0.4s var(--ease-out) both; }
 .heat-bar { animation: grow 0.9s var(--ease-out) both; }

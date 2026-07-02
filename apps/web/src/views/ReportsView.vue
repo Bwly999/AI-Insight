@@ -5,6 +5,7 @@
  */
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { Plus } from "@lucide/vue";
 import { listReports } from "@ai-insight/api-client";
 import type { Report } from "@ai-insight/shared-types";
 import { useTheme } from "../composables/useTheme";
@@ -52,7 +53,7 @@ function openReport(r: Report) {
           </div>
           <div class="mast-right">
             <button class="ghost-btn" @click="router.push('/c/new')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              <Plus :size="15" :stroke-width="2.2" />
               新洞察
             </button>
             <button class="icon-btn" @click="toggle" title="切换主题">◑</button>

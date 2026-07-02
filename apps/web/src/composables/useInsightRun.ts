@@ -1,23 +1,17 @@
 /**
- * useInsightRun — 订阅 Run 的 SSE 事件流，把 AgentEvent → 响应式状态。
+ * useInsightRun — 订阅 Run 的 SSE 事件流，把 AgentEvent → 有序 blocks（AgentLoop 模型）。
  *
- * 响应式状态：assistant 文本缓冲、thinking、工具调用卡、运行步骤、报告。
- * 支持 abort、自动重连。
+ * 响应式状态以单个 blocks: Block[] 为核心：思考/回复/工具按真实到达顺序排列，
+ * 形成 thinking → text → tool → thinking → tool → text 的循环。
+ * mock（UX 模式）与真实模式共用同一份 applyEvent mapper。
+ *
+ * 保留 lens / clarification / report / error / elapsed 等 turn 级状态。
  */
-import { ref, reactive, onUnmounted } from "vue";
+import { ref, onUnmounted } from "vue";
 import { isUxMode } from "../utils";
 import { subscribeRunStream, abortRun, submitRunInput } from "@ai-insight/api-client";
 import type { AgentEvent, LensKey, Report } from "@ai-insight/shared-types";
-
-/** 工具调用态（reactive 数组元素，UI 共享类型）。 */
-export interface ToolCallState {
-  toolCallId: string;
-  toolName: string;
-  args: Record<string, unknown>;
-  found?: number;
-  ok?: boolean;
-  durationMs?: number;
-}
+import { applyEvent, type Block, type ToolBlock, toolBlocksOf } from "./blocks";
 
 /** Agent 反问用户的澄清态（暂停/恢复会话）。 */
 export interface ClarificationState {
@@ -26,12 +20,17 @@ export interface ClarificationState {
   options?: string[];
 }
 
+/**
+ * 工具调用态（兼容旧消费者 EvidencePanel 的 ToolCallState 签名）。
+ * 真实数据由 blocks 派生，这里仅作 re-export 类型。
+ */
+export type ToolCallState = ToolBlock;
+
+/** UX 模式 mock：演示完整 AgentLoop（思考1→工具1→思考2→工具2→回复→报告）。 */
 function useMockInsightRun() {
   const runId = ref<string | null>(null);
   const status = ref<"idle" | "running" | "completed" | "failed">("idle");
-  const assistantText = ref("");
-  const thinking = ref<string[]>([]);
-  const toolCalls = reactive<ToolCallState[]>([]);
+  const blocks = ref<Block[]>([]);
   const lens = ref<LensKey | null>(null);
   const clarification = ref<ClarificationState | null>(null);
   const report = ref<Report | null>(null);
@@ -61,38 +60,55 @@ function useMockInsightRun() {
   function subscribe(id: string) {
     runId.value = id;
     status.value = "running";
-    assistantText.value = "";
-    thinking.value = [];
-    toolCalls.splice(0, toolCalls.length);
+    blocks.value = [];
     lens.value = null;
     clarification.value = null;
     report.value = null;
     error.value = null;
     startTimer();
 
+    // 完整 AgentLoop 演示序列：思考 → 工具 → 思考 → 工具 → 回复 → 报告
     const events: AgentEvent[] = [
-      { type: "run_started", runId: id, prompt: "Mock prompt" },
-      { type: "thinking_delta", runId: id, text: "正在分析需求...\n" },
-      { type: "thinking_delta", runId: id, text: "构建报告框架...\n" },
+      { type: "run_started", runId: id, prompt: "分析 2024 年 AI 行业趋势" },
+      { type: "thinking_delta", runId: id, text: "用户想了解 2024 年 AI 趋势。我先界定范围，然后从搜索和 RSS 双源采集信号。\n" },
       { type: "lens_selected", runId: id, lens: "deep" },
       {
         type: "tool_call_start",
         runId: id,
         toolName: "search",
         toolCallId: "tool-1",
-        args: { query: "AI in 2024" },
+        args: { query: "2024 AI multimodal trends" },
       },
       {
         type: "tool_call_end",
         runId: id,
         toolName: "search",
         toolCallId: "tool-1",
-        found: 10,
-        durationMs: 1500,
+        found: 12,
+        durationMs: 1800,
         ok: true,
       },
-      { type: "text_delta", runId: id, text: "## 2024年AI发展趋势\n\n" },
-      { type: "text_delta", runId: id, text: "### 1. 多模态模型成为主流\n\n" },
+      // 第二轮思考：模型分析搜索结果，决定补充 RSS
+      { type: "thinking_delta", runId: id, text: "搜索查询到 12 条，覆盖多模态与 Agent。RSS 源能补充近期热度，再抓一轮。\n" },
+      {
+        type: "tool_call_start",
+        runId: id,
+        toolName: "fetch_rss",
+        toolCallId: "tool-2",
+        args: { keywords: ["LLM", "Agent", "多模态"] },
+      },
+      {
+        type: "tool_call_end",
+        runId: id,
+        toolName: "fetch_rss",
+        toolCallId: "tool-2",
+        found: 8,
+        durationMs: 1200,
+        ok: true,
+      },
+      // 最终回复
+      { type: "text_delta", runId: id, text: "## 2024 年 AI 行业趋势\n\n基于 20 条多源信号的交叉研判，今年呈现三条主线：\n\n" },
+      { type: "text_delta", runId: id, text: "1. **多模态成为标配** — 文本/图像/音频统一建模进入主流产品。\n2. **Agent 架构落地** — 工具调用 + 多步推理从演示走向生产。\n3. **推理成本下降** — 竞争推动 token 价格持续走低。\n\n详见下方报告。\n\n" },
       {
         type: "report_created",
         runId: id,
@@ -100,9 +116,9 @@ function useMockInsightRun() {
           id: "report-1",
           runId: id,
           conversationId: "conv-1",
-          title: "2024年AI发展趋势分析报告",
+          title: "2024 年 AI 行业趋势分析报告",
           markdown:
-            "## 2024年AI发展趋势\n\n### 1. 多模态模型成为主流\n\n多模态模型能够理解和处理多种类型的数据，如文本、图像和声音。这使得它们在虚拟助手、内容创建和医疗诊断等领域的应用越来越广泛。",
+            "## 2024 年 AI 行业趋势\n\n### 1. 多模态模型成为主流\n\n多模态模型能够理解和处理多种类型的数据，如文本、图像和声音。这使得它们在虚拟助手、内容创建和医疗诊断等领域的应用越来越广泛。",
           html: "...",
           createdAt: new Date().toISOString(),
         },
@@ -119,21 +135,20 @@ function useMockInsightRun() {
         clearInterval(interval);
         stopTimer();
       }
-    }, 500);
+    }, 700);
   }
 
   function handleEvent(ev: AgentEvent) {
     switch (ev.type) {
       case "run_started":
         status.value = "running";
+        blocks.value = applyEvent(blocks.value, ev);
         break;
       case "thinking_delta":
-        // 累积 thinking（按段落）
-        if (thinking.value.length === 0) thinking.value.push(ev.text);
-        else thinking.value[thinking.value.length - 1] += ev.text;
-        break;
       case "text_delta":
-        assistantText.value += ev.text;
+      case "tool_call_start":
+      case "tool_call_end":
+        blocks.value = applyEvent(blocks.value, ev);
         break;
       case "lens_selected":
         lens.value = ev.lens;
@@ -142,22 +157,6 @@ function useMockInsightRun() {
         clarification.value = { inputId: ev.inputId, question: ev.question, ...(ev.options ? { options: ev.options } : {}) };
         status.value = "running"; // mock 无真实暂停态，保持 running 以维持 UI
         break;
-      case "tool_call_start":
-        toolCalls.push({
-          toolCallId: ev.toolCallId,
-          toolName: ev.toolName,
-          args: ev.args,
-        });
-        break;
-      case "tool_call_end": {
-        const tc = toolCalls.find((t) => t.toolCallId === ev.toolCallId);
-        if (tc) {
-          tc.found = ev.found;
-          tc.ok = ev.ok;
-          tc.durationMs = ev.durationMs;
-        }
-        break;
-      }
       case "report_created":
         report.value = ev.report;
         break;
@@ -198,9 +197,7 @@ function useMockInsightRun() {
   return {
     runId,
     status,
-    assistantText,
-    thinking,
-    toolCalls,
+    blocks,
     lens,
     clarification,
     report,
@@ -219,9 +216,7 @@ export function useInsightRun() {
 
   const runId = ref<string | null>(null);
   const status = ref<"idle" | "running" | "completed" | "failed" | "awaiting_input">("idle");
-  const assistantText = ref("");
-  const thinking = ref<string[]>([]);
-  const toolCalls = reactive<ToolCallState[]>([]);
+  const blocks = ref<Block[]>([]);
   const lens = ref<LensKey | null>(null);
   const clarification = ref<ClarificationState | null>(null);
   const report = ref<Report | null>(null);
@@ -252,9 +247,7 @@ export function useInsightRun() {
   function subscribe(id: string) {
     runId.value = id;
     status.value = "running";
-    assistantText.value = "";
-    thinking.value = [];
-    toolCalls.splice(0, toolCalls.length);
+    blocks.value = [];
     lens.value = null;
     clarification.value = null;
     report.value = null;
@@ -274,14 +267,13 @@ export function useInsightRun() {
     switch (ev.type) {
       case "run_started":
         status.value = "running";
+        blocks.value = applyEvent(blocks.value, ev);
         break;
       case "thinking_delta":
-        // 累积 thinking（按段落）
-        if (thinking.value.length === 0) thinking.value.push(ev.text);
-        else thinking.value[thinking.value.length - 1] += ev.text;
-        break;
       case "text_delta":
-        assistantText.value += ev.text;
+      case "tool_call_start":
+      case "tool_call_end":
+        blocks.value = applyEvent(blocks.value, ev);
         break;
       case "lens_selected":
         lens.value = ev.lens;
@@ -290,22 +282,6 @@ export function useInsightRun() {
         clarification.value = { inputId: ev.inputId, question: ev.question, ...(ev.options ? { options: ev.options } : {}) };
         status.value = "awaiting_input";
         break;
-      case "tool_call_start":
-        toolCalls.push({
-          toolCallId: ev.toolCallId,
-          toolName: ev.toolName,
-          args: ev.args,
-        });
-        break;
-      case "tool_call_end": {
-        const tc = toolCalls.find((t) => t.toolCallId === ev.toolCallId);
-        if (tc) {
-          tc.found = ev.found;
-          tc.ok = ev.ok;
-          tc.durationMs = ev.durationMs;
-        }
-        break;
-      }
       case "report_created":
         report.value = ev.report;
         break;
@@ -359,9 +335,7 @@ export function useInsightRun() {
   return {
     runId,
     status,
-    assistantText,
-    thinking,
-    toolCalls,
+    blocks,
     lens,
     clarification,
     report,
@@ -372,3 +346,5 @@ export function useInsightRun() {
     abort,
   };
 }
+
+export { toolBlocksOf };
