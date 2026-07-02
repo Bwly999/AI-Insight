@@ -32,9 +32,10 @@ export class FirecrawlEngine implements SearchEngine {
   async search(input: SearchInput): Promise<DataSourceItem[]> {
     if (!this.client) return [];
     const limit = Math.min(input.limit ?? 8, 8);
+    // 不带 scrapeOptions：只取 URL/title/description，避免对每条结果抓取正文
+    // 耗费 scrape 额度（一次 search ≈ 8 credits）。正文按需由 extract 链抓取。
     const res = await this.client.search(input.query, {
       limit,
-      scrapeOptions: { formats: ["markdown"] },
     });
     if (!res.success) {
       throw new Error(`Firecrawl search failed: ${res.error ?? "unknown"}`);
@@ -54,6 +55,7 @@ export class FirecrawlEngine implements SearchEngine {
           title: d.metadata?.title || url,
           url,
           summary: d.metadata?.description || undefined,
+          // search 不再抓正文；content 留空，由 extract 链按需 scrapeUrl 获取。
           content: d.markdown || undefined,
           author: d.metadata?.author,
           publishedAt: d.metadata?.publishedDate,
