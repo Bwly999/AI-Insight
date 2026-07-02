@@ -7,7 +7,7 @@
 
 /** editorial 色板（hex 值，同时用于 CSS 变量与 JS）。 */
 export const editorialColors = {
-  paper: "#f4efe6",
+  paper: "#ffffff",
   paper2: "#ece5d6",
   ink: "#1a1612",
   ink2: "#4a423a",
