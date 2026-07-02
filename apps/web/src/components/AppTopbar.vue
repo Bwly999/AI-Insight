@@ -3,7 +3,7 @@
  * AppTopbar — Workbench 顶栏（扁平 surface）。
  * 品牌 + 运行状态 pill + 主题/导出 icon 按钮。
  */
-import { SunMoon, Download } from "@lucide/vue";
+import { Sun, Moon, Download } from "@lucide/vue";
 import type { Conversation } from "@ai-insight/shared-types";
 import { useTheme } from "../composables/useTheme";
 
@@ -42,7 +42,7 @@ const { theme, toggle } = useTheme();
       <span class="dot" style="background: var(--rose)"></span>中止
     </button>
 
-    <button class="icon-btn theme-toggle" @click="toggle" :title="theme === 'dark' ? '切换到浅色 (⌘J)' : '切换到深色 (⌘J)'"><SunMoon :size="16" :stroke-width="1.8" /></button>
+    <button class="icon-btn theme-toggle" @click="toggle" :title="theme === 'dark' ? '切换到浅色 (⌘J)' : '切换到深色 (⌘J)'"><Moon v-if="theme === 'dark'" :size="16" :stroke-width="1.8" /><Sun v-else :size="16" :stroke-width="1.8" /></button>
     <button class="icon-btn" title="导出"><Download :size="16" :stroke-width="1.8" /></button>
   </header>
 </template>
