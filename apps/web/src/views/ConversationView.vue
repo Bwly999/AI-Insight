@@ -1,15 +1,12 @@
 <script setup lang="ts">
 /**
- * ConversationView — 三栏洞察工作台容器（Signal Observatory）。
- *
- * 只负责：编排三栏 grid + 持有状态/composable + 把数据 props 传给子组件。
- * 视觉与交互细节下沉到 components/。
- * 布局：左栏(会话列表) + 主区(对话：历史/运行流/报告卡) + 证据面板 + 底部 composer。
+ * ConversationView — 三栏 Workbench 容器。
+ * 左栏(会话列表) + 主区(conv-head + 历史/运行流/报告卡 + composer) + 右栏(数据源)。
  */
 import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import {
-  type Conversation, type ConversationConfig, type DataSourceTag, type Message, type TimeRange,
+  type Conversation, type ConversationConfig, type DataSourceTag, type Message, type TimeRange, type Report,
 } from "@ai-insight/shared-types";
 import { listConversations, createConversation, getConversation, sendMessage } from "@ai-insight/api-client";
 import { useInsightRun } from "../composables/useInsightRun.js";
@@ -23,6 +20,7 @@ import ReportCard from "../components/ReportCard.vue";
 import EvidencePanel from "../components/EvidencePanel.vue";
 import ClarifyCard from "../components/ClarifyCard.vue";
 import Composer from "../components/Composer.vue";
+import ReportModal from "../components/ReportModal.vue";
 import type { ToolCallState } from "../components/types";
 
 const props = defineProps<{ id: string }>();
@@ -137,12 +135,50 @@ function newInsight() {
 function selectConversation(c: Conversation) {
   router.push(`/c/${c.id}`);
 }
-function openReport(id: string) {
-  router.push(`/reports/${id}`);
+
+// ─── 报告弹窗 ─────────────────────────────────────────────────────────────
+// 运行中实时报告 与 历史报告复用同一弹窗
+const modalReport = ref<Report | null>(null);
+function openReportModal(id: string) {
+  // 优先用运行中实时报告；否则在历史消息里无独立报告卡，此分支留给 ReportsView 复用
+  if (run.report.value && run.report.value.id === id) {
+    modalReport.value = run.report.value;
+  } else if (run.report.value) {
+    modalReport.value = run.report.value;
+  }
+}
+function closeReportModal() {
+  modalReport.value = null;
 }
 
-// 工具调用（reactive 数组 → 传给子组件；类型为 ToolCallState[]）
+// ─── 引用联动：点击 .cite 高亮右栏对应来源 ─────────────────────────────────
+function onStreamClick(e: MouseEvent) {
+  const target = e.target as HTMLElement;
+  if (target.classList?.contains("cite")) {
+    const n = target.getAttribute("data-cite");
+    if (!n) return;
+    const el = document.getElementById("src" + n);
+    if (el) {
+      el.style.borderColor = "var(--accent)";
+      el.style.boxShadow = "0 0 0 2px var(--accent-soft)";
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => {
+        el.style.borderColor = "";
+        el.style.boxShadow = "";
+      }, 1500);
+    }
+  }
+}
+
+// 工具调用（reactive 数组 → 传给子组件）
 const toolCalls = computed<ToolCallState[]>(() => run.toolCalls as unknown as ToolCallState[]);
+
+// conv-head meta
+const sourceCount = computed(() => {
+  // 运行中来源数（来自 toolCalls found 之和的粗略估计无意义；右栏会显示真实数）
+  return null;
+});
+void sourceCount;
 
 watch(() => run.report, () => scrollToBottom());
 watch(() => run.status, () => scrollToBottom());
@@ -171,7 +207,7 @@ watch(
 </script>
 
 <template>
-  <div class="shell grid-bg">
+  <div class="shell">
     <AppTopbar
       :current-conv="currentConv"
       :status="run.status.value"
@@ -186,33 +222,42 @@ watch(
         @select="selectConversation"
         @go-reports="router.push('/reports')" />
 
-      <main class="convo">
-        <div class="convo-scroll scroll" ref="convoScroll">
-          <div class="convo-inner">
-            <MessageList
-              :messages="messages"
-              :idle="run.status.value === 'idle'"
-              :loading="loading" />
-
-            <RunStream
-              :status="run.status.value"
-              :assistant-text="run.assistantText.value"
-              :thinking="run.thinking.value"
-              :tool-calls="toolCalls"
-              :lens="run.lens.value" />
-
-            <ClarifyCard
-              v-if="run.clarification.value"
-              :question="run.clarification.value.question"
-              :options="run.clarification.value.options"
-              @reply="(text: string) => run.reply(text)" />
-
-            <ReportCard
-              v-if="run.report.value"
-              :report="run.report.value"
-              @open="openReport"
-              @download="(id: string) => { /* 默认 href 行为即可 */ }" />
+      <main class="col-mid">
+        <div class="conv-head" v-if="currentConv && currentConv.id !== 'new'">
+          <div class="eb">Deep Lens · 工作台</div>
+          <h1>{{ currentConv.title }}</h1>
+          <p class="lede" v-if="currentConv.title !== '新洞察'">关于该主题的多源交叉洞察，附完整证据链。</p>
+          <div class="meta">
+            <span>{{ messages.length }} 轮对话</span>
+            <span v-if="run.lens.value">视角 · {{ run.lens.value }}</span>
+            <span>{{ new Date(currentConv.updatedAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) }}</span>
           </div>
+        </div>
+
+        <div class="stream scroll" ref="convoScroll" @click="onStreamClick">
+          <MessageList
+            :messages="messages"
+            :idle="run.status.value === 'idle'"
+            :loading="loading" />
+
+          <RunStream
+            :status="run.status.value"
+            :assistant-text="run.assistantText.value"
+            :thinking="run.thinking.value"
+            :tool-calls="toolCalls"
+            :lens="run.lens.value" />
+
+          <ClarifyCard
+            v-if="run.clarification.value"
+            :question="run.clarification.value.question"
+            :options="run.clarification.value.options"
+            @reply="(text: string) => run.reply(text)" />
+
+          <ReportCard
+            v-if="run.report.value"
+            :report="run.report.value"
+            @open="openReportModal"
+            @download="() => {}" />
         </div>
 
         <Composer
@@ -227,11 +272,12 @@ watch(
 
       <EvidencePanel :tool-calls="toolCalls" :run-id="run.runId.value" :run-status="run.status.value" />
     </div>
+
+    <ReportModal :report="modalReport" @close="closeReportModal" />
   </div>
 </template>
 
 <style>
-/* 容器布局：两行(topbar/panes)；panes 三栏，composer 内嵌于主列底部 */
 .shell {
   display: grid;
   grid-template-rows: 56px 1fr;
@@ -239,25 +285,28 @@ watch(
 }
 .panes {
   display: grid;
-  grid-template-columns: 256px 1fr 332px;
+  grid-template-columns: 262px 1fr 340px;
   min-height: 0;
 }
-.convo {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+@media (max-width: 1180px) {
+  .panes { grid-template-columns: 240px 1fr; }
+  .col-right { display: none !important; }
+}
+
+.col-mid {
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   background: var(--bg);
 }
-.convo-scroll {
-  flex: 1;
-  overflow-y: auto;
+.conv-head {
+  padding: 22px 44px 18px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex: none;
 }
-.convo-inner {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 30px 28px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.conv-head .eb { font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.04em; }
+.conv-head h1 { font-size: 22px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; color: var(--text); }
+.conv-head .lede { font-size: 13.5px; color: var(--text-3); max-width: 60ch; margin: 0; }
+.conv-head .meta { margin-top: 11px; display: flex; gap: 16px; font-size: 11.5px; color: var(--text-3); font-weight: 500; }
+
+.stream {
+  flex: 1; overflow-y: auto; padding: 24px 44px 24px;
 }
 </style>

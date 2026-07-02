@@ -105,29 +105,29 @@ function dur(startedAt?: string, endedAt?: string): string {
 .page-inner { max-width: 1100px; margin: 0 auto; padding: 40px 24px 64px; }
 .masthead { margin-bottom: 24px; }
 .mast-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-.kicker { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px; color: var(--brand); font-weight: 600; }
-.title { font-family: var(--frau); font-weight: 600; font-size: 34px; margin: 8px 0 0; color: var(--ink); }
+.kicker { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px; color: var(--accent); font-weight: 600; }
+.title { font-family: var(--frau); font-weight: 600; font-size: 34px; margin: 8px 0 0; color: var(--text); }
 .mast-right { display: flex; align-items: center; gap: 12px; }
-.live { font-size: 11px; color: var(--brand); letter-spacing: 0.1em; animation: pulse 2s infinite; }
+.live { font-size: 11px; color: var(--accent); letter-spacing: 0.1em; animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-.double-rule { border-top: 3px double var(--brand); opacity: 0.5; margin-bottom: 14px; }
+.double-rule { border-top: 1px solid var(--border); margin-bottom: 14px; }
 .tabs { display: flex; gap: 4px; }
-.tab { font-size: 13px; color: var(--ink-3); padding: 6px 14px; border-radius: var(--r-pill); text-decoration: none; cursor: pointer; }
-.tab.on { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.tab { font-size: 13px; color: var(--text-3); padding: 6px 14px; border-radius: var(--r-pill); text-decoration: none; cursor: pointer; }
+.tab.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
-.state, .empty { color: var(--ink-3); padding: 60px; text-align: center; font-family: var(--mono); }
-.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.state, .empty { color: var(--text-3); padding: 60px; text-align: center; font-family: var(--mono); }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
 .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th { text-align: left; padding: 12px 14px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); border-bottom: 1px solid var(--line); background: var(--surface-2); }
-.tbl td { padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--ink); vertical-align: middle; }
+.tbl th { text-align: left; padding: 12px 14px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.tbl td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .tbl tr:last-child td { border-bottom: none; }
 .cell-main { font-family: var(--frau); font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.muted { color: var(--ink-3); }
+.muted { color: var(--text-3); }
 .badge { font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: var(--r-pill); text-transform: uppercase; letter-spacing: 0.06em; }
-.badge.ok { background: rgba(46,204,113,0.15); color: #2ecc71; }
-.badge.err { background: rgba(231,76,60,0.15); color: #e74c3c; }
-.badge.run { background: var(--brand-soft); color: var(--brand); }
-.badge.q { background: var(--surface-3); color: var(--ink-3); }
-.theme-toggle { color: var(--ink-2); }
-.theme-toggle:hover { color: var(--brand); background: var(--brand-soft); }
+.badge.ok { background: var(--green-soft); color: var(--green); }
+.badge.err { background: var(--rose-soft); color: var(--rose); }
+.badge.run { background: var(--accent-soft); color: var(--accent); }
+.badge.q { background: var(--surface-3); color: var(--text-3); }
+.theme-toggle { color: var(--text-2); }
+.theme-toggle:hover { color: var(--accent); background: var(--accent-soft); }
 </style>

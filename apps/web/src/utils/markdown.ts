@@ -5,6 +5,7 @@
  *  - 有序列表（`1.`）
  *  - 无序列表自动包裹 <ul>
  *  - 基础表格（GFM pipe table）
+ *  - 引用标记：`[1]` `[2]` → <sup class="cite" data-cite="1">①</sup>（点击高亮右栏来源）
  *  - 保留与服务端一致的 inline 转义
  *
  * 仅用于消息内 / 报告客户端预览；复杂场景（嵌套/图片）仍以服务端渲染为准。
@@ -14,12 +15,24 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** 1→① 2→② …（>20 回退为 [n]） */
+function circledNum(n: number): string {
+  const map = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳"];
+  return n >= 1 && n <= 20 ? map[n - 1] : `[${n}]`;
+}
+
 function inline(t: string): string {
   return esc(t)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\[(.+?)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // 链接 [text](url) 必须先于 [n] 引用，避免误伤
+    .replace(/\[(.+?)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    // 引用标记 [n] → ①（仅匹配纯数字方括号，且前面不是 ] 以排除链接残余）
+    .replace(/\[(\d+)\]/g, (_, n) => {
+      const num = parseInt(n, 10);
+      return `<sup class="cite" data-cite="${num}">${circledNum(num)}</sup>`;
+    });
 }
 
 /** 解析 GFM 管道表格块（lines 已是该表格的连续行）。 */

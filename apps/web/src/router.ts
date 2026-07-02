@@ -14,12 +14,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import("./views/ReportsView.vue"),
   },
   {
-    path: "/reports/:id",
-    name: "report",
-    component: () => import("./views/ReportView.vue"),
-    props: true,
-  },
-  {
     path: "/schedules",
     name: "schedules",
     component: () => import("./views/SchedulesView.vue"),

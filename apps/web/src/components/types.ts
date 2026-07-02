@@ -9,9 +9,9 @@ export function toolColor(toolName: string): { bg: string; fg: string; varName: 
   if (toolName === "search") return { bg: "color-mix(in srgb, var(--src-search) 18%, transparent)", fg: "var(--src-search)", varName: "--src-search" };
   if (toolName === "fetch_rss" || toolName === "rss") return { bg: "color-mix(in srgb, var(--src-rss) 18%, transparent)", fg: "var(--src-rss)", varName: "--src-rss" };
   if (toolName === "crawl") return { bg: "color-mix(in srgb, var(--src-crawl) 18%, transparent)", fg: "var(--src-crawl)", varName: "--src-crawl" };
-  if (toolName === "read") return { bg: "color-mix(in srgb, var(--ink-3) 22%, transparent)", fg: "var(--ink-2)", varName: "--ink-2" };
-  if (toolName === "ask") return { bg: "color-mix(in srgb, var(--amber, #d97706) 22%, transparent)", fg: "var(--amber, #d97706)", varName: "--amber" };
-  return { bg: "color-mix(in srgb, var(--brand) 18%, transparent)", fg: "var(--brand)", varName: "--brand" };
+  if (toolName === "read") return { bg: "color-mix(in srgb, var(--text-3) 22%, transparent)", fg: "var(--text-2)", varName: "--text-2" };
+  if (toolName === "ask") return { bg: "color-mix(in srgb, var(--amber) 22%, transparent)", fg: "var(--amber)", varName: "--amber" };
+  return { bg: "color-mix(in srgb, var(--accent) 18%, transparent)", fg: "var(--accent)", varName: "--accent" };
 }
 
 export function toolLabel(t: string): string {
