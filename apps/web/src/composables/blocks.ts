@@ -11,7 +11,7 @@
  *
  * 实时流（applyEvent）与历史回看（fromMessages）共用同一套 Block 类型与渲染组件。
  */
-import type { AgentEvent, Message } from "@ai-insight/shared-types";
+import type { AgentEvent, Message, ReportSummary } from "@ai-insight/shared-types";
 
 /** 工具块（也兼作证据面板的 ToolCallState）。 */
 export interface ToolBlock {
@@ -147,6 +147,8 @@ export interface Turn {
   text?: string;
   /** assistant turn 的有序块（role === 'assistant' 时使用）。 */
   blocks?: Block[];
+  /** 该 turn 所属 run 产出的报告（按 runId 匹配）；仅 assistant turn 可能有。 */
+  report?: ReportSummary;
 }
 
 /**
@@ -155,21 +157,30 @@ export interface Turn {
  * 历史回看策略：按 createdAt 顺序，相邻 assistant 消息归并进同一个 turn，
  * 其 content 按 kind 映射成 block，保持持久化时的顺序：
  *   - thinking     → ThinkingBlock
- *   - tool_result  → ToolBlock（toolCallId 用 message id）
- *   - clarification→ TextBlock（提示性文案）
+ *   - tool_result  → ToolBlock（toolCallId 用 message id；ask 澄清也走此分支）
  *   - text         → TextBlock
  * user 消息独立成一个 user turn。
  *
  * 兼容旧数据：单个 text assistant 消息 → 含单个 TextBlock 的 turn。
  */
-export function fromMessages(messages: Message[]): Turn[] {
+export function fromMessages(messages: Message[], reports: ReportSummary[] = []): Turn[] {
   const turns: Turn[] = [];
-  let current: Turn | null = null;
+  let current: (Turn & { _runId?: string }) | null = null;
+  // runId → report，便于 flush 时按 turn 归属的 run 匹配报告
+  const reportByRun = new Map(reports.map((r) => [r.runId, r]));
 
   const flush = () => {
     if (current) {
+      // 按该 turn 的 runId 匹配报告（报告卡归位到产生它的 run 的消息序列末尾）
+      const runId = current._runId;
+      const { _runId, ...turn } = current;
+      void _runId;
+      if (runId && reportByRun.has(runId)) {
+        turn.report = reportByRun.get(runId);
+        reportByRun.delete(runId); // 每报告只挂一次
+      }
       // 空 blocks 的 assistant turn（理论上不会出现）不丢弃，保留为空 turn
-      turns.push(current);
+      turns.push(turn);
       current = null;
     }
   };
@@ -190,7 +201,7 @@ export function fromMessages(messages: Message[]): Turn[] {
       // 续接当前 assistant turn（相邻 assistant 消息归并），否则新开
       if (!current || current.role !== "assistant") {
         flush();
-        current = { id: m.id, role: "assistant", at: m.createdAt, blocks: [] };
+        current = { id: m.id, role: "assistant", at: m.createdAt, blocks: [], _runId: m.runId };
       }
       const block = messageContentToBlock(m);
       if (block) current.blocks!.push(block);
@@ -222,9 +233,6 @@ function messageContentToBlock(m: Message): Block | null {
         ok: true,
         durationMs: m.toolCall?.durationMs,
       };
-    case "clarification":
-      // 澄清提示以文本块呈现（历史回看无需交互态）
-      return { kind: "text", id: m.id, text: `_${c.question}_` };
     default:
       return null;
   }

@@ -31,6 +31,7 @@ import type {
   Message,
   MessageContent,
   Report,
+  ReportSummary,
   RunStatus,
   Schedule,
   TimeRange,
@@ -102,7 +103,8 @@ export function getConversationWithMessages(id: string): ConversationWithMessage
   if (!conv) return undefined;
   const msgs = listMessages(id);
   const lastRun = getLastRun(id);
-  return { ...conv, messages: msgs, lastRun };
+  const reportSummaries = listReportSummaries(id);
+  return { ...conv, messages: msgs, lastRun, reports: reportSummaries };
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────
@@ -317,6 +319,26 @@ export function listReports(conversationId?: string): Report[] {
     ? db().select().from(reports).where(eq(reports.conversationId, conversationId))
     : db().select().from(reports);
   return q.orderBy(desc(reports.createdAt)).all().map(toReportDto);
+}
+
+/**
+ * 按对话取报告摘要（不含 html 大字段），用于历史回放。
+ * 按 createdAt 升序返回（便于按 runId 归位时保持时间线顺序）。
+ */
+export function listReportSummaries(conversationId: string): ReportSummary[] {
+  return db()
+    .select()
+    .from(reports)
+    .where(eq(reports.conversationId, conversationId))
+    .orderBy(reports.createdAt)
+    .all()
+    .map((row) => {
+      const dto = toReportDto(row);
+      // 剥离 html（ReportModal/Card 不需要，下载走 /reports/:id/html）
+      const { html: _html, ...summary } = dto;
+      void _html;
+      return summary;
+    });
 }
 
 // ─── Data Sources ─────────────────────────────────────────────────────────

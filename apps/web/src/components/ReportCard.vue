@@ -6,9 +6,9 @@
  */
 import { computed } from "vue";
 import { ArrowRight, Download, FileText } from "@lucide/vue";
-import type { Report } from "@ai-insight/shared-types";
+import type { Report, ReportSummary } from "@ai-insight/shared-types";
 
-const props = defineProps<{ report: Report }>();
+const props = defineProps<{ report: Report | ReportSummary }>();
 const emit = defineEmits<{ open: [id: string]; download: [id: string] }>();
 
 // 由 markdown 派生的卡片统计（Report 类型本身不带 stat 字段）

@@ -6,12 +6,12 @@
  */
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { Download, X } from "@lucide/vue";
-import type { Report } from "@ai-insight/shared-types";
+import type { Report, ReportSummary } from "@ai-insight/shared-types";
 import { editorialColors, stripReportHeader } from "@ai-insight/shared-ui";
 import { mdToHtml, mdInline } from "../utils/markdown";
 import { downloadReportHtml } from "../utils/download";
 
-const props = defineProps<{ report: Report | null }>();
+const props = defineProps<{ report: Report | ReportSummary | null }>();
 const emit = defineEmits<{ close: [] }>();
 
 // editorial 色板（@ai-insight/shared-ui 单一来源）——局部持有以便 CSS v-bind 稳定捕获。

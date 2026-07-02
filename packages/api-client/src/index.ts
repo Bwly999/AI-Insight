@@ -58,7 +58,9 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      // 仅在有 body 的请求上声明 JSON 内容类型；空 body 携带该头会触发
+      // Fastify 的 "Body cannot be empty when content-type is set to 'application/json'"。
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
       ...authHeaders(),
       ...(init.headers ?? {}),
     },

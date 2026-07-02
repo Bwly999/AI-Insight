@@ -21,40 +21,106 @@ import * as repo from "../repo.js";
 import { renderReportHtml, extractStandfirst } from "../report-renderer.js";
 import { resolveAwaiting, rejectPending } from "./pending-inputs.js";
 
-// ─── Block 累积器（与前端 blocks.ts 同构，用于 run 结束时按顺序持久化）─────────
-/** 一个 assistant turn 的有序块（思考 / 回复 / 工具）。 */
+// ─── Block 派生（从 session.messages 单一真相源派生有序块）─────────────────────
+/**
+ * 一个 assistant turn 的有序块（思考 / 回复 / 工具），落库用。
+ * 设计上与 Pi 的 session.messages 解耦：派生函数只依赖 messages 的结构形态，
+ * 不引入对 pi-ai 类型的硬依赖（executor 仅依赖 @ai-insight/agent）。
+ */
 type SrvBlock =
   | { kind: "thinking"; text: string }
   | { kind: "text"; text: string }
-  | { kind: "tool"; toolCallId: string; toolName: string; args: Record<string, unknown>; found?: number; ok?: boolean; durationMs?: number };
+  | {
+      kind: "tool";
+      toolCallId: string;
+      toolName: string;
+      args: Record<string, unknown>;
+      found?: number;
+      ok?: boolean;
+      durationMs?: number;
+    };
 
-/** 把 AgentEvent 累积进 blocks（末块同类合并：thinking/text 同类追加、异类新建；tool 新建/就地回填）。 */
-function reduceBlock(blocks: SrvBlock[], ev: AgentEvent): SrvBlock[] {
-  switch (ev.type) {
-    case "thinking_delta":
-    case "text_delta": {
-      const kind = ev.type === "thinking_delta" ? "thinking" : "text";
-      const next = blocks.slice();
-      const last = next[next.length - 1];
-      if (last && last.kind === kind) next[next.length - 1] = { ...last, text: last.text + ev.text };
-      else next.push({ kind, text: ev.text });
-      return next;
+/**
+ * session.messages 条目的结构化形态（duck-typed，对齐 pi-ai 的 AssistantMessage / ToolResultMessage）。
+ * - AssistantMessage.content[i] ∈ { type:"thinking", thinking } | { type:"text", text } | { type:"toolCall", id, name, arguments }
+ * - ToolResultMessage 带 toolCallId / details.found / isError
+ */
+export interface MessageLike {
+  role?: string;
+  // content 用 unknown[] + 运行时类型守卫收窄，避免字面量联合被 { type:string } 吸收导致收窄失效
+  content?: unknown[];
+  toolCallId?: string;
+  toolName?: string;
+  details?: { found?: number };
+  isError?: boolean;
+}
+
+// ─── content 元素类型守卫（content 声明为 unknown[]，靠守卫收窄）──────────────
+const isThinking = (c: unknown): c is { type: "thinking"; thinking: string } =>
+  !!c && typeof c === "object" && (c as { type?: string }).type === "thinking" &&
+  typeof (c as { thinking?: unknown }).thinking === "string";
+
+const isText = (c: unknown): c is { type: "text"; text: string } =>
+  !!c && typeof c === "object" && (c as { type?: string }).type === "text" &&
+  typeof (c as { text?: unknown }).text === "string";
+
+const isToolCall = (c: unknown): c is { type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> } =>
+  !!c && typeof c === "object" && (c as { type?: string }).type === "toolCall" &&
+  typeof (c as { id?: unknown }).id === "string" &&
+  typeof (c as { name?: unknown }).name === "string";
+
+/**
+ * 从 session.messages（本轮生成内容，不含注水的历史）派生有序 SrvBlock[]。
+ *
+ * Pi 的一次 prompt 内：模型流式输出思考+文本，遇工具调用时当前 AssistantMessage 以
+ * stopReason:"toolUse" 结束，工具执行后下一轮生成新的 AssistantMessage。因此 messages 是
+ * 多条 AssistantMessage 与 ToolResultMessage 交替的序列。
+ *
+ * 遍历策略：
+ *  - AssistantMessage：按 content 顺序映射 thinking/text/toolCall 各为一块
+ *    （思考/回复块直接产出；toolCall 块先记下，由后续 ToolResultMessage 按 id 回填 found/ok）
+ *  - ToolResultMessage：在 durations Map 取耗时、details.found 取命中数、isError 取反得 ok
+ *  - 连续的同类块（如多段思考）保持原序，不做合并——回放时按真实顺序逐块呈现更准确
+ *
+ * durations 来自桥接层的薄订阅（Map<toolCallId, ms>）；缺失时该工具块不带耗时，UI 不显示。
+ */
+export function deriveBlocksFromMessages(
+  messages: MessageLike[],
+  durations: Map<string, number>,
+): SrvBlock[] {
+  const blocks: SrvBlock[] = [];
+  /** toolCallId → 在 blocks 中的索引，便于 ToolResultMessage 回填。 */
+  const toolIdx = new Map<string, number>();
+
+  for (const m of messages) {
+    if (m.role === "assistant" && Array.isArray(m.content)) {
+      for (const c of m.content) {
+        // 类型守卫收窄（content 是 unknown[]，避免联合吸收问题）
+        if (isThinking(c)) {
+          blocks.push({ kind: "thinking", text: c.thinking });
+        } else if (isText(c)) {
+          // 跳过空文本块（模型有时会产空 TextContent）
+          if (c.text) blocks.push({ kind: "text", text: c.text });
+        } else if (isToolCall(c)) {
+          toolIdx.set(c.id, blocks.length);
+          blocks.push({ kind: "tool", toolCallId: c.id, toolName: c.name, args: c.arguments });
+        }
+      }
+    } else if (m.role === "toolResult" && m.toolCallId) {
+      const idx = toolIdx.get(m.toolCallId);
+      if (idx == null) continue;
+      const b = blocks[idx];
+      if (b.kind !== "tool") continue;
+      const found = m.details?.found;
+      blocks[idx] = {
+        ...b,
+        ...(found != null && { found }),
+        ok: !m.isError,
+        ...(durations.has(m.toolCallId) && { durationMs: durations.get(m.toolCallId) }),
+      };
     }
-    case "tool_call_start": {
-      if (blocks.some((b) => b.kind === "tool" && b.toolCallId === ev.toolCallId)) return blocks;
-      return blocks.slice().concat({ kind: "tool", toolCallId: ev.toolCallId, toolName: ev.toolName, args: ev.args });
-    }
-    case "tool_call_end": {
-      const idx = blocks.findIndex((b) => b.kind === "tool" && b.toolCallId === ev.toolCallId);
-      if (idx < 0) return blocks;
-      const next = blocks.slice();
-      const t = next[idx];
-      if (t.kind === "tool") next[idx] = { ...t, found: ev.found, ok: ev.ok, durationMs: ev.durationMs };
-      return next;
-    }
-    default:
-      return blocks;
   }
+  return blocks;
 }
 
 export interface ExecutorDeps {
@@ -100,6 +166,69 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
           html: `<!-- standalone HTML, ${report.html.length} chars → GET /api/reports/${report.id}/html -->`,
         },
       });
+    };
+
+    /**
+     * 把派生出的有序块按顺序落库（thinking / tool_result / text）。
+     * 成功与失败/中止路径共用：失败时先把已生成的块落下，再追加失败 text。
+     * 最后一个 text 块追加 summary（报告交付/信号计数），无 text 块则补一条 summary。
+     */
+    const persistBlocks = (conversationId: string, runId: string, blocks: SrvBlock[]) => {
+      const lastSaved = saved[saved.length - 1];
+      const summaryText = lastSaved
+        ? `已交付洞察报告「${lastSaved.title}」`
+        : `洞察运行结束（未生成报告）。本轮共采集 ${collectedItems.length} 条信号。`;
+
+      // 派生为空（session.messages 无 assistant 内容）→ 仅落 summary 兜底
+      if (blocks.length === 0) {
+        repo.addMessage(conversationId, "assistant", { kind: "text", text: summaryText }, { runId });
+        return;
+      }
+
+      // 找最后一个 text 块的索引，用于追加 summary
+      let lastTextIdx = -1;
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (blocks[i].kind === "text") {
+          lastTextIdx = i;
+          break;
+        }
+      }
+
+      blocks.forEach((b, i) => {
+        if (b.kind === "thinking") {
+          repo.addMessage(conversationId, "assistant", { kind: "thinking", text: b.text }, { runId });
+        } else if (b.kind === "tool") {
+          repo.addMessage(
+            conversationId,
+            "assistant",
+            {
+              kind: "tool_result",
+              toolName: b.toolName,
+              summary: b.found != null ? `查询到 ${b.found} 条数据` : b.ok === false ? "失败" : "完成",
+              ...(b.found != null && { found: b.found }),
+              args: b.args,
+              ...(b.durationMs != null && { durationMs: b.durationMs }),
+            },
+            {
+              runId,
+              toolCall: {
+                toolName: b.toolName,
+                args: b.args,
+                ...(b.found != null && { found: b.found }),
+                ...(b.durationMs != null && { durationMs: b.durationMs }),
+              },
+            },
+          );
+        } else {
+          // text：最后一个 text 块追加 summary
+          const text = i === lastTextIdx ? `${b.text}\n\n— ${summaryText}` : b.text;
+          repo.addMessage(conversationId, "assistant", { kind: "text", text }, { runId });
+        }
+      });
+      // 若本轮没有任何 text 块（纯工具/思考），补一条 summary
+      if (lastTextIdx < 0) {
+        repo.addMessage(conversationId, "assistant", { kind: "text", text: summaryText }, { runId });
+      }
     };
 
     // 启用的爬虫平台（从 data_sources 取）
@@ -169,14 +298,10 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       onItems: (items, toolName) =>
         collectedItems.push(...items.map((item) => ({ item, toolName }))),
       // ask 工具：暂停运行等待用户澄清（Claude-Code 式）。回复经 pending-inputs 传递。
+      // 落库不再旁路：ask 作为普通 tool_call 进入 session.messages，
+      // run 结束时由 deriveBlocksFromMessages 统一落为 tool_result（question/options 在 args、
+      // 用户回复在 ToolResultMessage.content）。
       awaitInput: (inputId, question, options) => {
-        // 落一条 clarification 消息（历史回看）+ 进 awaiting_input + emit 事件
-        repo.addMessage(run.conversationId, "assistant", {
-          kind: "clarification",
-          inputId,
-          question,
-          ...(options ? { options } : {}),
-        });
         repo.updateRun(ctx.runId, { status: "awaiting_input" });
         emit({ type: "clarification_needed", runId: ctx.runId, inputId, question, ...(options ? { options } : {}) });
         return resolveAwaiting(ctx.runId, inputId);
@@ -195,13 +320,13 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       },
     });
 
-    // 事件桥接 → emit AgentEvent + 累积 blocks（run 结束时按顺序持久化，历史回看还原 AgentLoop）
-    const accumulatedBlocks: SrvBlock[] = [];
+    // 事件桥接 → emit AgentEvent（透传前端实时流）+ 薄订阅记录 per-tool 耗时。
+    // 块的结构/顺序/内容统一在 run 结束时从 session.messages 派生（单一真相源），
+    // 此处仅维护 durations Map 作为锦上添花；Map 丢失时只是工具块缺耗时，块结构绝不丢。
+    const durations = new Map<string, number>();
     const unsubscribe = bridgeSessionEvents(session, ctx.runId, (ev: AgentEvent) => {
-      // 就地累积（reduceBlock 返回新数组，但这里维护同一个数组引用）
-      const reduced = reduceBlock(accumulatedBlocks, ev);
-      accumulatedBlocks.length = 0;
-      accumulatedBlocks.push(...reduced);
+      // tool_call_end 事件已由 event-bridge 算好 durationMs，直接登记
+      if (ev.type === "tool_call_end") durations.set(ev.toolCallId, ev.durationMs);
       emit(ev);
     });
 
@@ -230,6 +355,10 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
     if (ctx.signal.aborted) onAbort();
     else ctx.signal.addEventListener("abort", onAbort, { once: true });
 
+    // 标记本轮块是否已落库，防止成功路径落库后若 updateRun/emit 抛错、
+    // catch 再落一次导致重复（思考/工具/文本消息出现两份）
+    let blocksPersisted = false;
+
     try {
       await session.prompt(fullPrompt);
       unsubscribe();
@@ -243,67 +372,14 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
         // getSessionStats 不可用则跳过
       }
 
-      // 按顺序持久化本轮累积的 blocks（thinking / tool_result / text），
-      // 让历史回看能还原完整 AgentLoop（思考→工具→回复 一块一块）。全部关联到本 run。
-      const lastSaved = saved[saved.length - 1];
-      const summaryText = lastSaved
-        ? `已交付洞察报告「${lastSaved.title}」`
-        : `洞察运行结束（未生成报告）。本轮共采集 ${collectedItems.length} 条信号。`;
-
-      // 兜底：若累积为空（如未桥接上），回退提取最终 assistant 文本
-      if (accumulatedBlocks.length === 0) {
-        const convoText = extractAssistantText(session.messages);
-        repo.addMessage(
-          run.conversationId,
-          "assistant",
-          { kind: "text", text: convoText ? `${convoText}\n\n— ${summaryText}` : summaryText },
-          { runId: ctx.runId },
-        );
-      } else {
-        // 找到最后一个 text block 的索引，用于追加 summary
-        let lastTextIdx = -1;
-        for (let i = accumulatedBlocks.length - 1; i >= 0; i--) {
-          if (accumulatedBlocks[i].kind === "text") {
-            lastTextIdx = i;
-            break;
-          }
-        }
-        accumulatedBlocks.forEach((b, i) => {
-          if (b.kind === "thinking") {
-            repo.addMessage(run.conversationId, "assistant", { kind: "thinking", text: b.text }, { runId: ctx.runId });
-          } else if (b.kind === "tool") {
-            repo.addMessage(
-              run.conversationId,
-              "assistant",
-              {
-                kind: "tool_result",
-                toolName: b.toolName,
-                summary: b.found != null ? `查询到 ${b.found} 条数据` : b.ok ? "完成" : "失败",
-                ...(b.found != null && { found: b.found }),
-                args: b.args,
-                ...(b.durationMs != null && { durationMs: b.durationMs }),
-              },
-              {
-                runId: ctx.runId,
-                toolCall: {
-                  toolName: b.toolName,
-                  args: b.args,
-                  ...(b.found != null && { found: b.found }),
-                  ...(b.durationMs != null && { durationMs: b.durationMs }),
-                },
-              },
-            );
-          } else {
-            // text：最后一个 text block 追加 summary
-            const text = i === lastTextIdx ? `${b.text}\n\n— ${summaryText}` : b.text;
-            repo.addMessage(run.conversationId, "assistant", { kind: "text", text }, { runId: ctx.runId });
-          }
-        });
-        // 若本轮没有任何 text block（纯工具/思考），补一条 summary
-        if (lastTextIdx < 0) {
-          repo.addMessage(run.conversationId, "assistant", { kind: "text", text: summaryText }, { runId: ctx.runId });
-        }
-      }
+      // 从 session.messages 派生有序块（单一真相源），按顺序持久化。
+      // 历史/实时 UI 已验证的 thinking→tool→text 循环在此由 messages 还原。
+      persistBlocks(
+        run.conversationId,
+        ctx.runId,
+        deriveBlocksFromMessages(session.messages as MessageLike[], durations),
+      );
+      blocksPersisted = true;
 
       repo.updateRun(ctx.runId, {
         status: "completed",
@@ -316,19 +392,35 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       // 若是中止/超时导致 ask 阻塞被 reject，这里统一兜底清理 pending
       rejectPending(ctx.runId, new Error("运行失败"));
       const msg = (e as Error).message;
-      // 中止：status/endedAt 由 abort 路由置 interrupted；此处仅清理，不再 emit（SSE 由路由收尾）
+
+      // 失败/中止也先把本轮已生成的块落下（A 方案：session.messages 有什么落什么）。
+      // 已落过（成功路径 persistBlocks 后 updateRun/emit 抛错进来的）则跳过，避免重复落库。
+      // session.messages 读取异常时 persistBlocks 兜底落一条 summary，绝不丢空。
+      if (!blocksPersisted) {
+        let partialBlocks: SrvBlock[] = [];
+        try {
+          partialBlocks = deriveBlocksFromMessages(session.messages as MessageLike[], durations);
+        } catch {
+          partialBlocks = [];
+        }
+        persistBlocks(run.conversationId, ctx.runId, partialBlocks);
+      }
+
+      // 中止：先落块，再让 abort 路由置 interrupted（status/endedAt/SSE 由路由收尾）
       if (ctx.signal.aborted) return;
-      repo.updateRun(ctx.runId, {
-        status: "failed",
-        endedAt: new Date().toISOString(),
-        error: msg,
-      });
+
+      // 失败：追加失败原因 text 块 + 置 failed 状态
       repo.addMessage(
         run.conversationId,
         "assistant",
         { kind: "text", text: `洞察运行失败：${msg}` },
         { runId: ctx.runId },
       );
+      repo.updateRun(ctx.runId, {
+        status: "failed",
+        endedAt: new Date().toISOString(),
+        error: msg,
+      });
       emit({ type: "run_failed", runId: ctx.runId, error: msg });
     } finally {
       ctx.signal.removeEventListener("abort", onAbort);
@@ -344,18 +436,3 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
   };
 }
 
-/** 从 AgentMessage[] 提取最后一条 assistant 消息的文本（拼接所有 TextContent）。 */
-function extractAssistantText(messages: unknown): string {
-  if (!Array.isArray(messages)) return "";
-  // 从后往前找最后一条 assistant 消息
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i] as { role?: string; content?: unknown };
-    if (m.role !== "assistant" || !Array.isArray(m.content)) continue;
-    const text = m.content
-      .filter((c) => (c as { type?: string }).type === "text")
-      .map((c) => (c as { text?: string }).text ?? "")
-      .join("");
-    if (text.trim()) return text.trim();
-  }
-  return "";
-}

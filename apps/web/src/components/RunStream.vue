@@ -15,9 +15,9 @@ const props = defineProps<{
 }>();
 
 const streaming = computed(() => props.status === "running");
-const show = computed(
-  () => props.status === "running" || props.status === "awaiting_input" || props.blocks.length > 0,
-);
+// 仅在运行中/等待输入时显示实时流；completed/failed 后内容已落库并由 MessageList 历史渲染，
+// 此处不再显示，避免与历史重复。
+const show = computed(() => props.status === "running" || props.status === "awaiting_input");
 const lensLabel = computed(() => (props.lens ? LENS_OPTIONS.find((l) => l.key === props.lens)?.label : undefined));
 const hasText = computed(() => props.blocks.some((b) => b.kind === "text"));
 </script>

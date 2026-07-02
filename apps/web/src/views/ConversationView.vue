@@ -6,7 +6,7 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import {
-  type Conversation, type ConversationConfig, type Message, type TimeRange, type Report,
+  type Conversation, type ConversationConfig, type Message, type TimeRange, type Report, type ReportSummary,
 } from "@ai-insight/shared-types";
 import { listConversations, createConversation, getConversation, sendMessage } from "@ai-insight/api-client";
 import { useInsightRun } from "../composables/useInsightRun.js";
@@ -42,6 +42,8 @@ async function loadConversations() {
 // ─── 当前会话 ─────────────────────────────────────────────────────────────
 const currentConv = ref<Conversation | null>(null);
 const messages = ref<Message[]>([]);
+/** 该对话的历史报告（按 createdAt 升序），用于回放时按 runId 归位渲染报告卡。 */
+const historyReports = ref<ReportSummary[]>([]);
 const loading = ref(false);
 
 const config = reactive<ConversationConfig>({
@@ -71,6 +73,7 @@ async function loadConversation(id: string) {
     const c = await getConversation(id);
     currentConv.value = c;
     messages.value = c.messages;
+    historyReports.value = c.reports ?? [];
     if (c.config) {
       config.timeRange = c.config.timeRange;
       config.lens = c.config.lens;
@@ -79,6 +82,26 @@ async function loadConversation(id: string) {
     console.error("load conversation failed", e);
   } finally {
     loading.value = false;
+  }
+}
+
+/**
+ * 轻量刷新消息（不动 loading/config/标题）。
+ * run 完成后调用：把后端已落库的本轮内容（思考/工具/文本）并入 messages 历史，
+ * 这样下一轮 subscribe 清空 run.blocks 时，上轮内容已固化为历史、不会消失。
+ *
+ * 时序安全：SSE 的 run_completed 在后端 persistBlocks+updateRun 之后才 emit，
+ * 故收到时 DB 必已写完，直接拉取即可拿到本轮落库的全部块。
+ */
+async function refreshMessages() {
+  const id = currentConv.value?.id;
+  if (!id || id === "ux-conv") return;
+  try {
+    const c = await getConversation(id);
+    messages.value = c.messages;
+    historyReports.value = c.reports ?? [];
+  } catch (e) {
+    console.error("refresh messages failed", e);
   }
 }
 
@@ -132,14 +155,15 @@ function selectConversation(c: Conversation) {
 
 // ─── 报告弹窗 ─────────────────────────────────────────────────────────────
 // 运行中实时报告 与 历史报告复用同一弹窗
-const modalReport = ref<Report | null>(null);
+const modalReport = ref<Report | ReportSummary | null>(null);
+/** 按 id 查报告：优先实时 run.report（含运行中即时态），否则查历史 historyReports。 */
+function findReport(id: string): Report | ReportSummary | undefined {
+  if (run.report.value && run.report.value.id === id) return run.report.value;
+  return historyReports.value.find((r) => r.id === id);
+}
 function openReportModal(id: string) {
-  // 优先用运行中实时报告；否则在历史消息里无独立报告卡，此分支留给 ReportsView 复用
-  if (run.report.value && run.report.value.id === id) {
-    modalReport.value = run.report.value;
-  } else if (run.report.value) {
-    modalReport.value = run.report.value;
-  }
+  const r = findReport(id);
+  if (r) modalReport.value = r;
 }
 function closeReportModal() {
   modalReport.value = null;
@@ -147,8 +171,8 @@ function closeReportModal() {
 // 下载报告：经鉴权 fetch 取 on-demand 渲染的 standalone HTML 落盘
 // （与弹窗下载共用同一 helper → 同一渲染来源，保证与系统内实时一致）
 async function downloadReport(id: string) {
-  const r = run.report.value;
-  if (!r || r.id !== id) return;
+  const r = findReport(id);
+  if (!r) return;
   const filename = `${(r.title || "insight-report").replace(/[\\/:*?"<>|]/g, "_")}.html`;
   await downloadReportHtml(id, filename);
 }
@@ -184,6 +208,19 @@ void sourceCount;
 
 watch(() => run.report, () => scrollToBottom());
 watch(() => run.status, () => scrollToBottom());
+
+// run 完成或失败时刷新消息：把本轮落库的思考/工具/文本并入历史。
+// 解决"第二次发送清空第一次回应"——上轮内容固化进 messages 后，新一轮 subscribe
+// 清空 run.blocks 不再导致历史丢失。
+watch(
+  () => run.status.value,
+  (s, prev) => {
+    // 仅在从 running/awaiting_input 转入终态时刷新，避免初始化或重复触发
+    if ((s === "completed" || s === "failed") && prev !== s && prev !== "idle") {
+      refreshMessages();
+    }
+  },
+);
 
 onMounted(() => {
   if (isUxMode()) {
@@ -239,8 +276,11 @@ watch(
         <div class="stream scroll" ref="convoScroll" @click="onStreamClick">
           <MessageList
             :messages="messages"
+            :reports="historyReports"
             :idle="run.status.value === 'idle'"
-            :loading="loading" />
+            :loading="loading"
+            @open-report="openReportModal"
+            @download-report="downloadReport" />
 
           <RunStream
             :status="run.status.value"

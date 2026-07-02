@@ -267,7 +267,15 @@ export interface ApiError {
   message?: string;
 }
 
+/**
+ * 报告摘要（不含 html，用于历史回放/列表，避免大字段臃肿对话响应）。
+ * ReportModal/ReportCard 只需 markdown/title/standfirst；下载 HTML 走 /reports/:id/html 单独取。
+ */
+export type ReportSummary = Omit<Report, "html">;
+
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
   lastRun?: InsightRun;
+  /** 该对话的全部报告（按 createdAt 升序），用于历史回放按 runId 归位渲染报告卡。 */
+  reports?: ReportSummary[];
 }

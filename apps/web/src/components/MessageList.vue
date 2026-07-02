@@ -1,19 +1,29 @@
 <script setup lang="ts">
 /**
  * MessageList — 历史消息（Workbench 风格）。
- * 用 fromMessages 把 DB 历史 Message[] 聚合成 turns：
+ * 用 fromMessages 把 DB 历史 Message[] + 报告 聚合成 turns：
  *   user turn → 右对齐气泡；assistant turn → AI 头像 + MessageBlocks（有序思考/工具/回复块）。
+ *   turn.report（若该轮 run 产出了报告）→ ReportCard，归位到该 turn 末尾。
  * 兼容旧数据：单条 text assistant 消息 → 含单个 TextBlock 的 turn。
  */
 import { computed } from "vue";
 import { Sparkles } from "@lucide/vue";
-import type { Message } from "@ai-insight/shared-types";
+import type { Message, ReportSummary } from "@ai-insight/shared-types";
 import { fromMessages } from "../composables/blocks";
 import MessageBlocks from "./MessageBlocks.vue";
+import ReportCard from "./ReportCard.vue";
 
-const props = defineProps<{ messages: Message[]; idle: boolean; loading: boolean }>();
+const props = defineProps<{
+  messages: Message[];
+  /** 该对话的全部历史报告（按 runId 归位到产生它的 turn 末尾渲染）。 */
+  reports?: ReportSummary[];
+  idle: boolean;
+  loading: boolean;
+}>();
 
-const turns = computed(() => fromMessages(props.messages));
+const emit = defineEmits<{ openReport: [id: string]; downloadReport: [id: string] }>();
+
+const turns = computed(() => fromMessages(props.messages, props.reports ?? []));
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -31,12 +41,17 @@ function timeLabel(iso: string): string {
       </div>
     </div>
 
-    <!-- AI 回复（有序 blocks：思考 / 工具 / 回复） -->
+    <!-- AI 回复（有序 blocks：思考 / 工具 / 回复 + 报告卡） -->
     <div v-else class="turn ai fade-up">
       <div class="ai-ava">A</div>
       <div class="ai-body">
         <div class="ai-eb">AI-Insight</div>
         <MessageBlocks :blocks="t.blocks ?? []" :default-think-open="false" />
+        <ReportCard
+          v-if="t.report"
+          :report="t.report"
+          @open="emit('openReport', $event)"
+          @download="emit('downloadReport', $event)" />
       </div>
     </div>
   </template>
