@@ -12,6 +12,7 @@ import {
   editorialComponentCss,
   editorialFontLink,
 } from "./tokens.js";
+import { mdInline } from "./report-markdown.js";
 
 export interface RenderReportInput {
   title: string;
@@ -50,15 +51,17 @@ const EditorialReportSsr: Component = {
             h("span", { class: "font-mono pub-date" }, pubDate()),
           ]),
           h("div", { class: "double-rule masthead-rule" }),
-          h("h1", { class: "report-title" }, props.title),
+          // 标题/导语用 mdInline 解析内联标记（**bold** 等），与 web ReportModal 一致；
+          // innerHTML 在 SSR 等价 v-html（editorial-body 已用此法）。mdInline 先 esc() 再应用规则，安全。
+          h("h1", { class: "report-title", innerHTML: mdInline(props.title) }),
           props.standfirst
-            ? h("p", { class: "report-standfirst drop-cap" }, props.standfirst)
+            ? h("p", { class: "report-standfirst drop-cap", innerHTML: mdInline(props.standfirst) })
             : null,
         ]),
         // 正文（v-html 等价：innerHTML）
         h("div", { class: "editorial-body", innerHTML: props.bodyHtml }),
-        // 供稿行
-        props.meta
+        // 供稿行：仅当实际传入 signalCount/sourceCount 时渲染（避免只传 createdAt 时出现 "收录 — 条信号"）
+        props.meta && (props.meta.signalCount != null || props.meta.sourceCount != null)
           ? h("footer", { class: "report-footer thick-rule" }, [
               h(
                 "span",

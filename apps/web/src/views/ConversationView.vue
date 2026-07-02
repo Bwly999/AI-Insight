@@ -6,11 +6,12 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import {
-  type Conversation, type ConversationConfig, type DataSourceTag, type Message, type TimeRange, type Report,
+  type Conversation, type ConversationConfig, type Message, type TimeRange, type Report,
 } from "@ai-insight/shared-types";
 import { listConversations, createConversation, getConversation, sendMessage } from "@ai-insight/api-client";
 import { useInsightRun } from "../composables/useInsightRun.js";
 import { isUxMode } from "../utils";
+import { downloadReportHtml } from "../utils/download";
 
 import AppTopbar from "../components/AppTopbar.vue";
 import SidebarLeft from "../components/SidebarLeft.vue";
@@ -45,7 +46,6 @@ const loading = ref(false);
 
 const config = reactive<ConversationConfig>({
   timeRange: "1w",
-  tagPrefs: ["tech", "news"],
   // lens 留空：由 Agent 按意图自主路由（skill 模型）
 });
 
@@ -73,7 +73,6 @@ async function loadConversation(id: string) {
     messages.value = c.messages;
     if (c.config) {
       config.timeRange = c.config.timeRange;
-      config.tagPrefs = c.config.tagPrefs ?? ["tech", "news"];
       config.lens = c.config.lens;
     }
   } catch (e) {
@@ -124,12 +123,6 @@ async function onSend(text: string) {
   }
 }
 
-function onToggleTag(t: DataSourceTag) {
-  const i = config.tagPrefs.indexOf(t);
-  if (i >= 0) config.tagPrefs.splice(i, 1);
-  else config.tagPrefs.push(t);
-}
-
 function newInsight() {
   router.push("/c/new");
 }
@@ -151,19 +144,13 @@ function openReportModal(id: string) {
 function closeReportModal() {
   modalReport.value = null;
 }
-// 下载报告：优先用 standalone html，落盘 .html
-function downloadReport(id: string) {
+// 下载报告：经鉴权 fetch 取 on-demand 渲染的 standalone HTML 落盘
+// （与弹窗下载共用同一 helper → 同一渲染来源，保证与系统内实时一致）
+async function downloadReport(id: string) {
   const r = run.report.value;
   if (!r || r.id !== id) return;
-  const blob = new Blob([r.html || r.markdown], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${(r.title || "insight-report").replace(/[\\/:*?"<>|]/g, "_")}.html`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const filename = `${(r.title || "insight-report").replace(/[\\/:*?"<>|]/g, "_")}.html`;
+  await downloadReportHtml(id, filename);
 }
 
 // ─── 引用联动：点击 .cite 高亮右栏对应来源 ─────────────────────────────────
@@ -276,11 +263,9 @@ watch(
         <Composer
           :status="run.status.value"
           :time-range="config.timeRange"
-          :tag-prefs="config.tagPrefs"
           @send="onSend"
           @abort="run.abort()"
-          @update:time-range="(v: TimeRange) => (config.timeRange = v)"
-          @toggle-tag="onToggleTag" />
+          @update:time-range="(v: TimeRange) => (config.timeRange = v)" />
       </main>
 
       <EvidencePanel :tool-calls="toolCalls" :run-id="run.runId.value" :run-status="run.status.value" />

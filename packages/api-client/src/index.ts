@@ -119,6 +119,21 @@ export const getReport = (id: string) => req<Report>(`/api/reports/${id}`);
 export function reportHtmlUrl(id: string): string {
   return `${API_BASE}/api/reports/${id}/html`;
 }
+/**
+ * 经鉴权 fetch 取 on-demand 渲染的 standalone HTML 文本（用于客户端触发下载）。
+ *
+ * 不用 <a download> 导航：浏览器导航无法携带 Authorization 头，prod 会 401。
+ * 这里 fetch 带 Bearer token 取回文本，交调用方落盘为 Blob。dev/prod 皆可。
+ */
+export async function fetchReportHtml(id: string): Promise<string> {
+  const res = await fetch(reportHtmlUrl(id), {
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status}: ${res.statusText}`);
+  }
+  return res.text();
+}
 
 // ─── DataSources ──────────────────────────────────────────────────────────
 export const listDataSources = () => req<{ items: DataSource[] }>("/api/datasources");

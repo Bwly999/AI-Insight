@@ -1,88 +1,19 @@
 /**
  * 报告渲染 — markdown → editorial standalone HTML（升级为 EditorialReport 模板）。
  *
- * 流程：markdown → bodyHtml（极简转换）→ renderReportStandalone（@vue/server-renderer）。
+ * 流程：markdown → bodyHtml（mdToHtml，与 web 共用单一来源）→ renderReportStandalone（@vue/server-renderer）。
  * Phase 4：从 Phase 3 的极简版升级为 editorial 版式。
+ *
+ * 注：下载入口 GET /api/reports/:id/html 在请求时按本函数实时渲染（不读 reports.html 烘焙列），
+ * 故系统内渲染逻辑变更对历史/新报告均即时生效。
  */
-import type { Report } from "@ai-insight/shared-types";
-import { renderReportStandalone, stripReportHeader } from "@ai-insight/shared-ui";
-
-/** 极简 markdown → HTML（覆盖标题/列表/链接/引用/代码）。 */
-export function markdownToHtml(md: string): string {
-  const esc = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  const lines = md.split("\n");
-  const out: string[] = [];
-  let inList = false;
-  let inCode = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (line.startsWith("```")) {
-      if (inCode) {
-        out.push("</code></pre>");
-        inCode = false;
-      } else {
-        out.push("<pre><code>");
-        inCode = true;
-      }
-      continue;
-    }
-    if (inCode) {
-      out.push(esc(line));
-      continue;
-    }
-
-    const inline = (t: string) =>
-      esc(t)
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/`([^`]+)`/g, "<code>$1</code>")
-        .replace(/\[(.+?)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-    const h = line.match(/^(#{1,4})\s+(.*)$/);
-    if (h) {
-      if (inList) { out.push("</ul>"); inList = false; }
-      const level = h[1].length;
-      out.push(`<h${level}>${inline(h[2])}</h${level}>`);
-      continue;
-    }
-    // 水平分隔线 --- / *** / ___（≥3 个同一字符，允许空格）
-    if (/^(\s*[-*_]\s*){3,}$/.test(line) && /([-*_])\1\1/.test(line.replace(/\s/g, ""))) {
-      if (inList) { out.push("</ul>"); inList = false; }
-      out.push("<hr />");
-      continue;
-    }
-    if (line.startsWith("> ")) {
-      if (inList) { out.push("</ul>"); inList = false; }
-      out.push(`<blockquote>${inline(line.slice(2))}</blockquote>`);
-      continue;
-    }
-    if (/^\s*[-*]\s+/.test(line)) {
-      if (!inList) { out.push("<ul>"); inList = true; }
-      out.push(`<li>${inline(line.replace(/^\s*[-*]\s+/, ""))}</li>`);
-      continue;
-    }
-    if (line.trim() === "") {
-      if (inList) { out.push("</ul>"); inList = false; }
-      continue;
-    }
-    if (inList) { out.push("</ul>"); inList = false; }
-    out.push(`<p>${inline(line)}</p>`);
-  }
-  if (inList) out.push("</ul>");
-  if (inCode) out.push("</code></pre>");
-
-  return out.join("\n");
-}
+import { renderReportStandalone, stripReportHeader, mdToHtml } from "@ai-insight/shared-ui";
 
 /**
  * 渲染 standalone HTML 报告（editorial 版式，可独立打开/下载）。
  *
- * title / standfirst 在 masthead 报头单独渲染，故需从正文 markdown 中剔除
- * 否则会出现"标题/导语在报头与正文各出现一次"的重复。
+ * title / standfirst 在 masthead 报头单独渲染（editorial-ssr.ts 用 mdInline 解析内联标记），
+ * 故需从正文 markdown 中剔除否则会出现"标题/导语在报头与正文各出现一次"的重复。
  */
 export async function renderReportHtml(opts: {
   title: string;
@@ -90,7 +21,7 @@ export async function renderReportHtml(opts: {
   standfirst?: string;
   meta?: { issueNo?: string; createdAt?: string; signalCount?: number; sourceCount?: number };
 }): Promise<string> {
-  const bodyHtml = markdownToHtml(stripReportHeader(opts.markdown, opts.title, opts.standfirst));
+  const bodyHtml = mdToHtml(stripReportHeader(opts.markdown, opts.title, opts.standfirst));
   return renderReportStandalone({
     title: opts.title,
     standfirst: opts.standfirst,

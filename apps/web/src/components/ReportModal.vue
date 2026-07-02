@@ -6,10 +6,10 @@
  */
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { Download, X } from "@lucide/vue";
-import { reportHtmlUrl } from "@ai-insight/api-client";
 import type { Report } from "@ai-insight/shared-types";
 import { editorialColors, stripReportHeader } from "@ai-insight/shared-ui";
 import { mdToHtml, mdInline } from "../utils/markdown";
+import { downloadReportHtml } from "../utils/download";
 
 const props = defineProps<{ report: Report | null }>();
 const emit = defineEmits<{ close: [] }>();
@@ -23,13 +23,18 @@ const bodyHtml = computed(() =>
 );
 const titleHtml = computed(() => (props.report ? mdInline(props.report.title) : ""));
 const standfirstHtml = computed(() => (props.report?.standfirst ? mdInline(props.report.standfirst) : ""));
-const htmlUrl = computed(() => (props.report ? reportHtmlUrl(props.report.id) : "#"));
 
 /** 下载文件名：报告标题 + ".html"（净化文件名非法字符）。 */
 const downloadName = computed(() => {
   const t = props.report?.title ?? "report";
   return `${t.replace(/[\\/:*?"<>|]/g, "").trim() || "report"}.html`;
 });
+
+/** 下载：经鉴权 fetch 取 on-demand 渲染的 standalone HTML 落盘（与卡片下载共用 helper）。 */
+async function onDownload() {
+  if (!props.report) return;
+  await downloadReportHtml(props.report.id, downloadName.value);
+}
 
 /** 报头发布日期（YYYY-MM-DD），与下载 HTML 的 pub-date 一致。 */
 const pubDate = computed(() => (props.report?.createdAt ?? new Date().toISOString()).slice(0, 10));
@@ -54,16 +59,14 @@ onUnmounted(() => {
     <div class="modal">
       <!-- 右上浮动操作（下载 / 关闭）：脱离 editorial 排版，悬浮于 paper 之上 -->
       <div class="head-actions">
-        <a
+        <button
           class="icon-btn"
-          :href="htmlUrl"
-          :download="downloadName"
-          target="_blank"
-          rel="noopener"
+          type="button"
           title="下载 HTML"
-          aria-label="下载 HTML">
+          aria-label="下载 HTML"
+          @click="onDownload">
           <Download :size="16" :stroke-width="2" />
-        </a>
+        </button>
         <button class="icon-btn" title="关闭" aria-label="关闭" @click="emit('close')"><X :size="16" :stroke-width="2" /></button>
       </div>
 

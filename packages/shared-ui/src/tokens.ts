@@ -64,8 +64,12 @@ export const editorialComponentCss = `
   background:rgba(200,52,26,.06);color:var(--ink-2);border-radius:0 6px 6px 0;}
 .editorial-body code{background:rgba(26,22,18,.08);padding:1px 5px;border-radius:4px;
   font-family:'JetBrains Mono',monospace;font-size:.92em;}
-.editorial-body pre{background:var(--ink);color:#e6eaf0;padding:16px;border-radius:8px;overflow-x:auto);}
+.editorial-body pre{background:var(--ink);color:#e6eaf0;padding:16px;border-radius:8px;overflow-x:auto;}
 .editorial-body pre code{background:none;color:inherit;padding:0;}
+.editorial-body table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.95em;}
+.editorial-body th,.editorial-body td{border:1px solid rgba(26,22,18,.18);padding:6px 10px;text-align:left;}
+.editorial-body th{background:rgba(26,22,18,.05);font-weight:600;}
+.editorial-body .cite{color:var(--vermillion);font-weight:600;cursor:default;font-size:.8em;}
 `;
 
 export const editorialFontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">

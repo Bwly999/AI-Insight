@@ -15,5 +15,5 @@ export {
   editorialComponentCss,
   editorialFontLink,
 } from "./tokens.js";
-export { stripReportHeader } from "./report-markdown.js";
+export { stripReportHeader, mdToHtml, mdInline } from "./report-markdown.js";
 // EditorialReport.vue 仅在客户端（vite + vue 插件）使用，按需具名导入，不放 barrel
