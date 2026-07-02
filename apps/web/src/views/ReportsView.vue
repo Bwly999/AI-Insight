@@ -9,6 +9,7 @@ import { Plus, Sun, Moon, ArrowLeft, Sparkles, ArrowRight } from "@lucide/vue";
 import { listReports } from "@ai-insight/api-client";
 import type { Report } from "@ai-insight/shared-types";
 import { useTheme } from "../composables/useTheme";
+import { mdInline } from "../utils/markdown";
 import ReportModal from "../components/ReportModal.vue";
 
 const router = useRouter();
@@ -39,6 +40,14 @@ function relTime(iso: string): string {
 
 function openReport(r: Report) {
   modalReport.value = r;
+}
+
+/** 卡片标题/导语按 inline markdown 渲染（与弹窗 ReportModal 同源），先 esc() 再应用规则，安全用于 v-html。 */
+function titleHtml(r: Report): string {
+  return mdInline(r.title);
+}
+function ledeHtml(r: Report): string {
+  return r.standfirst ? mdInline(r.standfirst) : "";
 }
 </script>
 
@@ -73,11 +82,13 @@ function openReport(r: Report) {
         <button v-for="r in reports" :key="r.id" class="rep-card" @click="openReport(r)">
           <div class="rc-top"><span>分析报告</span><span>{{ relTime(r.createdAt) }}</span></div>
           <div class="rc-body">
-            <h3>{{ r.title }}</h3>
-            <p v-if="r.standfirst" class="rc-lede">{{ r.standfirst.slice(0, 80) }}{{ r.standfirst.length > 80 ? '…' : '' }}</p>
+            <!-- eslint-disable-next-line vue/no-v-html -- mdInline 先 esc() 再应用 inline 规则，安全 -->
+            <h3 v-html="titleHtml(r)"></h3>
+            <!-- eslint-disable-next-line vue/no-v-html -- mdInline 先 esc() 再应用 inline 规则，安全 -->
+            <p v-if="r.standfirst" class="rc-lede" v-html="ledeHtml(r)"></p>
           </div>
           <div class="rc-foot">
-            <span>点击查阅 <ArrowRight :size="11" :stroke-width="2.2" /></span>
+            <span class="rc-hint">点击查阅 <ArrowRight :size="11" :stroke-width="2.2" /></span>
           </div>
         </button>
       </div>
@@ -119,9 +130,15 @@ function openReport(r: Report) {
 }
 .rc-body { padding: 15px 17px; }
 .rc-body h3 { font-size: 17px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; color: var(--text); }
-.rc-lede { font-size: 13px; color: var(--text-3); margin: 0; line-height: 1.5; }
+.rc-lede {
+  font-size: 13px; color: var(--text-3); margin: 0; line-height: 1.5;
+  /* 摘要按 markdown 渲染后用行数截断，避免字符切割打断 ** 等内联标记 */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 .rc-foot {
   padding: 8px 17px; border-top: 1px solid var(--border);
   font-size: 11px; color: var(--accent-text); font-weight: 600;
 }
+/* 查阅提示：文字与图标 inline-flex 垂直居中，避免错行 */
+.rc-hint { display: inline-flex; align-items: center; gap: 4px; }
 </style>
