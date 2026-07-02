@@ -3,6 +3,7 @@
  * ReportCard — 对话内的报告预览卡（点击触发弹窗，不跳路由）。
  */
 import { computed } from "vue";
+import { ArrowRight } from "@lucide/vue";
 import type { Report } from "@ai-insight/shared-types";
 
 const props = defineProps<{ report: Report }>();
@@ -30,7 +31,7 @@ const timeLabel = computed(() => {
     <div class="rc-foot">
       <span>{{ chapterCount }} 章节</span>
       <span>{{ wordCount }} 字</span>
-      <span class="hint">点击在弹窗内查阅 →</span>
+      <span class="hint">点击在弹窗内查阅 <ArrowRight :size="11" :stroke-width="2.2" /></span>
     </div>
   </div>
 </template>

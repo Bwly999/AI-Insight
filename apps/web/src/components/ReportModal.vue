@@ -2,10 +2,10 @@
 /**
  * ReportModal — 报告弹窗（替代 ReportView 全屏页）。
  * 遮罩模糊 + 880px 卡片；正文区采用 editorial 版式（与下载 HTML 一致，固定浅色）；
- * head 含标题 + 下载图标 + ✕（ESC / 点遮罩关闭）。
+ * head 含标题 + 下载图标 + 关闭（ESC / 点遮罩关闭）。
  */
 import { computed, onMounted, onUnmounted, watch } from "vue";
-import { Download } from "@lucide/vue";
+import { Download, X } from "@lucide/vue";
 import { reportHtmlUrl } from "@ai-insight/api-client";
 import type { Report } from "@ai-insight/shared-types";
 import { editorialColors } from "@ai-insight/shared-ui";
@@ -61,7 +61,7 @@ onUnmounted(() => {
             aria-label="下载 HTML">
             <Download :size="16" :stroke-width="2" />
           </a>
-          <button class="icon-btn" title="关闭" aria-label="关闭" @click="emit('close')">✕</button>
+          <button class="icon-btn" title="关闭" aria-label="关闭" @click="emit('close')"><X :size="16" :stroke-width="2" /></button>
         </div>
       </div>
 
