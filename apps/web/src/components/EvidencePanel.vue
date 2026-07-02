@@ -74,11 +74,12 @@ function domainOf(url: string): string {
         <div v-for="(it, i) in items" :key="it.id" class="source" :id="'src' + (i + 1)" :data-source-no="i + 1">
           <span class="s-no">{{ circled(i + 1) }}</span>
           <div class="s-src"><span class="dot" :style="{ background: sourceDot(it.sourceType) }"></span>{{ it.sourceType.toUpperCase() }} · {{ it.sourceName }}</div>
-          <div class="s-title">{{ it.title }}</div>
+          <!-- 拉伸链接：标题为锚点，::after 覆盖整张卡，点击任意位置在新标签页打开原网页 -->
+          <a class="s-title" :href="it.url" target="_blank" rel="noopener noreferrer">{{ it.title }}</a>
           <div v-if="it.summary" class="s-sum">{{ it.summary }}</div>
           <div class="s-foot">
             <span>{{ it.publishedAt ? it.publishedAt.slice(0, 10) : it.fetchedAt.slice(0, 10) }}</span>
-            <span>{{ domainOf(it.url) }}</span>
+            <span class="s-domain">{{ domainOf(it.url) }} ↗</span>
           </div>
         </div>
       </template>
@@ -115,9 +116,9 @@ function domainOf(url: string): string {
 .source {
   position: relative;
   background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
-  padding: 11px 12px; margin-bottom: 9px; transition: var(--t-fast); cursor: pointer;
+  padding: 11px 12px; margin-bottom: 9px; transition: var(--t-fast);
 }
-.source:hover { border-color: var(--border-2); }
+.source:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
 .source .s-no {
   position: absolute; right: 10px; top: 10px;
   font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text-3);
@@ -127,12 +128,23 @@ function domainOf(url: string): string {
   display: flex; align-items: center; gap: 6px; letter-spacing: 0.02em;
 }
 .s-src .dot { box-shadow: none; }
-.s-title { font-size: 13.5px; font-weight: 600; margin: 4px 0 3px; line-height: 1.35; color: var(--text); }
+.s-title {
+  display: block; font-size: 13.5px; font-weight: 600; margin: 4px 0 3px;
+  line-height: 1.35; color: var(--text); text-decoration: none; cursor: pointer;
+  /* 拉伸链接：伪元素铺满最近 .source，使整卡可点 */
+}
+.s-title::after { content: ""; position: absolute; inset: 0; }
+.source:hover .s-title { color: var(--accent); }
 .s-sum {
   font-size: 12px; color: var(--text-2); line-height: 1.55;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .s-foot { margin-top: 7px; font-size: 10.5px; color: var(--text-3); display: flex; gap: 12px; }
+.s-domain {
+  position: relative; z-index: 1; font-weight: 600;
+  color: var(--accent); cursor: pointer;
+}
+.source:hover .s-domain { text-decoration: underline; }
 
 .empty-glyph { font-family: var(--mono); font-size: 36px; color: var(--text-4); opacity: 0.5; margin-bottom: 8px; }
 .empty-glyph.spin { animation: spin 1.4s linear infinite; }
