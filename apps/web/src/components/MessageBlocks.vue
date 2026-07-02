@@ -200,10 +200,10 @@ const hasContent = computed(() => props.blocks.length > 0);
           <span class="tool-args">{{ toolArgsPreview(b.args) }}</span>
           <span class="th-right">
             <span v-if="toolStatusKey(b) === 'ok'" class="tool-status ok">
-              ✓<span v-if="b.found != null"> {{ b.found }} 条</span><span v-if="b.durationMs"> · {{ (b.durationMs / 1000).toFixed(1) }}s</span>
+              <Check :size="12" :stroke-width="2.5" /><span v-if="b.found != null"> {{ b.found }} 条</span><span v-if="b.durationMs"> · {{ (b.durationMs / 1000).toFixed(1) }}s</span>
             </span>
-            <span v-else-if="toolStatusKey(b) === 'fail'" class="tool-status fail">✕ 失败</span>
-            <span v-else class="tool-status running"><span class="spin">◐</span> 运行中</span>
+            <span v-else-if="toolStatusKey(b) === 'fail'" class="tool-status fail"><X :size="12" :stroke-width="2.5" /> 失败</span>
+            <span v-else class="tool-status running"><Loader :size="12" :stroke-width="2.5" class="spin" /> 运行中</span>
             <ChevronDown :size="15" :stroke-width="2" class="chev" :class="{ open: isToolOpen(b.id) }" />
           </span>
         </div>
