@@ -5,7 +5,6 @@ import type { ConversationConfig, DataSourceItem } from "@ai-insight/shared-type
 
 const CFG: ConversationConfig = {
   timeRange: "1w",
-  tagPrefs: ["tech"],
   lens: "deep",
 };
 

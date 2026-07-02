@@ -315,28 +315,6 @@ body {
   color: var(--text);
   border-color: var(--text-4);
 }
-.rchip {
-  font-family: var(--mono);
-  font-size: var(--fs-xs);
-  padding: 4px 9px;
-  border-radius: var(--r-xs);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  cursor: pointer;
-  transition: var(--t-fast);
-  line-height: 1;
-}
-.rchip:hover {
-  border-color: var(--border-2);
-  color: var(--text);
-}
-.rchip.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-}
 .tchip {
   font-size: var(--fs-xs);
   padding: 4px 10px;

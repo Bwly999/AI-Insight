@@ -10,7 +10,6 @@ import { nextFireIso, validateCron, notifyScheduleChange } from "../jobs/schedul
 
 const DEFAULT_SCHEDULE_CONFIG: ConversationConfig = {
   timeRange: "1w",
-  tagPrefs: ["tech"],
   lens: "deep",
 };
 

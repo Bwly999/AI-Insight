@@ -1,26 +1,22 @@
 <script setup lang="ts">
 /**
  * Composer — 底部输入框（Workbench 风格）。
- * sticky + 渐变淡出底；focus 时 border 变 accent；上下文进度环 + 时间窗/标签 chips。
+ * sticky + 渐变淡出底；focus 时 border 变 accent；时间窗下拉 + 上下文进度环。
  */
 import { ref, nextTick, computed } from "vue";
-import {
-  TIME_RANGE_OPTIONS, ALL_TAGS, TAG_LABELS,
-  type TimeRange, type DataSourceTag,
-} from "@ai-insight/shared-types";
+import { type TimeRange } from "@ai-insight/shared-types";
 import { SquareArrowUp, SquarePause } from "@lucide/vue";
+import TimeRangeSelect from "./TimeRangeSelect.vue";
 
 const props = defineProps<{
   status: "idle" | "running" | "completed" | "failed" | "awaiting_input";
   timeRange: TimeRange;
-  tagPrefs: DataSourceTag[];
 }>();
 
 const emit = defineEmits<{
   send: [text: string];
   abort: [];
   "update:timeRange": [v: TimeRange];
-  toggleTag: [t: DataSourceTag];
 }>();
 
 const draft = ref("");
@@ -62,11 +58,8 @@ function submit() {
 
       <div class="composer-foot">
         <div class="chips">
-          <button type="button" v-for="r in TIME_RANGE_OPTIONS" :key="r.value" class="rchip"
-            :class="{ on: r.value === timeRange }" @click="emit('update:timeRange', r.value)">{{ r.label }}</button>
-          <span class="chip-sep"></span>
-          <button type="button" v-for="t in ALL_TAGS" :key="t" class="tchip"
-            :class="{ on: tagPrefs.includes(t) }" @click="emit('toggleTag', t)">{{ TAG_LABELS[t] }}</button>
+          <TimeRangeSelect :model-value="timeRange"
+            @update:model-value="(v) => emit('update:timeRange', v)" />
         </div>
 
         <span class="ctx-ring" :style="{ background: `conic-gradient(var(--accent) 0 ${ctxPct}%, var(--border-2) ${ctxPct}% 100%)` }" :title="`上下文 ${ctxPct}%`"></span>
@@ -110,7 +103,6 @@ function submit() {
 
 .composer-foot { display: flex; align-items: center; gap: 11px; margin-top: 9px; flex-wrap: wrap; }
 .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.chip-sep { width: 1px; height: 16px; background: var(--border); margin: 0 3px; }
 
 .ctx-ring { width: 15px; height: 15px; border-radius: 50%; flex: none; }
 .cm-meta { font-size: 11.5px; color: var(--text-3); font-weight: 500; }

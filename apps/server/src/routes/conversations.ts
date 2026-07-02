@@ -20,7 +20,6 @@ export function setEnqueueRun(fn: EnqueueRunFn): void {
 
 const DEFAULT_CONFIG: ConversationConfig = {
   timeRange: "1w",
-  tagPrefs: ["tech", "news"],
   // lens 留空：由 Agent 按意图自主路由（skill 模型）；用户显式指定时才覆盖
 };
 

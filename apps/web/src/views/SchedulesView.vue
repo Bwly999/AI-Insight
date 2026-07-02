@@ -15,11 +15,9 @@ import {
 import {
   LENS_OPTIONS,
   TIME_RANGE_OPTIONS,
-  ALL_TAGS,
   type Schedule,
   type LensKey,
   type TimeRange,
-  type DataSourceTag,
 } from "@ai-insight/shared-types";
 import { useTheme } from "../composables/useTheme";
 
@@ -34,7 +32,6 @@ const prompt = ref("");
 const cron = ref("0 9 * * *");
 const timeRange = ref<TimeRange>("1w");
 const lens = ref<LensKey>("deep");
-const tagPrefs = ref<DataSourceTag[]>(["tech", "news"]);
 const creating = ref(false);
 const error = ref("");
 
@@ -50,12 +47,6 @@ async function reload() {
   } finally {
     loading.value = false;
   }
-}
-
-function toggleTag(t: DataSourceTag) {
-  const i = tagPrefs.value.indexOf(t);
-  if (i >= 0) tagPrefs.value.splice(i, 1);
-  else tagPrefs.value.push(t);
 }
 
 function setCron(c: string) {
@@ -74,7 +65,7 @@ async function submit() {
       prompt: prompt.value.trim(),
       cron: cron.value.trim(),
       lens: lens.value,
-      config: { timeRange: timeRange.value, tagPrefs: tagPrefs.value, lens: lens.value },
+      config: { timeRange: timeRange.value, lens: lens.value },
     });
     prompt.value = "";
     await reload();
@@ -162,9 +153,6 @@ function relTime(iso?: string): string {
             </select>
           </label>
         </div>
-        <div class="f-chips">
-          <button v-for="t in ALL_TAGS" :key="t" class="tchip" :class="{ on: tagPrefs.includes(t) }" @click="toggleTag(t)">{{ t }}</button>
-        </div>
         <div class="f-quick">
           <span class="f-label">快选：</span>
           <button class="qbtn" @click="setCron('*/2 * * * *')">每2分</button>
@@ -191,7 +179,6 @@ function relTime(iso?: string): string {
               <span class="sch-cron">{{ s.cron }}</span>
               <span>{{ s.lens ?? "deep" }}</span>
               <span>{{ s.config.timeRange }}</span>
-              <span v-if="s.config.tagPrefs?.length">{{ s.config.tagPrefs.join("/") }}</span>
             </div>
             <div class="sch-times mono">
               <span>下次 {{ relTime(s.nextRunAt) }}</span>
@@ -236,7 +223,6 @@ function relTime(iso?: string): string {
 .f-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .f-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 120px; }
 .f-label { font-size: 10px; color: var(--text-3); letter-spacing: 0.04em; font-family: var(--mono); }
-.f-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .f-quick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .qbtn { font-size: 11px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: var(--t-fast); }
 .qbtn:hover { color: var(--accent); border-color: var(--accent); }

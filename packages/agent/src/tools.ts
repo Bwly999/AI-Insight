@@ -25,7 +25,7 @@ import type {
 
 /** 工具上下文（绑定到一次 Run）。 */
 export interface ToolContext {
-  /** Run 配置（时间范围、标签偏好、lens）。 */
+  /** Run 配置（时间范围、lens）。 */
   config: ConversationConfig;
   /** 搜索引擎实例（注入便于测试/复用）。 */
   engines?: SearchEngine[];
@@ -57,7 +57,7 @@ export interface ToolContext {
 // ─── 工具参数 schema ──────────────────────────────────────────────────────
 const searchParams = Type.Object({
   query: Type.String({ description: "搜索查询词（建议用英文/中英混合以提高命中率）" }),
-  tags: Type.Optional(Type.Array(Type.String(), { description: "标签偏好（覆盖默认）" })),
+  tags: Type.Optional(Type.Array(Type.String(), { description: "按标签过滤（可选）" })),
   limit: Type.Optional(Type.Number({ description: "每引擎取多少条，默认 8" })),
 });
 
@@ -109,7 +109,7 @@ export function createInsightTools(ctx: ToolContext) {
         {
           query: params.query,
           timeRange: ctx.config.timeRange,
-          tags: (params.tags ?? ctx.config.tagPrefs) as never,
+          tags: params.tags as never,
           perEngineLimit: limit,
         },
         ctx.engines,
@@ -136,7 +136,6 @@ export function createInsightTools(ctx: ToolContext) {
           keywords: params.keywords,
           timeRange: ctx.config.timeRange,
           perPlatformLimit: params.limit ?? 8,
-          tags: ctx.config.tagPrefs,
         },
         ctx.crawlers,
       );
@@ -157,7 +156,7 @@ export function createInsightTools(ctx: ToolContext) {
     parameters: rssParams,
     async execute(_id, params) {
       const limit = params.limit ?? 10;
-      const tags = (params.tags ?? ctx.config.tagPrefs) as never;
+      const tags = params.tags as never;
       let items: DataSourceItem[];
       if (ctx.searchRssIndex) {
         // server 注入：FTS5 索引优先，零结果回退即时 fetch 并写回索引
@@ -219,7 +218,7 @@ export function createInsightTools(ctx: ToolContext) {
       lines.push("**搜索引擎（search）**：DuckDuckGo, Exa, Firecrawl");
       lines.push(`**爬虫平台（crawl）**：${(ctx.enabledPlatforms ?? []).join(", ") || "(无)"}`);
       lines.push(`**RSS 源（fetch_rss）**：${ctx.rssFeeds.map((f) => `${f.sourceName}`).join(", ") || "(无)"}`);
-      lines.push(`**当前时间窗**：${ctx.config.timeRange}  **标签偏好**：${ctx.config.tagPrefs.join(",")}`);
+      lines.push(`**当前时间窗**：${ctx.config.timeRange}`);
       return {
         content: [{ type: "text" as const, text: lines.join("\n") }],
         details: {},

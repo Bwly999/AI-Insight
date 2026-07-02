@@ -10,7 +10,6 @@ beforeAll(() => {
 
 const CFG: ConversationConfig = {
   timeRange: "1w",
-  tagPrefs: ["tech"],
   lens: "deep",
 };
 

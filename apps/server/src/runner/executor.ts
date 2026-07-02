@@ -216,7 +216,7 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
       .filter(Boolean);
 
     // 构造本轮 prompt：历史 + 当前洞察请求 + 配置提示
-    const configHint = `（本轮洞察配置：时间窗=${run.config.timeRange}，标签偏好=${run.config.tagPrefs.join("/")}，视角=${run.lens ?? "智能路由（由 Agent 按意图判定）"}）`;
+    const configHint = `（本轮洞察配置：时间窗=${run.config.timeRange}，视角=${run.lens ?? "智能路由（由 Agent 按意图判定）"}）`;
     const fullPrompt =
       history.length > 1
         ? `## 此前对话\n${history.slice(0, -1).join("\n")}\n\n## 本次洞察请求\n${run.prompt}\n${configHint}`

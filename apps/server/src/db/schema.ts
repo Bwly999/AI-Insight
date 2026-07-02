@@ -22,7 +22,7 @@ export const conversations = sqliteTable("conversations", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
-  // config: { timeRange, tagPrefs[], lens? } 以 JSON 存
+  // config: { timeRange, lens? } 以 JSON 存
   config: text("config").notNull().default("{}"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),

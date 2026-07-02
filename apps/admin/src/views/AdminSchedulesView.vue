@@ -13,12 +13,9 @@ import {
 import {
   LENS_OPTIONS,
   TIME_RANGE_OPTIONS,
-  ALL_TAGS,
-  TAG_LABELS,
   type Schedule,
   type LensKey,
   type TimeRange,
-  type DataSourceTag,
 } from "@ai-insight/shared-types";
 import { useTheme } from "../composables/useTheme";
 
@@ -31,7 +28,6 @@ const prompt = ref("");
 const cron = ref("0 9 * * *");
 const timeRange = ref<TimeRange>("1w");
 const lens = ref<LensKey>("deep");
-const tagPrefs = ref<DataSourceTag[]>(["tech", "news"]);
 const creating = ref(false);
 const error = ref("");
 
@@ -47,12 +43,6 @@ async function reload() {
   } finally {
     loading.value = false;
   }
-}
-
-function toggleTag(t: DataSourceTag) {
-  const i = tagPrefs.value.indexOf(t);
-  if (i >= 0) tagPrefs.value.splice(i, 1);
-  else tagPrefs.value.push(t);
 }
 
 function setCron(c: string) {
@@ -71,7 +61,7 @@ async function submit() {
       prompt: prompt.value.trim(),
       cron: cron.value.trim(),
       lens: lens.value,
-      config: { timeRange: timeRange.value, tagPrefs: tagPrefs.value, lens: lens.value },
+      config: { timeRange: timeRange.value, lens: lens.value },
     });
     prompt.value = "";
     await reload();
@@ -167,9 +157,6 @@ function lensLabel(k?: string): string {
             </select>
           </label>
         </div>
-        <div class="f-chips">
-          <button v-for="t in ALL_TAGS" :key="t" class="chip" :class="{ on: tagPrefs.includes(t) }" @click="toggleTag(t)">{{ TAG_LABELS[t] }}</button>
-        </div>
         <div class="f-quick">
           <span class="f-label">快选：</span>
           <button class="qbtn" @click="setCron('*/2 * * * *')">每2分</button>
@@ -196,7 +183,6 @@ function lensLabel(k?: string): string {
               <span class="sch-cron">{{ s.cron }}</span>
               <span class="sch-lens">{{ lensLabel(s.lens) }}</span>
               <span class="sch-tr">{{ s.config.timeRange }}</span>
-              <span v-if="s.config.tagPrefs?.length" class="sch-tags">{{ s.config.tagPrefs.join("/") }}</span>
               <span class="sch-user">用户 {{ s.userId.slice(0, 10) }}</span>
             </div>
             <div class="sch-times mono">
@@ -243,12 +229,6 @@ function lensLabel(k?: string): string {
 .f-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .f-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 120px; }
 .f-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--mono); }
-.f-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip {
-  font-size: 11px; padding: 4px 11px; border-radius: var(--r-pill); border: 1px solid var(--border);
-  background: var(--bg); color: var(--text-3); cursor: pointer; transition: var(--t-fast); font-family: var(--mono);
-}
-.chip.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); font-weight: 600; }
 .f-quick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .qbtn { font-size: 11px; padding: 3px 9px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg); color: var(--text-2); cursor: pointer; font-family: var(--mono); }
 .qbtn:hover { color: var(--accent); border-color: var(--accent-line); }

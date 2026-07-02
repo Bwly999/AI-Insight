@@ -101,10 +101,9 @@ export interface Conversation {
   updatedAt: string; // ISO
 }
 
-/** Conversation 级运行配置（时间窗 + 标签偏好）。 */
+/** Conversation 级运行配置（时间窗 + 可选视角）。 */
 export interface ConversationConfig {
   timeRange: TimeRange;
-  tagPrefs: DataSourceTag[];
   lens?: LensKey; // 默认 deep
 }
 
