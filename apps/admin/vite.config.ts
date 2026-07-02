@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       // /api 代理到后端，避免 CORS；SSE 也走此代理
       "/api": {
-        target: "http://localhost:4000",
+        target: "http://localhost:4166",
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on("proxyRes", (proxyRes) => {

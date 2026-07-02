@@ -2,14 +2,14 @@
  * 跨平台端口清理 — 启动后端前干掉占用目标端口的残留进程。
  *
  * 用法： node scripts/clear-port.mjs [port]
- * 默认端口 4000。退出码恒为 0（即使没占用也不报错），可安全作为 predev 钩子。
+ * 默认端口 4166。退出码恒为 0（即使没占用也不报错），可安全作为 predev 钩子。
  *
  * 安全说明：只结束占用该端口的进程。Windows 用 taskkill；Unix 用 lsof/fuser。
  */
 import { execSync } from "node:child_process";
 import { platform } from "node:os";
 
-const port = parseInt(process.argv[2] ?? "4000", 10);
+const port = parseInt(process.argv[2] ?? "4166", 10);
 const isWin = platform() === "win32";
 
 function log(msg) {
@@ -23,7 +23,7 @@ function findPidsOnPort() {
       // netstat 找出 LISTENING 占用端口的 PID
       const out = execSync(`netstat -ano -p TCP`, { encoding: "utf8" });
       for (const line of out.split(/\r?\n/)) {
-        // 形如： TCP  0.0.0.0:4000  0.0.0.0:0  LISTENING  1234
+        // 形如： TCP  0.0.0.0:4166  0.0.0.0:0  LISTENING  1234
         if (line.includes("LISTENING") && new RegExp(`[:.]${port}\\s`).test(line)) {
           const parts = line.trim().split(/\s+/);
           const pid = parts[parts.length - 1];

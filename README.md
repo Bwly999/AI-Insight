@@ -35,7 +35,7 @@ pnpm db:push && pnpm db:seed
 
 # 4. 启动（后端 + 用户端）
 pnpm dev
-#   后端  http://localhost:4000
+#   后端  http://localhost:4166
 #   用户端 http://localhost:5173
 ```
 

@@ -6,7 +6,7 @@
   "main": "src/main.ts",
   "scripts": {
     "dev": "node --watch --watch-path src --watch-path ../../packages --import tsx/esm src/main.ts",
-    "predev": "node ../../scripts/clear-port.mjs 4000",
+    "predev": "node ../../scripts/clear-port.mjs 4166",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",

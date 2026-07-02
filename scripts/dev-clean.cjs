@@ -95,7 +95,7 @@ function listCandidates() {
 
 const devKeywords = ["main.ts", "tsx", "vite"];
 
-/** 占用指定端口的 PID 集合（端口兜底识别：占着 4000 的必是本项目后端）。 */
+/** 占用指定端口的 PID 集合（端口兜底识别：占着 4166 的必是本项目后端）。 */
 function pidsOnPort(port) {
   const set = new Set();
   try {
@@ -119,7 +119,7 @@ function pidsOnPort(port) {
 }
 
 /** 本项目后端端口（与 config.ts 默认值一致）。 */
-const SERVER_PORT = parseInt(process.env.PORT ?? "4000", 10);
+const SERVER_PORT = parseInt(process.env.PORT ?? "4166", 10);
 const serverPortPids = pidsOnPort(SERVER_PORT);
 
 function isAiInsightDev(cmd, pid) {
