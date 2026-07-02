@@ -5,7 +5,7 @@
  */
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { Plus } from "@lucide/vue";
+import { Plus, SunMoon, ArrowLeft, Sparkles, ArrowRight } from "@lucide/vue";
 import { listReports } from "@ai-insight/api-client";
 import type { Report } from "@ai-insight/shared-types";
 import { useTheme } from "../composables/useTheme";
@@ -56,8 +56,8 @@ function openReport(r: Report) {
               <Plus :size="15" :stroke-width="2.2" />
               新洞察
             </button>
-            <button class="icon-btn" @click="toggle" title="切换主题">◑</button>
-            <button class="icon-btn" @click="router.push('/c/new')" title="返回工作台">←</button>
+            <button class="icon-btn" @click="toggle" title="切换主题"><SunMoon :size="16" :stroke-width="1.8" /></button>
+            <button class="icon-btn" @click="router.push('/c/new')" title="返回工作台"><ArrowLeft :size="16" :stroke-width="1.8" /></button>
           </div>
         </div>
         <div class="rule"></div>
@@ -65,7 +65,7 @@ function openReport(r: Report) {
 
       <div v-if="loading" class="state">加载中…</div>
       <div v-else-if="!reports.length" class="empty">
-        <div class="empty-glyph">◎</div>
+        <div class="empty-glyph"><Sparkles :size="48" :stroke-width="1.4" /></div>
         <div class="big">还没有报告</div>
         <p>发起一次洞察，Agent 会为你生成报告。</p>
       </div>
@@ -77,7 +77,7 @@ function openReport(r: Report) {
             <p v-if="r.standfirst" class="rc-lede">{{ r.standfirst.slice(0, 80) }}{{ r.standfirst.length > 80 ? '…' : '' }}</p>
           </div>
           <div class="rc-foot">
-            <span>点击查阅 →</span>
+            <span>点击查阅 <ArrowRight :size="11" :stroke-width="2.2" /></span>
           </div>
         </button>
       </div>
@@ -100,7 +100,7 @@ function openReport(r: Report) {
 
 .state { color: var(--text-3); padding: 60px; text-align: center; font-family: var(--mono); }
 .empty { padding: 80px 40px; text-align: center; color: var(--text-3); }
-.empty-glyph { font-family: var(--mono); font-size: 48px; color: var(--text-4); opacity: 0.5; margin-bottom: 14px; }
+.empty-glyph { display: flex; color: var(--text-4); opacity: 0.5; margin-bottom: 14px; }
 .big { font-size: 24px; font-weight: 700; color: var(--text-2); letter-spacing: -0.01em; }
 .empty p { margin-top: 8px; }
 
