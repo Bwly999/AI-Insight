@@ -16,7 +16,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "db:push": "pnpm --filter @ai-insight/server db:push",
-    "db:seed": "pnpm --filter @ai-insight/server db:seed"
+    "db:seed": "pnpm --filter @ai-insight/server db:seed",
+    "build:skill": "pnpm --filter @ai-insight/cli bundle"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

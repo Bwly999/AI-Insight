@@ -13,7 +13,8 @@
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "dev": "tsx src/bin.ts"
+    "dev": "tsx src/bin.ts",
+    "bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
     "@ai-insight/datasources": "workspace:*",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "esbuild": "^0.19.12",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

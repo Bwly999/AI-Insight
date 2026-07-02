@@ -2,6 +2,9 @@
 node_modules
 .pnpm-store
 
+# build tooling (开发期绕路装 esbuild 的独立目录，见 packages/cli/scripts/bundle.mjs)
+.build-tools/
+
 # build outputs
 dist
 build

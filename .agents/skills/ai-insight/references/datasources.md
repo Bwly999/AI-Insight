@@ -29,11 +29,13 @@
 
 ## ZCode / Bash-only 环境的 CLI 用法
 
-`aiinsight` CLI 独立于洞察平台，单独可跑，扇出多引擎去重。
+`aiinsight` CLI **已内置在本 skill 目录**（`scripts/aiinsight.cjs`，自包含单文件，零 `node_modules`），独立于洞察平台，单独可跑，扇出多引擎去重。只需 Node ≥20，无需任何安装或下载。
+
+调用统一形如 `node scripts/aiinsight.cjs <command> ...`（路径相对本 skill 根目录）。
 
 ### search
 ```bash
-aiinsight search "<query>" --engines ddg,exa --time 1w --limit 8 --format json
+node scripts/aiinsight.cjs search "<query>" --engines ddg,exa --time 1w --limit 8 --format json
 ```
 - `--engines`：`ddg` / `exa` / `firecrawl` / `arxiv`，多选逗号分隔；不传 = 全部已配置引擎
 - `--time`：`1d` / `3d` / `1w` / `1m` / `6m` / `1y` / `all`（时间窗）
@@ -45,18 +47,18 @@ aiinsight search "<query>" --engines ddg,exa --time 1w --limit 8 --format json
 
 ### extract
 ```bash
-aiinsight extract <url> --engine jina        # 指定单一引擎
-aiinsight extract <url>                      # 默认 all：jina → firecrawl → local 逐个 fallback
+node scripts/aiinsight.cjs extract <url> --engine jina        # 指定单一引擎
+node scripts/aiinsight.cjs extract <url>                      # 默认 all：jina → firecrawl → local 逐个 fallback
 ```
 输出：`{ url, title?, content, engine }`。
 
 ### config
 ```bash
-aiinsight config list                         # 查看当前配置
-aiinsight config set engines.exa.apiKey sk-xxx
-aiinsight config set engines.jina.url http://my-jina:3000
-aiinsight config set proxy.url http://proxy:8080
-aiinsight config path                         # 配置文件路径
+node scripts/aiinsight.cjs config list                         # 查看当前配置
+node scripts/aiinsight.cjs config set engines.exa.apiKey sk-xxx
+node scripts/aiinsight.cjs config set engines.jina.url http://my-jina:3000
+node scripts/aiinsight.cjs config set proxy.url http://proxy:8080
+node scripts/aiinsight.cjs config path                         # 配置文件路径
 ```
 配置文件：`~/.aiinsight/config.json`（可用 `AIINSIGHT_CONFIG` env 覆盖路径）。明文存 key，注意文件权限。加载优先级：命令行 flag > JSON 文件 > env（兼容兜底）> default。
 
