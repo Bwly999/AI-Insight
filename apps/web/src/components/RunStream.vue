@@ -7,6 +7,7 @@ import { computed } from "vue";
 import { LENS_OPTIONS, type LensKey } from "@ai-insight/shared-types";
 import type { Block } from "../composables/blocks";
 import MessageBlocks from "./MessageBlocks.vue";
+import AgentMark from "./AgentMark.vue";
 
 const props = defineProps<{
   status: "idle" | "running" | "completed" | "failed" | "awaiting_input";
@@ -20,17 +21,19 @@ const streaming = computed(() => props.status === "running");
 const show = computed(() => props.status === "running" || props.status === "awaiting_input");
 const lensLabel = computed(() => (props.lens ? LENS_OPTIONS.find((l) => l.key === props.lens)?.label : undefined));
 const hasText = computed(() => props.blocks.some((b) => b.kind === "text"));
+const isLive = computed(() => props.status === "running" || props.status === "awaiting_input");
 </script>
 
 <template>
   <div v-if="show" class="turn ai fade-up">
-    <div class="ai-ava">
-      <span v-if="status === 'running' || status === 'awaiting_input'" class="ring" style="width: 15px; height: 15px"></span>
-      <template v-else>A</template>
+    <div class="ai-ava" :class="{ live: isLive }">
+      <AgentMark :size="16" />
+      <span v-if="isLive" class="live-ring"></span>
     </div>
     <div class="ai-body">
       <div class="ai-eb">
-        AI-Insight
+        <span class="ai-name">AI-Insight</span>
+        <span class="ai-dot"></span>
         <span v-if="lens" class="lens">{{ lensLabel ?? lens }}</span>
       </div>
 
@@ -50,20 +53,44 @@ const hasText = computed(() => props.blocks.some((b) => b.kind === "text"));
 /* unslop-ignore: AI 头像 accent-soft tint（与 MessageList 统一 agent 身份） */
 .ai-ava {
   width: 30px; height: 30px; border-radius: var(--r-sm); flex: none;
-  background: var(--accent-soft); color: var(--accent-text);
+  background: var(--accent-soft); color: var(--accent);
   display: grid; place-items: center;
-  font-weight: 700; font-size: 13px;
+  position: relative;
   border: 1px solid var(--accent-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+/* 运行态：avatar 外圈一圈翠绿脉冲（仪器“工作中”信号） */
+.live-ring {
+  position: absolute; inset: -3px; border-radius: calc(var(--r-sm) + 3px);
+  border: 1.5px solid var(--accent); opacity: 0.5;
+  animation: ping 1.8s var(--ease-out) infinite;
+  pointer-events: none;
 }
 .ai-body { flex: 1; min-width: 0; }
-.ai-eb { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 7px; letter-spacing: -0.005em; }
+.ai-eb {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 8px;
+}
+.ai-name {
+  font-size: 12.5px; font-weight: 700; color: var(--text); letter-spacing: -0.005em;
+}
+.ai-dot {
+  width: 2.5px; height: 2.5px; border-radius: 50%; background: var(--text-4); flex: none;
+}
 .ai-eb .lens {
-  font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-xs);
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+  padding: 2px 6px; border-radius: var(--r-xs);
   background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-line);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.1em; text-transform: uppercase;
 }
 
 /* 流式指示 */
-.writing { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-3); font-weight: 500; margin-top: 6px; }
-.writing .wd { width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); animation: wd-blink 1.2s ease-in-out infinite; }
+.writing {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: var(--text-3); font-weight: 500; margin-top: 8px;
+}
+.writing .wd {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: wd-blink 1.2s ease-in-out infinite;
+}
 </style>
+

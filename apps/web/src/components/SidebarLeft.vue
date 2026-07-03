@@ -45,10 +45,12 @@ function relTime(iso: string): string {
 
 <template>
   <aside class="col-left">
-    <button class="new-btn" @click="emit('newInsight')">
-      <Plus :size="14" :stroke-width="2.6" />
-      新对话
-    </button>
+    <div class="sb-top">
+      <button class="new-btn" @click="emit('newInsight')">
+        <Plus :size="15" :stroke-width="2.4" />
+        新对话
+      </button>
+    </div>
 
     <div class="conv-list scroll">
       <template v-if="inProgress.length">
@@ -91,18 +93,27 @@ function relTime(iso: string): string {
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
 }
+.sb-top { padding: 14px 14px 4px; }
+
+/* 新对话按钮：committed accent CTA —— 主操作配清晰触发 */
 .new-btn {
-  margin: 14px 14px 6px; padding: 10px 13px; border: none; border-radius: var(--r-sm);
+  width: 100%; padding: 10px 13px; border: none; border-radius: var(--r-sm);
   background: var(--accent); color: var(--on-accent);
   font-size: 13px; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; gap: 8px; transition: var(--t-fast);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: var(--t-fast);
+  /* 精致内边沿 + 极轻下沉：实色 CTA 的“按下去”预期 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
 }
 .new-btn:hover { background: var(--accent-hover); }
+.new-btn:active { transform: translateY(0.5px); }
 
 .conv-list { flex: 1; overflow-y: auto; padding: 8px 10px 16px; }
 .cl-eb {
   font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
-  color: var(--text-4); padding: 14px 9px 7px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-4); padding: 14px 9px 7px; letter-spacing: 0.14em; text-transform: uppercase;
 }
 .conv-item {
   display: block; width: 100%; text-align: left;
@@ -117,7 +128,7 @@ function relTime(iso: string): string {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .conv-item.active .ci-title { color: var(--text); font-weight: 600; }
-.ci-meta { margin-top: 3px; font-family: var(--mono); font-size: 10.5px; color: var(--text-3); letter-spacing: 0.01em; }
+.ci-meta { margin-top: 3px; font-family: var(--mono); font-size: 10.5px; color: var(--text-3); letter-spacing: 0.02em; }
 .ci-tag {
   display: inline-block; margin-top: 5px; font-size: 10px; font-weight: 600;
   padding: 2px 7px; border-radius: var(--r-xs); letter-spacing: 0.02em;
@@ -136,3 +147,4 @@ function relTime(iso: string): string {
 .nav-link:hover { background: var(--surface-2); color: var(--accent); }
 .nav-link:focus-visible { outline: none; box-shadow: var(--ring); }
 </style>
+

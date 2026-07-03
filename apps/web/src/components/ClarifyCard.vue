@@ -70,46 +70,55 @@ function onKey(e: KeyboardEvent) {
 <style scoped>
 .clarify {
   background: var(--surface); border: 1px solid var(--amber-line);
-  border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden;
+  border-radius: var(--r-md); box-shadow: var(--shadow-md); overflow: hidden;
+  /* 极轻的琥珀顶栏色调，让“需澄清”语义在视觉上立刻可辨 */
 }
-.cl-top { display: flex; align-items: center; gap: 9px; padding: 13px 17px 0; }
+.cl-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 17px 0;
+}
 .cl-ava {
-  width: 22px; height: 22px; border-radius: 6px; flex: none;
+  width: 22px; height: 22px; border-radius: var(--r-xs); flex: none;
   background: var(--amber); color: #1a0f00; font-weight: 800; font-size: 13px;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .cl-kicker {
-  font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
-  color: var(--amber); letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-xs); font-weight: 700;
+  color: var(--amber); letter-spacing: 0.14em; text-transform: uppercase;
 }
 
-.cl-question { font-size: 14.5px; line-height: 1.6; color: var(--text); margin: 10px 17px 0; }
+.cl-question { font-size: 14.5px; line-height: 1.6; color: var(--text); margin: 10px 17px 0; font-weight: 500; }
 
-.cl-options { display: flex; flex-direction: column; gap: 7px; margin: 12px 17px 0; }
+.cl-options { display: flex; flex-direction: column; gap: 7px; margin: 13px 17px 0; }
 .cl-option {
   text-align: left; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 12px; font-size: 13px; color: var(--text); cursor: pointer;
-  transition: var(--t-fast);
+  border-radius: var(--r-sm); padding: 10px 13px; font-size: 13px; color: var(--text); cursor: pointer;
+  transition: var(--t-fast); font-weight: 500;
 }
-.cl-option:hover { border-color: var(--amber); background: var(--amber-soft); }
+.cl-option:hover { border-color: var(--amber); background: var(--amber-soft); color: var(--text); }
 
-.cl-input { display: flex; gap: 9px; align-items: flex-end; padding: 12px 17px 4px; }
+.cl-input { display: flex; gap: 9px; align-items: flex-end; padding: 13px 17px 4px; }
 .cl-input textarea {
-  flex: 1; border: 1px solid var(--border); border-radius: 8px;
+  flex: 1; border: 1px solid var(--border); border-radius: var(--r-sm);
   background: var(--surface-2); padding: 9px 11px; resize: none; outline: 0;
   font-family: var(--sans); font-size: 13.5px; line-height: 1.55; color: var(--text);
   min-height: 42px; max-height: 160px; transition: var(--t-fast);
 }
-.cl-input textarea:focus { border-color: var(--amber); }
+.cl-input textarea:focus { border-color: var(--amber); background: var(--surface); }
 .cl-input textarea::placeholder { color: var(--text-3); }
 .cl-send {
-  border: 0; border-radius: 8px; cursor: pointer; flex: none;
+  border: 0; border-radius: var(--r-sm); cursor: pointer; flex: none;
   padding: 0 14px; height: 38px;
   font-size: 13px; font-weight: 600; transition: var(--t-fast);
 }
-.cl-send.on { background: var(--amber); color: #1a0f00; }
-.cl-send.on:hover { background: color-mix(in srgb, var(--amber) 85%, #000); }
+.cl-send.on {
+  background: var(--amber); color: #1a0f00;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.cl-send.on:hover { background: color-mix(in srgb, var(--amber) 88%, #000); }
 .cl-send.off { background: var(--surface-3); color: var(--text-4); cursor: not-allowed; }
 
 .cl-hint { padding: 0 19px 14px; font-size: 11px; color: var(--text-3); }
 </style>
+

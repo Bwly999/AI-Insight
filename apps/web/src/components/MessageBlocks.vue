@@ -291,18 +291,21 @@ const hasContent = computed(() => props.blocks.length > 0);
 .tool-ico {
   width: 15px; height: 15px; flex: none;
   color: var(--tc);
+  /* 工具图标外裹一个 tint 方块，强化“按类型上色”的语义，提升识别度 */
+  padding: 4px; box-sizing: content-box; border-radius: var(--r-xs);
+  background: color-mix(in srgb, var(--tc) 12%, transparent);
 }
 .tool-name {
-  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text);
-  white-space: nowrap;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--text);
+  white-space: nowrap; letter-spacing: 0.01em;
 }
 .tool-args {
   font-family: var(--mono); font-size: 11px; color: var(--text-3); flex: 1;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .tool-status {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-xs);
   letter-spacing: 0.02em; font-family: var(--mono); white-space: nowrap;
 }
 .tool-status.ok { background: var(--green-soft); color: var(--green); }

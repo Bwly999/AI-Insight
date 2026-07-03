@@ -358,20 +358,29 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* ── 滚动条（按主题） ──────────────────────────────────────────────────── */
+/* ── 滚动条（按主题，精致 thin rail） ──────────────────────────────────── */
 .scroll::-webkit-scrollbar,
 ::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
+}
+.scroll::-webkit-scrollbar-track,
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 .scroll::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb {
   background: var(--border-2);
-  border-radius: 6px;
+  border-radius: var(--r-pill);
+  /* 内嵌 2px 边让 thumb 浮在 track 上，避免“贴墙” */
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 .scroll::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-4);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 /* ── markdown 正文（消息内/报告预览，对齐原型 .md） ─────────────────────── */
@@ -446,22 +455,23 @@ body {
   font-size: 11px;
 }
 
-/* 引用标记（[n] → ① 转换后） */
+/* 引用标记（[n] → ① 转换后）—— 可追溯性的核心原子，仪器感 */
 .cite {
   display: inline-block;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--accent-text);
   background: var(--accent-soft);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   margin: 0 2px;
   vertical-align: super;
   line-height: 1.5;
   cursor: pointer;
   border: 1px solid var(--accent-line);
   transition: var(--t-fast);
+  letter-spacing: 0;
 }
 .cite:hover {
   background: var(--accent);

@@ -101,22 +101,37 @@ function submit() {
 }
 .composer textarea::placeholder { color: var(--text-4); }
 
-.composer-foot { display: flex; align-items: center; gap: 11px; margin-top: 9px; flex-wrap: wrap; }
+/* 底栏：上方一条 hairline 分隔，让“输入区/控件区”分层清晰 */
+.composer-foot {
+  display: flex; align-items: center; gap: 11px; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border); flex-wrap: wrap;
+}
+.composer:focus-within .composer-foot { border-top-color: var(--accent-line); }
 .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-.ctx-ring { width: 15px; height: 15px; border-radius: 50%; flex: none; }
+/* 上下文进度环：加一个 surface 底色环作“轨道”，让 conic 进度更清晰 */
+.ctx-ring {
+  width: 15px; height: 15px; border-radius: 50%; flex: none; position: relative;
+}
 .cm-meta { font-family: var(--mono); font-size: 11px; color: var(--text-3); font-weight: 500; letter-spacing: 0.02em; }
 
+/* 发送键：accent 实色圆形 CTA —— 主操作的最强视觉权重 */
 .send-btn {
   margin-left: auto; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border: none; border-radius: var(--r-sm);
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--accent); color: var(--on-accent);
   cursor: pointer; transition: var(--t-fast);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.12);
 }
-.send-btn:hover:not(:disabled):not(.stop) { background: var(--accent); color: var(--on-accent); }
+.send-btn:hover:not(:disabled):not(.stop) { background: var(--accent-hover); }
+.send-btn:active:not(:disabled) { transform: translateY(0.5px); }
 .send-btn:focus-visible { outline: none; box-shadow: var(--ring); }
-.send-btn:disabled { color: var(--text-4); cursor: not-allowed; background: transparent; }
-.send-btn.stop { color: var(--rose); background: var(--rose-soft); }
+.send-btn:disabled {
+  color: var(--text-4); cursor: not-allowed; background: var(--surface-3);
+  box-shadow: none;
+}
+.send-btn.stop { color: var(--rose); background: var(--rose-soft); box-shadow: none; }
 .send-btn.stop:hover { background: var(--rose); color: var(--on-accent); }
 </style>
+

@@ -46,7 +46,7 @@ function onKey(e: KeyboardEvent) {
     tabindex="0"
     @click="open"
     @keydown="onKey">
-    <!-- 眉栏：报告标识 + 状态 -->
+    <!-- 眉栏：报告标识 + 状态（editorial masthead 风：kicker + double-rule） -->
     <div class="rc-eyebrow">
       <span class="rc-label"><FileText :size="12" :stroke-width="2.2" /> 分析报告</span>
       <span class="rc-meta">
@@ -55,13 +55,13 @@ function onKey(e: KeyboardEvent) {
       </span>
     </div>
 
-    <!-- 标题 + 导语 -->
+    <!-- 标题 + 导语（editorial 预览：Fraunces 标题，standfirst 衬线导语） -->
     <div class="rc-body">
       <h3 class="rc-title">{{ report.title }}</h3>
       <p v-if="report.standfirst" class="rc-lede">{{ report.standfirst }}</p>
     </div>
 
-    <!-- 三宫格统计 -->
+    <!-- 三宫格统计（仪器风：mono 数据 + 翠绿数值强调） -->
     <div class="rc-stats">
       <div class="rc-stat">
         <span class="rc-stat-num">{{ chapterCount }}</span>
@@ -93,14 +93,14 @@ function onKey(e: KeyboardEvent) {
 
 <style scoped>
 .report-card {
-  margin: 14px 0;
+  margin: 16px 0;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   overflow: hidden;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: border-color var(--t-mid), box-shadow var(--t-mid);
+  transition: border-color var(--t-mid), box-shadow var(--t-mid), transform var(--t-mid);
 }
 .report-card:hover {
   border-color: var(--accent-line);
@@ -112,13 +112,13 @@ function onKey(e: KeyboardEvent) {
   box-shadow: var(--ring);
 }
 
-/* 眉栏 */
+/* 眉栏：editorial masthead——kicker 在左、元信息在右，底 double-rule */
 .rc-eyebrow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 7px 16px;
+  padding: 8px 16px;
   background: var(--accent-soft);
   border-bottom: 1px solid var(--accent-line);
 }
@@ -147,24 +147,25 @@ function onKey(e: KeyboardEvent) {
   font-size: 10px;
   font-weight: 600;
   line-height: 1.5;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--amber-line);
 }
 .rc-time {
   font-family: var(--mono);
   font-size: var(--fs-xs);
   color: var(--text-3);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 /* 标题 + 导语 */
-.rc-body { padding: 16px 18px 14px; }
+.rc-body { padding: 18px 20px 14px; }
 .rc-title {
-  margin: 0 0 6px;
+  margin: 0 0 7px;
   font-family: var(--frau);
   font-size: var(--fs-xl);
   font-weight: 600;
   line-height: 1.2;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   color: var(--text);
 }
 .rc-lede {
@@ -176,18 +177,20 @@ function onKey(e: KeyboardEvent) {
   color: var(--text-2);
 }
 
-/* 三宫格统计 */
+/* 三宫格统计：数值用 Fraunces（editorial 数字感），label 用 mono uppercase */
 .rc-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  padding: 14px 18px;
+  padding: 13px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
 }
 .rc-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 4px 4px;
+  padding: 3px 4px;
 }
 .rc-stat + .rc-stat { border-left: 1px solid var(--border); }
 .rc-stat-num {
@@ -195,11 +198,11 @@ function onKey(e: KeyboardEvent) {
   font-size: 22px;
   font-weight: 600;
   line-height: 1;
-  color: var(--text);
+  color: var(--accent-text);
 }
 .rc-unit {
   margin-left: 2px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   color: var(--text-3);
 }
@@ -217,7 +220,7 @@ function onKey(e: KeyboardEvent) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 18px;
+  padding: 10px 20px;
   border-top: 1px solid var(--border);
 }
 .rc-open-hint {
@@ -232,13 +235,14 @@ function onKey(e: KeyboardEvent) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-2);
   font-family: var(--sans);
   font-size: var(--fs-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: var(--t-fast);
 }
@@ -247,4 +251,6 @@ function onKey(e: KeyboardEvent) {
   background: var(--accent-soft);
   color: var(--accent-text);
 }
+.rc-dl:focus-visible { outline: none; box-shadow: var(--ring); }
 </style>
+
