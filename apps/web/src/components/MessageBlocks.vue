@@ -233,7 +233,7 @@ const hasContent = computed(() => props.blocks.length > 0);
 /* ─── 思考卡（紫调）──────────────────────────────────────────────────── */
 .think {
   border: 1px solid var(--border); border-left: 2px solid var(--border-2);
-  border-radius: 10px; overflow: hidden; background: var(--surface);
+  border-radius: var(--r-md); overflow: hidden; background: var(--surface);
   transition: border-color var(--t-fast, .15s);
 }
 .think.open { border-left-color: color-mix(in srgb, var(--src-rss) 55%, transparent); }
@@ -279,7 +279,7 @@ const hasContent = computed(() => props.blocks.length > 0);
   --tc: var(--text-3); /* 工具图标色，由内联 --tc 覆盖 */
   position: relative;
   border: 1px solid var(--border); border-left: 2px solid var(--border-2);
-  border-radius: 9px; overflow: hidden; background: var(--surface);
+  border-radius: var(--r-md); overflow: hidden; background: var(--surface);
   transition: border-color var(--t-fast, .15s);
 }
 /* 状态色覆盖左边框 */

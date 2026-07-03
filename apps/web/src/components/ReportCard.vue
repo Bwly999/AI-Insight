@@ -103,9 +103,9 @@ function onKey(e: KeyboardEvent) {
   transition: border-color var(--t-mid), transform var(--t-mid), box-shadow var(--t-mid);
 }
 .report-card:hover {
-  border-color: var(--accent-line);
+  border-color: var(--accent);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), 0 0 22px var(--accent-soft);
+  box-shadow: var(--shadow-lg);
 }
 .report-card:focus-visible {
   outline: none;
@@ -176,14 +176,14 @@ function onKey(e: KeyboardEvent) {
 .rc-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  padding: 4px 18px 14px;
+  padding: 14px 18px;
 }
 .rc-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 6px 4px;
+  gap: 4px;
+  padding: 4px 4px;
 }
 .rc-stat + .rc-stat { border-left: 1px solid var(--border); }
 .rc-stat-num {

@@ -375,7 +375,7 @@ watch(
   background: var(--surface); flex: none;
 }
 .conv-head .eb { font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.04em; }
-.conv-head h1 { font-size: 22px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; color: var(--text); }
+.conv-head h1 { font-size: 24px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; color: var(--text); }
 .conv-head .lede { font-size: 13.5px; color: var(--text-3); max-width: 60ch; margin: 0; }
 .conv-head .meta { margin-top: 11px; display: flex; gap: 16px; font-size: 11.5px; color: var(--text-3); font-weight: 500; }
 

@@ -33,7 +33,7 @@ function timeLabel(iso: string): string {
 <template>
   <template v-for="t in turns" :key="t.id">
     <!-- 用户气泡 -->
-    <div v-if="t.role === 'user'" class="turn user fade-up">
+    <div v-if="t.role === 'user'" class="turn user">
       <div class="b-user">
         <div class="u-eb">你 · {{ timeLabel(t.at) }}</div>
         {{ t.text }}
@@ -41,7 +41,7 @@ function timeLabel(iso: string): string {
     </div>
 
     <!-- AI 回复（有序 blocks：思考 / 工具 / 回复 + 报告卡） -->
-    <div v-else class="turn ai fade-up">
+    <div v-else class="turn ai">
       <div class="ai-ava">A</div>
       <div class="ai-body">
         <div class="ai-eb">AI-Insight</div>

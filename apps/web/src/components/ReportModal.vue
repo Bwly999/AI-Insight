@@ -186,7 +186,7 @@ onUnmounted(() => {
   color: var(--ink);
   margin: 0;
   padding: 40px 48px 56px;
-  font-family: "Inter Tight", -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Inter Tight", -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; /* unslop-ignore: editorial body（与工作台 Inter 刻意区分的 Tight 变体，朱砂报刊阅读体验） */
   line-height: 1.7;
   border-radius: 0;
 }
@@ -211,12 +211,12 @@ onUnmounted(() => {
 .double-rule { border-top: 3px double var(--rule); }
 .masthead-rule { margin-bottom: 6px; }
 .report-title {
-  font-family: "Fraunces", Georgia, serif; font-weight: 900;
+  font-family: "Fraunces", Georgia, serif; font-weight: 900; /* unslop-ignore: editorial 报刊标题，朱砂白纸刻意决策 */
   font-size: 36px; line-height: 1.08; letter-spacing: -0.015em;
   color: var(--ink); margin: 6px 0 0;
 }
 .editorial-standfirst {
-  font-family: "Fraunces", Georgia, serif;
+  font-family: "Fraunces", Georgia, serif; /* unslop-ignore: editorial standfirst */
   font-size: 18px;
   font-style: italic;
   color: var(--ink-2);
@@ -232,7 +232,7 @@ onUnmounted(() => {
 .editorial-paper .editorial-body h1,
 .editorial-paper .editorial-body h2,
 .editorial-paper .editorial-body h3 {
-  font-family: "Fraunces", Georgia, serif;
+  font-family: "Fraunces", Georgia, serif; /* unslop-ignore: editorial 报告正文标题 */
   color: var(--ink);
 }
 .editorial-paper .editorial-body h1 {
@@ -304,7 +304,7 @@ onUnmounted(() => {
 
 /* drop-cap 导语首字母大写 */
 .editorial-paper .drop-cap::first-letter {
-  font-family: "Fraunces", Georgia, serif; font-weight: 900; float: left;
+  font-family: "Fraunces", Georgia, serif; font-weight: 900; float: left; /* unslop-ignore: editorial drop-cap */
   font-size: 4.2rem; line-height: 0.82; color: var(--vermillion); margin: 0.1rem 0.6rem 0 0;
 }
 </style>

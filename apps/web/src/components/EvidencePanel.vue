@@ -112,11 +112,7 @@ function domainOf(url: string): string {
   background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
   padding: 11px 12px; margin-bottom: 9px; transition: var(--t-fast);
 }
-.source:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
-.source .s-no {
-  position: absolute; right: 10px; top: 10px;
-  font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text-3);
-}
+.source:hover { border-color: var(--accent); }
 .s-src {
   font-size: 10.5px; font-weight: 600; color: var(--text-3);
   display: flex; align-items: center; gap: 6px; letter-spacing: 0.02em;
