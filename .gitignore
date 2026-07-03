@@ -48,3 +48,4 @@ Thumbs.db
 # 默认在 ~/.aiinsight/，但若用户用 AIINSIGHT_CONFIG 指向仓库内则需此规则保护
 aiinsight.config.json
 .aiinsight/
+.playwright-mcp

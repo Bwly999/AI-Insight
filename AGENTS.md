@@ -11,3 +11,12 @@
 ### 领域文档
 
 单一上下文布局。详见 `docs/agents/domain.md`。
+
+### 设计上下文（Design Context）
+
+前端 UI 工作以 `apps/web/` 为主要界面。设计意图有两份单一来源文件，动手改 UI 前先读：
+
+- **`apps/web/PRODUCT.md`** — 战略层：register=product，用户=分析师/研究员，品牌=自信·精准·可追溯，战略方向是"更锐利、更有主张"，可访问性目标 WCAG AA。voice/战略冲突时以此为准。
+- **`apps/web/DESIGN.md`** — 视觉层：双声调系统（翠玉绿工作台 Inter+Mono / 朱砂 editorial 报告 Fraunces）、扁平优先、翠绿稀缺强调、仪器级可读性。色板/字体/组件 token 的规范源。视觉冲突时以此为准；与 PRODUCT.md 冲突时 PRODUCT.md 胜。
+
+系统刻意拒绝 2026 AI 默认审美（奶油底、玻璃拟态、发光、渐变文字、卡片网格、eyebrow 满天飞）；仓库里 `unslop-ignore` 标记的每一处都是刻意决策，不要当 AI 语法"清理"掉。token 实际值见 `apps/web/src/style.css`，editorial 色板单一来源在 `packages/shared-ui/src/tokens.ts`。

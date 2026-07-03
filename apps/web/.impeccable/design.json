@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "title": "Design System: AI-Insight · 洞察工作台",
+  "extensions": {
+    "colorMeta": {
+      "verdant-emerald": { "role": "primary", "displayName": "翠玉绿 Verdant Emerald", "canonical": "#2F855A", "tonalRamp": ["#0F3D27", "#1A5238", "#276749", "#2F855A", "#4A9D72", "#6FB591", "#9FCEB3", "#D6E9DD"] },
+      "verdant-emerald-hover": { "role": "primary", "displayName": "翠玉深 Emerald Deep", "canonical": "#276749" },
+      "verdant-emerald-soft": { "role": "primary", "displayName": "翠玉浅 Emerald Soft", "canonical": "#E1EFE5" },
+      "verdant-emerald-dark": { "role": "primary", "displayName": "翠玉亮（深色） Emerald Bright", "canonical": "#3DD684" },
+      "mist-bg": { "role": "neutral", "displayName": "雾白 Mist", "canonical": "#FAFAFB", "tonalRamp": ["#D4D4D8", "#E4E4E7", "#EFEFF2", "#F4F4F6", "#FAFAFB", "#FCFCFD", "#FDFDFE", "#FFFFFF"] },
+      "mist-surface": { "role": "neutral", "displayName": "雾面 Mist Surface", "canonical": "#FFFFFF" },
+      "mist-surface-2": { "role": "neutral", "displayName": "雾面二 Mist Surface-2", "canonical": "#F4F4F6" },
+      "mist-surface-3": { "role": "neutral", "displayName": "雾面三 Mist Surface-3", "canonical": "#EFEFF2" },
+      "graphite": { "role": "neutral", "displayName": "墨灰 Graphite", "canonical": "#18181B", "tonalRamp": ["#000000", "#18181B", "#27272A", "#3F3F46", "#52525B", "#71717A", "#A1A1AA", "#D4D4D8"] },
+      "graphite-2": { "role": "neutral", "displayName": "墨灰二 Graphite-2", "canonical": "#3F3F46" },
+      "graphite-3": { "role": "neutral", "displayName": "墨灰三 Graphite-3", "canonical": "#71717A" },
+      "graphite-4": { "role": "neutral", "displayName": "墨灰四 Graphite-4 (占位/禁用)", "canonical": "#A1A1AA" },
+      "mist-border": { "role": "neutral", "displayName": "雾线 Mist Border", "canonical": "#E7E7EA" },
+      "mist-border-2": { "role": "neutral", "displayName": "雾线二 Mist Border-2", "canonical": "#DEDDE1" },
+      "carbon-bg": { "role": "neutral", "displayName": "炭黑 Carbon BG（深色）", "canonical": "#0E0F13" },
+      "carbon-surface": { "role": "neutral", "displayName": "炭面 Carbon Surface（深色）", "canonical": "#16171D" },
+      "carbon-text": { "role": "neutral", "displayName": "炭字 Carbon Text（深色）", "canonical": "#E5E7EB" },
+      "carbon-border": { "role": "neutral", "displayName": "炭线 Carbon Border（深色）", "canonical": "#262830" },
+      "signal-green": { "role": "tertiary", "displayName": "信号绿 Signal Green", "canonical": "#16A34A" },
+      "signal-amber": { "role": "tertiary", "displayName": "信号琥珀 Signal Amber", "canonical": "#C4870E" },
+      "signal-rose": { "role": "tertiary", "displayName": "信号玫瑰 Signal Rose", "canonical": "#DC2626", "tonalRamp": ["#5C1809", "#8A2412", "#A92C16", "#DC2626", "#E5484D", "#EC7676", "#F1A0A0", "#F7CDCD"] },
+      "src-search": { "role": "tertiary", "displayName": "数据源 · 搜索 Src Search", "canonical": "#3B7EA1" },
+      "src-rss": { "role": "tertiary", "displayName": "数据源 · RSS Src RSS", "canonical": "#9B5DE5" },
+      "src-crawl": { "role": "tertiary", "displayName": "数据源 · 爬取 Src Crawl", "canonical": "#C4870E" },
+      "editorial-vermillion": { "role": "secondary", "displayName": "朱砂红 Editorial Vermillion", "canonical": "#c8341a", "tonalRamp": ["#5C1809", "#8A2412", "#A92C16", "#c8341a", "#D85640", "#E27765", "#EC9C8E", "#F5C9C0"] },
+      "editorial-paper": { "role": "secondary", "displayName": "editorial 纸面 Paper", "canonical": "#ffffff" },
+      "editorial-paper-2": { "role": "secondary", "displayName": "editorial 暖纸 Paper-2（仅报告内）", "canonical": "#ece5d6" },
+      "editorial-ink": { "role": "secondary", "displayName": "editorial 墨 Ink", "canonical": "#1a1612" },
+      "editorial-ink-2": { "role": "secondary", "displayName": "editorial 墨二 Ink-2", "canonical": "#4a423a" }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body · Inter", "purpose": "工作台正文，14px / 1.6。" },
+      "label": { "displayName": "Label · JetBrains Mono", "purpose": "全大写小标签 / 时间戳 / 元信息，仅用于真正的 label。" },
+      "mono": { "displayName": "Mono · JetBrains Mono", "purpose": "数据 / 代码 / 引用标记，tabular-nums。" },
+      "display-workbench": { "displayName": "Workbench Display · Inter", "purpose": "工作台最大字号（空态大标题、页面标题）。" },
+      "editorial-display": { "displayName": "Editorial Display · Fraunces 900", "purpose": "报告主标题，仅此一处用衬线 display。" },
+      "editorial-body": { "displayName": "Editorial Body · Inter Tight", "purpose": "报告正文，16px / 1.7。" }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(0, 0, 0, 0.04)", "purpose": "极轻 raised edge；深色用 rgba(0,0,0,0.3)。" },
+      { "name": "shadow-md", "value": "0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.06)", "purpose": "composer 输入框、悬浮元素。" },
+      { "name": "shadow-lg", "value": "0 8px 30px rgba(0, 0, 0, 0.12)", "purpose": "modal、cite 弹窗。" }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.2, 0.7, 0.2, 1)", "purpose": "默认缓出，绝大多数状态过渡。" },
+      { "name": "t-fast", "value": "0.13s ease-out", "purpose": "hover / 颜色状态快过渡。" },
+      { "name": "t-mid", "value": "0.2s ease-out", "purpose": "主题切换 / 中等过渡。" },
+      { "name": "vt-circle", "value": "0.55s cubic-bezier(0.2, 0.7, 0.2, 1) clip-path circle expand/shrink", "purpose": "主题切换的 View Transitions 圆形展开（点击位置为圆心）；reduced-motion 时降级。" }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "主操作按钮：翠玉绿底白字，无发光无下沉，hover 加深。",
+      "html": "<button class=\"ds-btn-primary\">新对话</button>",
+      "css": ".ds-btn-primary { background: var(--accent, #2F855A); color: #fff; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600; border: none; border-radius: 8px; padding: 0 16px; height: 36px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.13s cubic-bezier(0.2,0.7,0.2,1); } .ds-btn-primary:hover { background: var(--accent-hover, #276749); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft, #E1EFE5); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "次级按钮：surface 底 + border，hover 时 border 与字转 accent——颜色承载状态，不加阴影。",
+      "html": "<button class=\"ds-btn-secondary\">取消</button>",
+      "css": ".ds-btn-secondary { background: var(--surface, #fff); color: var(--text-2, #3F3F46); font-family: 'Inter', system-ui, sans-serif; font-size: 12.5px; border: 1px solid var(--border-2, #DEDDE1); border-radius: 8px; height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; transition: border-color 0.13s cubic-bezier(0.2,0.7,0.2,1), color 0.13s cubic-bezier(0.2,0.7,0.2,1); } .ds-btn-secondary:hover { color: var(--text, #18181B); border-color: var(--text-4, #A1A1AA); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "标签 / 过滤 chip：pill 圆角；选中态转翠玉浅底 + accent 字。",
+      "html": "<span class=\"ds-chip ds-chip-on\">已选中</span>",
+      "css": ".ds-chip { background: var(--surface, #fff); color: var(--text-2, #3F3F46); border: 1px solid var(--border, #E7E7EA); border-radius: 999px; padding: 4px 10px; font-size: 11px; line-height: 1; font-family: 'Inter', system-ui, sans-serif; display: inline-flex; align-items: center; } .ds-chip-on { background: var(--accent-soft, #E1EFE5); border-color: var(--accent-line, #C7E3D0); color: var(--accent-text, #235944); font-weight: 600; }"
+    },
+    {
+      "name": "Composer Send",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "composer 发送键：透明底 + accent 图标；运行中转 rose + 停止图标——状态即颜色。",
+      "html": "<button class=\"ds-send\" aria-label=\"发送\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 19V5\"/><path d=\"m5 12 7-7 7 7\"/></svg></button>",
+      "css": ".ds-send { width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: var(--accent, #2F855A); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.13s cubic-bezier(0.2,0.7,0.2,1); } .ds-send:hover { background: var(--accent-soft, #E1EFE5); } .ds-send:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft, #E1EFE5); }"
+    },
+    {
+      "name": "Conversation Item",
+      "kind": "custom",
+      "refersTo": "conversation-item",
+      "description": "会话列表项：active 态靠 surface-2 底 + 2px 翠玉左线指示（状态，非卡片装饰）。",
+      "html": "<button class=\"ds-conv ds-conv-active\"><span class=\"ds-conv-title\">东南亚电动车市场季度分析</span><span class=\"ds-conv-meta\">今天 · 2 小时前</span></button>",
+      "css": ".ds-conv { display: flex; flex-direction: column; width: 100%; text-align: left; background: transparent; border: none; border-radius: 8px; padding: 9px 11px; cursor: pointer; transition: background 0.13s cubic-bezier(0.2,0.7,0.2,1); } .ds-conv:hover { background: var(--surface-2, #F4F4F6); } .ds-conv-title { font-family: 'Inter', system-ui, sans-serif; font-size: 13.5px; font-weight: 500; color: var(--text, #18181B); } .ds-conv-meta { margin-top: 3px; font-size: 11px; color: var(--text-3, #71717A); } .ds-conv-active { background: var(--surface-2, #F4F4F6); border-left: 2px solid var(--accent, #2F855A); padding-left: 9px; } .ds-conv-active .ds-conv-title { font-weight: 600; }"
+    },
+    {
+      "name": "Editorial Report Title",
+      "kind": "custom",
+      "refersTo": "editorial-display",
+      "description": "签名交付物：朱砂 mono kicker + 3px 双线 + Fraunces 900 标题。固定浅色，不跟主题切换。",
+      "html": "<header class=\"ds-mast\"><span class=\"ds-kicker\">AI-INSIGHT · 洞察报告</span><div class=\"ds-rule\"></div><h1 class=\"ds-title\">东南亚电动车市场：供应链重组下的窗口期</h1></header>",
+      "css": ".ds-mast { border-bottom: 3px double #1a1612; padding-bottom: 20px; margin-bottom: 28px; background: #fff; color: #1a1612; padding: 0 0 20px; font-family: 'Inter Tight', system-ui, sans-serif; } .ds-kicker { display: block; font-family: 'JetBrains Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px; color: #c8341a; font-weight: 600; margin-bottom: 14px; } .ds-title { font-family: 'Fraunces', Georgia, serif; font-weight: 900; font-size: 36px; line-height: 1.08; letter-spacing: -0.015em; color: #1a1612; margin: 6px 0 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "研究员的工作台（The Research Desk）",
+    "overview": "AI-Insight 是研究员的工作台。表面是一件仪器：翠玉绿强调的扁平工作台，Inter + JetBrains Mono，无发光，浅/深双主题。仪器产出的是一份出版物：朱砂 + 白纸的 editorial 报告，Fraunces 衬线 + drop-cap + 双线报头。工具是主身份，报告是它的一等交付物。\n\n系统刻意克制而自信：层级由字重、对比与密度承载，不靠发光、渐变或装饰。它主动拒绝 2026 AI 默认审美——不要奶油 / 米色背景、玻璃拟态、发光、渐变文字、千篇一律的卡片网格、每个 section 上方的全大写 eyebrow。仓库以 unslop-ignore 标记每一处刻意决策。\n\n战略方向（PRODUCT.md）：在当前克制基线上往'更锐利、更有主张'推——更紧的节奏、更强的层级、更高的对比。DESIGN.md 记录今天的系统；锐利化是未来 craft / bolder / layout 的方向。",
+    "keyCharacteristics": [
+      "双声调：翠玉绿工作台（sans/mono）与朱砂 editorial 报告（serif）刻意分层",
+      "扁平优先：tonal layering 表达深度，阴影只服务于状态",
+      "翠玉绿是稀缺强调：≤10%",
+      "Mono 即数据：JetBrains Mono 专属时间 / 标签 / 代码 / 元信息",
+      "仪器级可读性：正文 ≥4.5:1，永远不为优雅牺牲对比",
+      "浅/深双主题：都过对比检查；切换为 View Transitions 圆形展开"
+    ],
+    "rules": [
+      { "name": "The 稀缺翠玉 Rule", "body": "翠玉绿出现在任何一屏的面积 ≤10%。它是强调不是底色，铺满即稀释其信号力量。", "section": "colors" },
+      { "name": "The Paper-Only Rule", "body": "暖纸 #ece5d6 只允许出现在 editorial 报告内部，永不许用作工作台 body / 卡片 / section 背景——反奶油底 AI 默认的硬边界。", "section": "colors" },
+      { "name": "The 双声调不混 Rule", "body": "朱砂 #c8341a 与 Fraunces 只属于 editorial 报告；翠玉 #2F855A 与 Inter 只属于工作台，色与字绝不交叉。", "section": "colors" },
+      { "name": "The 对比底线 Rule", "body": "正文 ≥4.5:1，大字 ≥3:1，占位符同理。不接受灰一点更优雅。", "section": "colors" },
+      { "name": "The Mono-Means-Data Rule", "body": "JetBrains Mono 专属数据 / 时间 / 代码 / 标签 / 引用，绝不跑正文或当装饰。", "section": "typography" },
+      { "name": "The One-Serif Surface Rule", "body": "Fraunces 只活在 editorial 报告里；工作台出现衬线即 register 污染。", "section": "typography" },
+      { "name": "The 无发光 Rule", "body": "没有装饰性 blur / glow / 渐变光晕；backdrop-filter 只用在 modal 遮罩等功能性隔离。", "section": "elevation" },
+      { "name": "The Flat-By-Default Rule", "body": "表面静止时是平的；阴影只作为状态响应（hover / 悬浮 / modal），绝不给静态卡片加投影当装饰。", "section": "elevation" },
+      { "name": "The Ghost-Card 禁令", "body": "永远不要把 1px border 与 ≥16px blur 的 box-shadow 配在一起当装饰；二选一。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 把翠玉绿当稀缺信号——任何一屏 ≤10%，留给主操作、active、focus。",
+      "Do 用 tonal layering（surface / surface-2 / surface-3）表达深度，而非阴影。",
+      "Do 让正文达到 ≥4.5:1 对比；占位符同理。",
+      "Do 把 JetBrains Mono 留给数据 / 时间 / 代码 / 标签 / 引用。",
+      "Do 让 editorial 报告保持固定浅色 + 朱砂 + Fraunces，与工具态刻意分层。",
+      "Do 给每个状态语义色配形素（图标 / 文字），绝不只靠颜色。",
+      "Do 为每个动效带 prefers-reduced-motion 降级。"
+    ],
+    "donts": [
+      "Don't 用奶油 / 沙 / 米色做工作台背景；暖纸只属于 editorial 报告内部。",
+      "Don't 用玻璃拟态、发光、渐变文字当装饰；功能性 blur 只允许在 modal 遮罩。",
+      "Don't 把 1px border 与 ≥16px blur 的 box-shadow 配在一起当装饰（ghost card）。",
+      "Don't 给卡片 / section / 输入框用 24px+ 大圆角；卡片上限 12–16px。",
+      "Don't 用千篇一律的图标+标题+一句话卡片网格，或 hero-metric 模板。",
+      "Don't 在每个 section 上方加全大写宽字距 eyebrow 当 scaffolding。",
+      "Don't 让 Fraunces 衬线或朱砂出现在工作台界面（register 污染）。",
+      "Don't 把克制推到怯懦：洗白灰底正文、只有发丝线层级、所有元素同等权重。",
+      "Don't 用 border-left/right >1px 当卡片 / callout 的彩色装饰。",
+      "Don't 做不展示来源与推理的聊天壳。"
+    ]
+  }
+}
