@@ -374,10 +374,24 @@ watch(
   padding: 22px 44px 18px; border-bottom: 1px solid var(--border);
   background: var(--surface); flex: none;
 }
-.conv-head .eb { font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.04em; }
-.conv-head h1 { font-size: 24px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; color: var(--text); }
-.conv-head .lede { font-size: 13.5px; color: var(--text-3); max-width: 60ch; margin: 0; }
-.conv-head .meta { margin-top: 11px; display: flex; gap: 16px; font-size: 11.5px; color: var(--text-3); font-weight: 500; }
+.conv-head .eb {
+  font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--accent-text); letter-spacing: 0.14em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.conv-head .eb::before {
+  content: ""; width: 14px; height: 1.5px; background: var(--accent); display: inline-block;
+}
+.conv-head h1 { font-size: 28px; font-weight: 700; margin: 7px 0 4px; letter-spacing: -0.015em; color: var(--text); text-wrap: balance; }
+.conv-head .lede { font-size: 13.5px; color: var(--text-2); max-width: 60ch; margin: 0; text-wrap: pretty; }
+.conv-head .meta {
+  margin-top: 14px; display: flex; gap: 14px; align-items: center;
+  font-family: var(--mono); font-size: 11px; color: var(--text-3); font-weight: 500;
+}
+.conv-head .meta > span + span::before {
+  content: ""; display: inline-block; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--text-4); margin-right: 14px; vertical-align: middle;
+}
 
 .stream-wrap {
   flex: 1; min-height: 0; position: relative; display: flex;
@@ -395,19 +409,18 @@ watch(
   bottom: 20px;
   width: 38px; height: 38px;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-line);
   border-radius: 50%;
   background: var(--surface);
-  color: var(--text-2);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  color: var(--accent);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
-  transition: transform var(--t-fast, .15s), box-shadow var(--t-fast, .15s), color var(--t-fast, .15s);
+  transition: background var(--t-fast, .15s), color var(--t-fast, .15s), border-color var(--t-fast, .15s);
   z-index: 10;
 }
 .scroll-bottom-btn:hover {
-  color: var(--text);
-  transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 .scroll-bottom-btn:active {
   transform: translateX(-50%) translateY(0);

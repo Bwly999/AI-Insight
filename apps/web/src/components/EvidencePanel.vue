@@ -95,47 +95,52 @@ function domainOf(url: string): string {
   background: var(--surface); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
 }
-.r-head { padding: 18px 20px 12px; border-bottom: 1px solid var(--border); }
-.r-eb { font-size: 11px; font-weight: 600; color: var(--text-3); margin-bottom: 3px; letter-spacing: 0.04em; }
+.r-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.r-eb {
+  font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--text-4); margin-bottom: 4px; letter-spacing: 0.12em; text-transform: uppercase;
+}
 .r-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
-.r-count { font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+.r-count { font-family: var(--mono); font-size: 11px; color: var(--text-3); margin-top: 5px; letter-spacing: 0.01em; }
 .r-note {
-  margin: 11px 16px 0; padding: 8px 11px;
-  font-size: 11.5px; color: var(--text-3); line-height: 1.5;
-  background: var(--surface-2); border-radius: 7px; border-left: 2px solid var(--text-4);
+  margin: 12px 16px 0; padding: 9px 12px;
+  font-size: 12px; color: var(--text-3); line-height: 1.5;
+  background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid var(--border);
 }
 .r-note b { color: var(--text-2); }
 .r-list { flex: 1; overflow-y: auto; padding: 10px 16px 18px; }
 
 .source {
   position: relative;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
   padding: 11px 12px; margin-bottom: 9px; transition: var(--t-fast);
 }
-.source:hover { border-color: var(--accent); }
+.source:hover { border-color: var(--accent-line); background: var(--surface); }
+.source:focus-within { border-color: var(--accent); }
 .s-src {
-  font-size: 10.5px; font-weight: 600; color: var(--text-3);
-  display: flex; align-items: center; gap: 6px; letter-spacing: 0.02em;
+  font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text-3);
+  display: flex; align-items: center; gap: 6px; letter-spacing: 0.08em;
 }
 .s-src .dot { box-shadow: none; }
 .s-title {
-  display: block; font-size: 13.5px; font-weight: 600; margin: 4px 0 3px;
+  display: block; font-size: 13.5px; font-weight: 600; margin: 5px 0 3px;
   line-height: 1.35; color: var(--text); text-decoration: none; cursor: pointer;
   /* 拉伸链接：伪元素铺满最近 .source，使整卡可点 */
 }
 .s-title::after { content: ""; position: absolute; inset: 0; }
-.source:hover .s-title { color: var(--accent); }
+.source:hover .s-title { color: var(--accent-text); }
 .s-sum {
   font-size: 12px; color: var(--text-2); line-height: 1.55;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
-.s-foot { margin-top: 7px; font-size: 10.5px; color: var(--text-3); display: flex; gap: 12px; }
+.s-foot { margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--text-3); display: flex; gap: 12px; letter-spacing: 0.02em; }
 .s-domain {
   position: relative; z-index: 1; font-weight: 600;
-  color: var(--accent); cursor: pointer;
+  color: var(--accent-text); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 3px;
 }
-.source:hover .s-domain { text-decoration: underline; }
+.source:hover .s-domain { color: var(--accent); text-decoration: underline; }
 
-.empty-glyph { display: flex; color: var(--text-4); opacity: 0.5; margin-bottom: 8px; }
+.empty-glyph { display: flex; color: var(--text-3); margin-bottom: 8px; }
 .empty-glyph.spin { animation: spin 1.4s linear infinite; }
 </style>

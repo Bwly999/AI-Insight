@@ -92,7 +92,7 @@ function relTime(iso: string): string {
   display: flex; flex-direction: column; overflow: hidden;
 }
 .new-btn {
-  margin: 14px 14px 6px; padding: 10px 13px; border: none; border-radius: 9px;
+  margin: 14px 14px 6px; padding: 10px 13px; border: none; border-radius: var(--r-sm);
   background: var(--accent); color: var(--on-accent);
   font-size: 13px; font-weight: 600; cursor: pointer;
   display: flex; align-items: center; gap: 8px; transition: var(--t-fast);
@@ -100,11 +100,15 @@ function relTime(iso: string): string {
 .new-btn:hover { background: var(--accent-hover); }
 
 .conv-list { flex: 1; overflow-y: auto; padding: 8px 10px 16px; }
-.cl-eb { font-size: 11px; font-weight: 600; color: var(--text-4); padding: 12px 8px 7px; letter-spacing: 0.04em; }
+.cl-eb {
+  font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--text-4); padding: 14px 9px 7px; letter-spacing: 0.12em; text-transform: uppercase;
+}
 .conv-item {
   display: block; width: 100%; text-align: left;
-  padding: 9px 11px; border-radius: 8px; cursor: pointer; margin-bottom: 1px;
+  padding: 9px 11px; border-radius: var(--r-sm); cursor: pointer; margin-bottom: 1px;
   transition: var(--t-fast); background: transparent; border: none;
+  position: relative;
 }
 .conv-item:hover { background: var(--surface-2); }
 .conv-item.active { background: var(--surface-2); border-left: 2px solid var(--accent); padding-left: 9px; }
@@ -113,12 +117,13 @@ function relTime(iso: string): string {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .conv-item.active .ci-title { color: var(--text); font-weight: 600; }
-.ci-meta { margin-top: 3px; font-size: 11px; color: var(--text-3); }
+.ci-meta { margin-top: 3px; font-family: var(--mono); font-size: 10.5px; color: var(--text-3); letter-spacing: 0.01em; }
 .ci-tag {
-  display: inline-block; margin-top: 4px; font-size: 10px; font-weight: 600;
-  padding: 1px 6px; border-radius: 4px; letter-spacing: 0.02em;
+  display: inline-block; margin-top: 5px; font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-xs); letter-spacing: 0.02em;
+  font-family: var(--mono);
 }
-.ci-tag.draft { background: var(--accent-soft); color: var(--accent-text); }
+.ci-tag.draft { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-line); }
 .ci-tag.done { background: var(--surface-3); color: var(--text-3); }
 .list-empty { padding: 20px; text-align: center; color: var(--text-3); font-size: 12px; }
 
@@ -129,4 +134,5 @@ function relTime(iso: string): string {
   font-size: 13px; color: var(--text-2); cursor: pointer; transition: var(--t-fast);
 }
 .nav-link:hover { background: var(--surface-2); color: var(--accent); }
+.nav-link:focus-visible { outline: none; box-shadow: var(--ring); }
 </style>

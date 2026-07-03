@@ -60,24 +60,32 @@ const { theme, toggle } = useTheme();
   z-index: 5;
 }
 .brand { display: flex; align-items: center; gap: 10px; }
+/* unslop-ignore: 品牌徽标是翠绿稀缺强调最合理的位置——产品“面貌”，非装饰色块。
+   视觉签名优先于≤10%比例；这是工具的“on”状态。 */
 .brand-logo {
-  width: 30px; height: 30px; border-radius: 8px;
-  background: var(--surface-3); border: 1px solid var(--border);
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  background: var(--accent); border: none;
   display: grid; place-items: center;
-  color: var(--text); font-weight: 700; font-size: 15px;
+  color: var(--on-accent); font-weight: 700; font-size: 15px;
+  letter-spacing: -0.02em;
 }
 .brand-name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
 .brand-name span { color: var(--accent); }
-.brand-sub { font-size: 11px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
+.brand-sub {
+  font-family: var(--mono); font-size: 10.5px; color: var(--text-3);
+  font-weight: 500; margin-left: 3px; letter-spacing: 0.08em;
+  padding-left: 8px; border-left: 1px solid var(--border);
+}
 .spacer { flex: 1; }
 
 .status-pill {
   display: flex; align-items: center; gap: 7px;
   padding: 5px 12px; border-radius: var(--r-pill);
   background: var(--surface-2); border: 1px solid var(--border);
-  font-size: 11.5px; font-weight: 500; color: var(--text-2);
+  font-size: 11.5px; font-weight: 600; color: var(--text-2);
+  font-family: var(--sans);
 }
-.status-pill .dim { color: var(--text-3); font-weight: 500; margin-left: 2px; }
+.status-pill .dim { color: var(--text-3); font-weight: 500; margin-left: 2px; font-family: var(--mono); }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); position: relative; flex: none; }
 .status-dot.run::after {
   content: ""; position: absolute; inset: -3px; border-radius: 50%;

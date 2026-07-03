@@ -47,18 +47,20 @@ const hasText = computed(() => props.blocks.some((b) => b.kind === "text"));
 
 <style scoped>
 .turn.ai { display: flex; gap: 13px; }
+/* unslop-ignore: AI 头像 accent-soft tint（与 MessageList 统一 agent 身份） */
 .ai-ava {
-  width: 30px; height: 30px; border-radius: 9px; flex: none;
-  background: var(--surface-3); color: var(--text);
+  width: 30px; height: 30px; border-radius: var(--r-sm); flex: none;
+  background: var(--accent-soft); color: var(--accent-text);
   display: grid; place-items: center;
   font-weight: 700; font-size: 13px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-line);
 }
 .ai-body { flex: 1; min-width: 0; }
-.ai-eb { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; display: flex; align-items: center; gap: 7px; }
+.ai-eb { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 7px; letter-spacing: -0.005em; }
 .ai-eb .lens {
-  font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px;
-  background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--r-xs);
+  background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-line);
+  letter-spacing: 0.02em;
 }
 
 /* 流式指示 */

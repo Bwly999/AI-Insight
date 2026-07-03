@@ -78,18 +78,20 @@ function onKey(e: KeyboardEvent) {
   background: var(--amber); color: #1a0f00; font-weight: 800; font-size: 13px;
   display: flex; align-items: center; justify-content: center;
 }
-.cl-kicker { font-size: 11px; font-weight: 600; color: var(--amber); letter-spacing: 0.04em; }
+.cl-kicker {
+  font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--amber); letter-spacing: 0.12em; text-transform: uppercase;
+}
 
 .cl-question { font-size: 14.5px; line-height: 1.6; color: var(--text); margin: 10px 17px 0; }
 
 .cl-options { display: flex; flex-direction: column; gap: 7px; margin: 12px 17px 0; }
 .cl-option {
   text-align: left; background: var(--surface); border: 1px solid var(--border);
-  border-left: 2px solid var(--amber-line);
   border-radius: 8px; padding: 9px 12px; font-size: 13px; color: var(--text); cursor: pointer;
   transition: var(--t-fast);
 }
-.cl-option:hover { border-color: var(--amber); border-left-color: var(--amber); background: var(--amber-soft); }
+.cl-option:hover { border-color: var(--amber); background: var(--amber-soft); }
 
 .cl-input { display: flex; gap: 9px; align-items: flex-end; padding: 12px 17px 4px; }
 .cl-input textarea {
@@ -106,7 +108,7 @@ function onKey(e: KeyboardEvent) {
   font-size: 13px; font-weight: 600; transition: var(--t-fast);
 }
 .cl-send.on { background: var(--amber); color: #1a0f00; }
-.cl-send.on:hover { filter: brightness(1.06); }
+.cl-send.on:hover { background: color-mix(in srgb, var(--amber) 85%, #000); }
 .cl-send.off { background: var(--surface-3); color: var(--text-4); cursor: not-allowed; }
 
 .cl-hint { padding: 0 19px 14px; font-size: 11px; color: var(--text-3); }

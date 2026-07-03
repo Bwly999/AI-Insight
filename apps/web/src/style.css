@@ -43,7 +43,6 @@
 
   /* 过渡 */
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --t-fast: 0.13s var(--ease-out);
   --t-mid: 0.2s var(--ease-out);
 }
@@ -232,6 +231,11 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+.icon-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
 .ghost-btn {
   height: 32px;
   padding: 0 12px;
@@ -251,6 +255,11 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+.ghost-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
 .btn-primary {
   height: 36px;
   padding: 0 16px;
@@ -269,6 +278,10 @@ body {
 }
 .btn-primary:hover {
   background: var(--accent-hover);
+}
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 .btn-secondary {
   height: 36px;
@@ -303,6 +316,11 @@ body {
 .tchip:hover {
   border-color: var(--border-2);
   color: var(--text);
+}
+.tchip:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 .tchip.on {
   background: var(--accent-soft);
@@ -432,17 +450,18 @@ body {
 .cite {
   display: inline-block;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: var(--text-2);
-  background: var(--surface-2);
-  padding: 0 4px;
-  border-radius: 3px;
-  margin: 0 1px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin: 0 2px;
   vertical-align: super;
-  line-height: 1.6;
+  line-height: 1.5;
   cursor: pointer;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent-line);
+  transition: var(--t-fast);
 }
 .cite:hover {
   background: var(--accent);

@@ -98,14 +98,13 @@ function onKey(e: KeyboardEvent) {
   border-radius: var(--r-md);
   overflow: hidden;
   background: var(--surface);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: border-color var(--t-mid), transform var(--t-mid), box-shadow var(--t-mid);
+  transition: border-color var(--t-mid), box-shadow var(--t-mid);
 }
 .report-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-md);
 }
 .report-card:focus-visible {
   outline: none;
@@ -128,9 +127,11 @@ function onKey(e: KeyboardEvent) {
   align-items: center;
   gap: 6px;
   color: var(--accent-text);
+  font-family: var(--mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 .rc-meta {
   display: inline-flex;
@@ -138,18 +139,21 @@ function onKey(e: KeyboardEvent) {
   gap: 8px;
 }
 .rc-draft {
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: var(--r-pill);
   background: var(--amber-soft);
   color: var(--amber);
+  font-family: var(--mono);
   font-size: 10px;
   font-weight: 600;
   line-height: 1.5;
+  letter-spacing: 0.02em;
 }
 .rc-time {
   font-family: var(--mono);
   font-size: var(--fs-xs);
   color: var(--text-3);
+  letter-spacing: 0.01em;
 }
 
 /* 标题 + 导语 */
@@ -202,8 +206,9 @@ function onKey(e: KeyboardEvent) {
 .rc-stat-label {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--text-3);
+  text-transform: uppercase;
 }
 
 /* 操作行 */

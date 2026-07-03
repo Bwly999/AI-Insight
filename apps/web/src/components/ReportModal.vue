@@ -274,6 +274,7 @@ onUnmounted(() => {
 .editorial-paper .editorial-body th { background: rgba(26, 22, 18, 0.05); font-weight: 600; }
 .editorial-paper .editorial-body .cite {
   color: var(--vermillion); font-weight: 600; cursor: pointer; font-size: 0.8em;
+  background: transparent; border: none; padding: 0; margin: 0;
 }
 .editorial-paper .editorial-body .cite-num { color: var(--vermillion); text-decoration: none; cursor: pointer; }
 .editorial-paper .editorial-body .cite-num sup { font-weight: 600; font-size: 0.8em; }
