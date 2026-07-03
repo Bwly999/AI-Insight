@@ -490,21 +490,21 @@ body {
  *  - light → dark（切到深色）：旧主题向圆心收缩，露出底层新主题
  * useTheme.toggle 会在 <html> 上临时打上 data-vt-to="light|dark"
  * 以指示本次切换的目标主题；动画结束后属性会被移除。
+ *
+ * 关键：必须显式控制 z-index，让正在被动画的那一层压在另一方之上，
+ * 否则另一方（默认在最上层）会整张盖住动画层，导致看不到收缩/展开。
  */
-::view-transition-old(root) {
-  z-index: 1;
-}
-::view-transition-new(root) {
-  z-index: 9999;
-}
 
-/* dark → light：新快照在上层，从点击点展开盖住旧深色快照 */
+/* dark → light：新（浅）快照在上层，从点击点展开盖住旧深色快照 */
+[data-vt-to="light"]::view-transition-old(root) { z-index: 1; }
 [data-vt-to="light"]::view-transition-new(root) {
+  z-index: 9999;
   clip-path: circle(0% at var(--vt-x) var(--vt-y));
   animation: vt-circle-expand 0.55s var(--ease-out) forwards;
 }
 
-/* light → dark：旧快照在上层，向点击点收缩，露出底层新深色快照 */
+/* light → dark：旧（浅）快照在上层，向点击点收缩，露出底层新深色快照 */
+[data-vt-to="dark"]::view-transition-new(root) { z-index: 1; }
 [data-vt-to="dark"]::view-transition-old(root) {
   z-index: 9999;
   clip-path: circle(150% at var(--vt-x) var(--vt-y));

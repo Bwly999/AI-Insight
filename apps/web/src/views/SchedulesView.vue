@@ -125,7 +125,7 @@ function relTime(iso?: string): string {
               <Plus :size="15" :stroke-width="2.2" />
               新洞察
             </button>
-            <button class="icon-btn" @click="toggle" :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"><Moon v-if="theme === 'dark'" :size="16" :stroke-width="1.8" /><Sun v-else :size="16" :stroke-width="1.8" /></button>
+            <button class="icon-btn" @click="toggle($event)" :title="theme === 'dark' ? '切换到浅色' : '切换到深色'"><Moon v-if="theme === 'dark'" :size="16" :stroke-width="1.8" /><Sun v-else :size="16" :stroke-width="1.8" /></button>
             <button class="icon-btn" @click="router.push('/c/new')" title="返回工作台"><ArrowLeft :size="16" :stroke-width="1.8" /></button>
           </div>
         </div>
