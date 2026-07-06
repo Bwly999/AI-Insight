@@ -91,7 +91,7 @@ function submit() {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
   padding: 12px 14px; box-shadow: var(--shadow-md); transition: var(--t-fast);
 }
-.composer:focus-within { border-color: var(--accent); box-shadow: var(--shadow-md), var(--ring); }
+.composer:focus-within { border-color: var(--accent); box-shadow: var(--shadow-md), var(--ring), var(--glow-sm); }
 .composer.running { border-color: var(--accent-line); }
 
 .composer textarea {
@@ -124,7 +124,7 @@ function submit() {
   cursor: pointer; transition: var(--t-fast);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.12);
 }
-.send-btn:hover:not(:disabled):not(.stop) { background: var(--accent-hover); }
+.send-btn:hover:not(:disabled):not(.stop) { background: var(--accent-hover); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.12), var(--glow-md); }
 .send-btn:active:not(:disabled) { transform: translateY(0.5px); }
 .send-btn:focus-visible { outline: none; box-shadow: var(--ring); }
 .send-btn:disabled {

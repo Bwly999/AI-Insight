@@ -20,6 +20,12 @@
   </script>
 </head>
 <body>
+  <!-- 仪器背景层（mesh + 网格，无噪点）：固定铺底，pointer-events:none，z-index:0。
+       unslop-ignore: V2 仪器背景是刻意决策，配合信号发光表达"运转中的仪器"。 -->
+  <div class="bg-layers" aria-hidden="true">
+    <div class="mesh"></div>
+    <div class="grid-bg"></div>
+  </div>
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

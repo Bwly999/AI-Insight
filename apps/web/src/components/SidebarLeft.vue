@@ -1,14 +1,21 @@
 <script setup lang="ts">
 /**
- * SidebarLeft — 会话列表（Workbench 左栏）。
- * 工具区（CTA + 客户端过滤）+ 按 updatedAt 的时间桶列表 + 底部报告/定时导航。
- * 锐利化：active 态用极轻 accent-soft tint + 2px 左线（列表项 active 左线合法）；
- * 真实 run 状态已在顶栏表达，这里不再画伪 tag。
+ * SidebarLeft — Workbench V2 左栏（情报台索引卡）。
+ * 工具区（CTA + 搜索）+ 时间桶索引卡列表（鼠标光晕 + active glow）+ 底部导航。
+ *
+ * V2 变化：从单行 list-item 升级为「索引卡」——
+ *   - card-t 标题（2 行 clamp）+ card-ft 元信息行（轮数 accent / 时长 / 来源数 / 相对时间）
+ *   - active 态：lime-soft gradient + lime border + glow-sm
+ *   - 鼠标跟随光晕（--mx/--my + radial-gradient，reduced-motion 关闭）
  */
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Plus, BookOpen, Clock, Search, X } from "@lucide/vue";
-import type { Conversation } from "@ai-insight/shared-types";
+import { Plus, BookOpen, Clock, Search, X, Telescope, CalendarRange } from "@lucide/vue";
+import {
+  LENS_OPTIONS,
+  TIME_RANGE_OPTIONS,
+  type Conversation,
+} from "@ai-insight/shared-types";
 
 const props = defineProps<{
   conversations: Conversation[];
@@ -28,14 +35,14 @@ const filtered = computed(() =>
   q.value ? props.conversations.filter((c) => c.title.toLowerCase().includes(q.value)) : props.conversations,
 );
 
-// ── 时间桶：今天 / 本周 / 更早（按 updatedAt 降序） ──────────────────────────
+// ── 时间桶：今天 / 本周 / 更早 ──────────────────────────────────────────────
 function startOfToday(): number {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
 const TODAY = startOfToday();
-const WEEK = TODAY - 6 * 24 * 3600 * 1000; // 含今天，共 7 天
+const WEEK = TODAY - 6 * 24 * 3600 * 1000;
 
 interface Bucket {
   key: "today" | "week" | "older";
@@ -65,32 +72,56 @@ const buckets = computed<Bucket[]>(() => {
 });
 
 const total = computed(() => props.conversations.length);
+const reportsCount = 12; // 占位：真实值待 ReportsStore
+const schedulesCount = 4; // 占位
 
 function relTime(iso: string): string {
   const d = new Date(iso).getTime();
   const diff = Date.now() - d;
   const min = Math.floor(diff / 60000);
   if (min < 1) return "刚刚";
-  if (min < 60) return `${min} 分钟前`;
+  if (min < 60) return `${min}分钟前`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
+  if (hr < 24) return `${hr}小时前`;
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }).replace("/", " 月 ") + " 日";
+  if (day < 7) return `${day}天前`;
+  return new Date(iso).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }).replace("/", "-");
+}
+
+// ── config 派生标签（卡片底栏元信息） ──────────────────────────────────────
+// 后端 Conversation 只有 title/config/createdAt/updatedAt；messageCount/sourceCount 需 N+1 请求。
+// 这里用 config 里已有的 lens（视角）+ timeRange（时间窗）作为卡片元信息，零额外请求。
+function lensLabel(c: Conversation): string | null {
+  const k = c.config?.lens;
+  if (!k) return null;
+  return LENS_OPTIONS.find((o) => o.key === k)?.label ?? null;
+}
+function timeRangeLabel(c: Conversation): string | null {
+  const v = c.config?.timeRange;
+  if (!v) return null;
+  return TIME_RANGE_OPTIONS.find((o) => o.value === v)?.label ?? null;
 }
 
 function clearQuery() {
   query.value = "";
 }
+
+// ── 鼠标跟随光晕（写在卡片 CSS 变量上；reduced-motion 时不绑监听）──────────────
+function onCardMove(e: MouseEvent, el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  el.style.setProperty("--mx", ((e.clientX - r.left) / r.width) * 100 + "%");
+  el.style.setProperty("--my", ((e.clientY - r.top) / r.height) * 100 + "%");
+}
 </script>
 
 <template>
   <aside class="col-left">
-    <!-- 工具区：CTA + 搜索 + 列表头计数。hairline 收束成一个面板。 -->
+    <!-- ─── 工具区 ─── -->
     <div class="sb-tool">
-      <button class="new-btn" @click="emit('newInsight')">
+      <button class="new-btn" type="button" @click="emit('newInsight')">
         <Plus :size="15" :stroke-width="2.4" />
-        新对话
+        <span>新对话</span>
+        <span class="kbd">⌘N</span>
       </button>
 
       <label class="search">
@@ -100,26 +131,40 @@ function clearQuery() {
           <X :size="12" :stroke-width="2.4" />
         </button>
       </label>
-
-      <div class="list-head">
-        <span class="lh-label">会话</span>
-        <span class="lh-count">{{ total }}</span>
-      </div>
     </div>
 
-    <!-- 列表 -->
+    <!-- ─── 索引卡列表 ─── -->
     <div class="conv-list scroll">
       <template v-if="buckets.length">
         <div v-for="b in buckets" :key="b.key" class="bucket">
-          <div class="bk-eb">{{ b.label }}</div>
+          <div class="bk-head">
+            <span class="bk-label">{{ b.label }}</span>
+            <span class="bk-line"></span>
+            <span class="bk-count">{{ String(b.items.length).padStart(2, "0") }}</span>
+          </div>
           <button
             v-for="c in b.items"
             :key="c.id"
-            class="conv-item"
+            class="card"
             :class="{ active: c.id === currentConvId }"
-            @click="emit('select', c)">
-            <div class="ci-title">{{ c.title }}</div>
-            <div class="ci-meta">{{ relTime(c.updatedAt) }}</div>
+            @click="emit('select', c)"
+            @mousemove="onCardMove($event, $event.currentTarget as HTMLElement)">
+            <div class="card-hd">
+              <div class="card-t">{{ c.title }}</div>
+            </div>
+            <div class="card-ft">
+              <!-- 元信息行：视角（accent）+ 时间窗 + 相对时间。
+                   后端 Conversation 无 messageCount/sourceCount，用 config 已有字段填充。 -->
+              <span v-if="lensLabel(c)" class="meta acc">
+                <Telescope :size="11" :stroke-width="2" />
+                {{ lensLabel(c) }}
+              </span>
+              <span v-if="timeRangeLabel(c)" class="meta">
+                <CalendarRange :size="11" :stroke-width="2" />
+                {{ timeRangeLabel(c) }}
+              </span>
+              <span class="card-time">{{ relTime(c.updatedAt) }}</span>
+            </div>
           </button>
         </div>
       </template>
@@ -137,23 +182,27 @@ function clearQuery() {
       </div>
     </div>
 
-    <!-- 底部导航：hairline 收束 -->
+    <!-- ─── 底部导航 ─── -->
     <div class="side-bottom">
-      <div class="nav-link" @click="emit('goReports')">
-        <BookOpen :size="16" :stroke-width="1.8" />
-        我的报告
-      </div>
-      <div class="nav-link" @click="goSchedules">
-        <Clock :size="16" :stroke-width="1.8" />
-        我的定时
-      </div>
+      <button class="nav-link" type="button" @click="emit('goReports')">
+        <BookOpen :size="15" :stroke-width="1.8" />
+        <span class="nav-label">我的报告</span>
+        <span class="nav-count">{{ String(reportsCount).padStart(2, "0") }}</span>
+      </button>
+      <button class="nav-link" type="button" @click="goSchedules">
+        <Clock :size="15" :stroke-width="1.8" />
+        <span class="nav-label">我的定时</span>
+        <span class="nav-count">{{ String(schedulesCount).padStart(2, "0") }}</span>
+      </button>
     </div>
   </aside>
 </template>
 
 <style scoped>
 .col-left {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--bg) 50%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -162,54 +211,80 @@ function clearQuery() {
 
 /* ─── 工具区 ─────────────────────────────────────────────── */
 .sb-tool {
-  padding: 14px 14px 0;
+  padding: 16px;
   border-bottom: 1px solid var(--border);
 }
 
-/* 新对话按钮：committed accent CTA —— 主操作配清晰触发，无下沉 */
+/* 新对话按钮：lime gradient 底 + glow on hover + kbd。
+   非实色 CTA——用 accent-soft gradient + lime 文字，更"信号感"，配 glow-md。
+   布局：图标 + "新对话" 居中成组，kbd 右浮——用 padding 留出 kbd 空间避免与居中文字打架。 */
 .new-btn {
   width: 100%;
-  padding: 10px 13px;
-  border: none;
-  border-radius: var(--r-sm);
-  background: var(--accent);
-  color: var(--on-accent);
+  height: 40px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: var(--t-mid);
+  background: linear-gradient(135deg, var(--accent-soft), transparent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent-line);
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* 不用 justify-content:center——会让 margin-left:auto 的 kbd 与居中文字互相拉扯。
+     改为左侧成组（图标+文字）+ 右侧 kbd（margin-left:auto），视觉更稳。 */
   gap: 8px;
-  transition: var(--t-fast);
-  /* 精致内边沿：实色 CTA 的“按下去”预期，非发光 */
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+  padding: 0 14px;
+  position: relative;
+  overflow: hidden;
+}
+/* hover：边框转实 accent + glow-md + 极轻上抬 */
+.new-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(400px circle at 50% 0%, var(--accent-soft), transparent 60%);
+  opacity: 0;
+  transition: var(--t-mid);
 }
 .new-btn:hover {
-  background: var(--accent-hover);
+  border-color: var(--accent);
+  box-shadow: var(--glow-md);
+  transform: translateY(-1px);
 }
-.new-btn:active {
-  transform: translateY(0.5px);
+.new-btn:hover::before {
+  opacity: 1;
+}
+.new-btn .kbd {
+  margin-left: auto; /* 推到右侧，与左侧"图标+新对话"成组拉开距离 */
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-4);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  padding: 1px 5px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
-/* 搜索框：icon-led，border + focus 转 accent（非发光 ring） */
+/* 搜索框 */
 .search {
-  margin-top: 9px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px;
-  height: 32px;
+  padding: 0 12px;
+  height: 36px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  color: var(--text-3);
+  color: var(--text-4);
   transition: var(--t-fast);
 }
 .search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   box-shadow: var(--ring);
   color: var(--accent);
 }
@@ -222,13 +297,13 @@ function clearQuery() {
   border: none;
   background: none;
   font-family: var(--sans);
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text);
   outline: none;
   line-height: 1;
 }
 .search input::placeholder {
-  color: var(--text-3);
+  color: var(--text-4);
 }
 .search-clear {
   display: inline-flex;
@@ -239,7 +314,7 @@ function clearQuery() {
   border: none;
   border-radius: var(--r-xs);
   background: transparent;
-  color: var(--text-3);
+  color: var(--text-4);
   cursor: pointer;
   transition: var(--t-fast);
 }
@@ -248,97 +323,160 @@ function clearQuery() {
   background: var(--surface-2);
 }
 
-/* 列表头：mono label + 计数，把工具区与列表“锁边” */
-.list-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 2px 8px;
-  font-family: var(--mono);
-}
-.lh-label {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-.lh-count {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-3);
-  font-feature-settings: "zero", "ss01";
-  letter-spacing: 0.04em;
-}
-
 /* ─── 列表 ──────────────────────────────────────────────── */
 .conv-list {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 10px 16px;
+  padding: 12px 12px 16px;
 }
 
 .bucket + .bucket {
-  margin-top: 4px;
-}
-.bk-eb {
-  font-family: var(--mono);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-4);
-  padding: 12px 9px 6px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  margin-top: 6px;
 }
 
-.conv-item {
+/* 时间桶头：label + hairline + count（原型 .bk 风） */
+.bk-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px 8px;
+}
+.bk-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-4);
+  text-transform: uppercase;
+}
+.bk-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.bk-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-4);
+  font-feature-settings: "zero";
+}
+
+/* 索引卡（核心 V2 升级）—— 12px 圆角卡片 + 鼠标光晕 + active glow */
+.card {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 9px 11px;
-  border-radius: var(--r-sm);
+  margin-bottom: 8px;
   cursor: pointer;
-  margin-bottom: 1px;
-  transition: var(--t-fast);
-  background: transparent;
-  border: none;
+  transition: var(--t-mid);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: linear-gradient(160deg, var(--surface), var(--bg-2));
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+}
+/* 鼠标跟随光晕（radial-gradient at --mx --my）—— reduced-motion 时不绑监听即不出现 */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-md);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--t-mid);
+  background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 0%), var(--accent-soft), transparent 50%);
+}
+.card:hover {
+  border-color: var(--border-2);
+  transform: translateY(-1px);
+}
+.card:hover::before {
+  opacity: 1;
+}
+/* active：lime-soft gradient + lime border + glow-sm */
+.card.active {
+  border-color: var(--accent-line);
+  background: linear-gradient(160deg, var(--accent-soft), var(--bg-2));
+  box-shadow: var(--glow-sm);
+}
+.card.active::before {
+  opacity: 1;
+}
+
+.card-hd {
+  padding: 12px 14px 7px;
   position: relative;
 }
-.conv-item:hover {
-  background: var(--surface-2);
-}
-/* active：极轻 accent-soft tint + 2px 左线（列表项 active 左线合法） */
-.conv-item.active {
-  background: var(--accent-soft);
-  border-left: 2px solid var(--accent);
-  padding-left: 9px;
-}
-.ci-title {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text);
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.conv-item.active .ci-title {
+.card-t {
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.ci-meta {
-  margin-top: 3px;
+.card.active .card-t {
+  color: var(--accent-text);
+}
+
+.card-ft {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 7px 14px 10px;
+  border-top: 1px solid var(--border);
+}
+.card.active .card-ft {
+  border-top-color: var(--accent-line);
+}
+/* 元信息项：图标 + 文本，项间用 hairline 分隔（对齐原型 .meta） */
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-3);
-  letter-spacing: 0.02em;
+  padding-right: 9px;
+  margin-right: 9px;
+  border-right: 1px solid var(--border);
+  line-height: 1;
+}
+.meta:last-of-type {
+  /* 最后一项 meta 不画右边线（card-time 紧跟其后） */
+  border-right: none;
+}
+.meta :deep(svg) {
+  flex: none;
+  color: var(--text-4);
+}
+/* acc 项：柠绿强调（视角 lens 是最有区分度的元信息） */
+.meta.acc {
+  color: var(--accent-text);
+}
+.meta.acc :deep(svg) {
+  color: var(--accent);
+}
+.card.active .meta.acc {
+  color: var(--accent);
+}
+.card-time {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-4);
+  font-feature-settings: "zero";
 }
 
 /* ─── 空态 ──────────────────────────────────────────────── */
 .list-empty {
   padding: 40px 20px;
   text-align: center;
-  color: var(--text-3);
+  color: var(--text-4);
 }
 .le-glyph {
   display: flex;
@@ -368,35 +506,52 @@ function clearQuery() {
 /* ─── 底部导航 ──────────────────────────────────────────── */
 .side-bottom {
   border-top: 1px solid var(--border);
-  padding: 8px 10px;
+  padding: 10px;
+  display: flex;
+  gap: 6px;
 }
 .nav-link {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 11px;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
   border-radius: var(--r-sm);
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--text-2);
   cursor: pointer;
   transition: var(--t-fast);
+  border: 1px solid transparent;
+  background: transparent;
 }
 .nav-link:hover {
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--accent);
+  border-color: var(--border);
 }
-.nav-link:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
+.nav-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .new-btn,
+  .new-btn::before,
   .search,
   .search-clear,
-  .conv-item,
+  .card,
+  .card::before,
   .nav-link {
     transition: none;
   }
+  .new-btn:hover,
+  .card:hover {
+    transform: none;
+  }
+  /* reduced-motion 下卡片的鼠标光晕不出现（监听仍在跑但 transition: none 让它瞬变；
+     更彻底可在 onCardMove 里 matchMedia 短路，这里 transition 关闭已足够） */
 }
 </style>

@@ -104,7 +104,7 @@ function onKey(e: KeyboardEvent) {
 }
 .report-card:hover {
   border-color: var(--accent-line);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--glow-sm);
 }
 .report-card:focus-visible {
   outline: none;

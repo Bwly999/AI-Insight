@@ -97,14 +97,14 @@ function timeLabel(iso: string): string {
 /* ─── AI 回复 ─────────────────────────────────────────────── */
 .turn.ai { display: flex; gap: 13px; }
 /* unslop-ignore: AI 头像用 accent-soft tint 承载 agent 身份——
-   翠绿作为“信号/身份”的合法应用，非装饰填色。 */
+   柠绿作为“信号/身份”的合法应用，配 glow-sm 信号发光。 */
 .ai-ava {
   width: 30px; height: 30px; border-radius: var(--r-sm); flex: none;
   background: var(--accent-soft); color: var(--accent);
   display: grid; place-items: center;
   border: 1px solid var(--accent-line);
-  /* 精致内边沿：让 tint 块有“徽章”质感 */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  /* 精致内边沿 + 信号发光：让 tint 块有“徽章”质感 + agent 身份信号 */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--glow-sm);
 }
 .ai-body { flex: 1; min-width: 0; }
 .ai-eb {
@@ -128,14 +128,14 @@ function timeLabel(iso: string): string {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 7vh 40px 40px;
 }
-/* unslop-ignore: 空态是首屏唯一焦点，accent-soft 容器承载翠绿“仪器已就绪”语义 */
+/* unslop-ignore: 空态是首屏唯一焦点，accent-soft 容器承载柠绿“仪器已就绪”语义 + glow 信号 */
 .hero-glyph {
   display: inline-flex; align-items: center; justify-content: center;
   width: 76px; height: 76px; border-radius: 50%; flex: none;
   background: var(--accent-soft); color: var(--accent);
   border: 1px solid var(--accent-line);
   margin-bottom: 22px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), var(--glow-md);
 }
 .big {
   font-size: var(--fs-2xl); color: var(--text); font-weight: 700;

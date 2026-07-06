@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 /* ════════════════════════════════════════════════════════════════════════
-   AI-Insight · Workbench（浅/深双主题 · 翠绿强调）
-   审美：扁平 surface · 翠绿强调 · Inter + JetBrains Mono · 无发光
+   AI-Insight · Workbench V2（浅/深双主题 · 柠绿信号强调 · 仪器背景）
+   审美：扁平 surface · 柠绿 lime 信号 · Inter + JetBrains Mono · 信号发光（仅语义点）
    双主题：data-theme="light"（默认）/ "dark"
+   背景层：mesh + grid（仪器感氛围），pointer-events:none，z-index:0
    ════════════════════════════════════════════════════════════════════════ */
 
 /* ── 尺度 token（双主题通用，消除硬编码） ─────────────────────────────── */
@@ -45,12 +46,17 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --t-fast: 0.13s var(--ease-out);
   --t-mid: 0.2s var(--ease-out);
+
+  /* View Transitions 圆心（由 useTheme.toggle 写入；缺省回退到屏幕中心） */
+  --vt-x: 50vw;
+  --vt-y: 50vh;
 }
 
 /* ── 浅色主题（默认） ──────────────────────────────────────────────────── */
 :root,
 [data-theme="light"] {
   --bg: #FAFAFB;
+  --bg-2: #F4F4F6;
   --surface: #FFFFFF;
   --surface-2: #F4F4F6;
   --surface-3: #EFEFF2;
@@ -64,12 +70,12 @@
   --border: #E7E7EA;
   --border-2: #DEDDE1;
 
-  /* 强调 = 翠绿（浅色用饱和版） */
-  --accent: #2F855A;
-  --accent-hover: #276749;
-  --accent-soft: #E1EFE5;
-  --accent-text: #235944;
-  --accent-line: #C7E3D0;
+  /* 强调 = 柠绿 lime（浅色用深翠绿保证 ≥4.5:1 对比；亮柠绿在白底对比不足） */
+  --accent: #5B8C1A;
+  --accent-hover: #3F6312;
+  --accent-soft: rgba(91, 140, 26, 0.10);
+  --accent-text: #3F6312;
+  --accent-line: rgba(91, 140, 26, 0.28);
   --on-accent: #FFFFFF;
 
   --green: #16A34A; --green-soft: #DCFCE7; --green-line: #BBF7D0;
@@ -85,7 +91,20 @@
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
 
-  --code-bg: #F1F4F1; --code-text: #235944;
+  /* 信号发光（glow）—— 仅用于 live/数据端点/关系节点/focus/品牌 mark 等语义点。
+     浅色模式用更克制的 glow（深翠绿低透明度），避免在白底上过曝。
+     unslop-ignore: V2 信号发光是刻意决策，标注"系统活着"的状态点，非装饰氛围光。 */
+  --glow-sm: 0 0 0 1px rgba(91, 140, 26, 0.15); /* focus 强化、cite hover */
+  --glow-md: 0 4px 16px rgba(91, 140, 26, 0.18); /* active 卡片、发送键 hover */
+  --glow-lg: 0 8px 24px rgba(91, 140, 26, 0.22); /* 极少用，里程碑时刻 */
+  /* 点状信号发光（live 脉冲点、曲线端点、关系节点）—— 用 box-shadow 表达小圆点的 glow */
+  --glow-dot: 0 0 8px rgba(91, 140, 26, 0.45);
+
+  /* 仪器背景控制 */
+  --mesh-opacity: 0.5;
+  --grid-opacity: 0.45;
+
+  --code-bg: #F1F4F1; --code-text: #3F6312;
 
   /* 兼容旧玻璃变量（已扁平化，保留名以避免破坏未迁移处） */
   --glass: var(--surface);
@@ -93,43 +112,55 @@
   --ring: 0 0 0 3px var(--accent-soft);
 }
 
-/* ── 深色主题（炭灰） ──────────────────────────────────────────────────── */
+/* ── 深色主题（情报台原色） ────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg: #0E0F13;
-  --surface: #16171D;
-  --surface-2: #1C1E25;
-  --surface-3: #23262F;
-  --surface-raised: #1C1E25;
+  --bg: #08090C;
+  --bg-2: #0E1014;
+  --surface: #111319;
+  --surface-2: #161922;
+  --surface-3: #1F232C;
+  --surface-raised: #161922;
 
-  --text: #E5E7EB;
-  --text-2: #CBD1DA;
-  --text-3: #9CA3AF;
-  --text-4: #6B7280;
+  --text: #ECEEF3;
+  --text-2: #9AA0AD;
+  --text-3: #6E7480;
+  --text-4: #4A5060;
 
-  --border: #262830;
-  --border-2: #32363F;
+  --border: #1F232C;
+  --border-2: #2A2F3A;
 
-  /* 强调 = 翠绿（深色提亮保证对比度） */
-  --accent: #3DD684;
-  --accent-hover: #4FE595;
-  --accent-soft: rgba(61, 214, 132, 0.14);
-  --accent-text: #5EE696;
-  --accent-line: rgba(61, 214, 132, 0.32);
-  --on-accent: #06281D;
+  /* 强调 = 柠绿 lime（深色用亮柠绿，高饱和、信号穿透力强） */
+  --accent: #D4FF3F;
+  --accent-hover: #A8CC2A;
+  --accent-soft: rgba(212, 255, 63, 0.10);
+  --accent-text: #D4FF3F;
+  --accent-line: rgba(212, 255, 63, 0.30);
+  --on-accent: #0A0A0B;
 
   --green: #34D399; --green-soft: rgba(52, 211, 153, 0.14); --green-line: rgba(52, 211, 153, 0.36);
-  --amber: #FBBF24; --amber-soft: rgba(251, 191, 36, 0.14); --amber-line: rgba(251, 191, 36, 0.38);
-  --rose: #F87171;  --rose-soft: rgba(248, 113, 113, 0.14); --rose-line: rgba(248, 113, 113, 0.38);
+  --amber: #FFB347; --amber-soft: rgba(255, 179, 71, 0.12); --amber-line: rgba(255, 179, 71, 0.36);
+  --rose: #FF5C5C;  --rose-soft: rgba(255, 92, 92, 0.12);  --rose-line: rgba(255, 92, 92, 0.36);
 
-  --src-search: #5B9EC9;
-  --src-rss: #B47DF5;
-  --src-crawl: #FBBF24;
+  --src-search: #7FB4FF;
+  --src-rss: #C084FC;
+  --src-crawl: #FFB347;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
 
-  --code-bg: rgba(61, 214, 132, 0.12); --code-text: #5EE696;
+  /* 信号发光（glow）—— 深色模式柠绿 glow 更明显，给"情报台"的信号穿透感。
+     unslop-ignore: V2 信号发光是刻意决策。 */
+  --glow-sm: 0 0 12px rgba(212, 255, 63, 0.30);
+  --glow-md: 0 0 24px rgba(212, 255, 63, 0.35);
+  --glow-lg: 0 0 32px rgba(212, 255, 63, 0.45);
+  --glow-dot: 0 0 8px rgba(212, 255, 63, 0.55);
+
+  /* 仪器背景控制（深色更明显） */
+  --mesh-opacity: 1;
+  --grid-opacity: 1;
+
+  --code-bg: rgba(212, 255, 63, 0.10); --code-text: #D4FF3F;
 
   --glass: var(--surface);
   --glass-border: var(--border);
@@ -152,9 +183,58 @@ body {
   -webkit-font-smoothing: antialiased;
   transition: background-color var(--t-mid), color var(--t-mid);
 }
+/* #app 浮于仪器背景层之上 */
+#app {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+}
 ::selection {
   background: var(--accent-soft);
   color: var(--accent-text);
+}
+button {
+  font-family: inherit;
+}
+
+/* ═══ 仪器背景层（mesh + grid，无噪点） ══════════════════════════════════
+   固定铺底，z-index:0，pointer-events:none。内容容器需 position:relative;z-index:1。
+   mesh = 3 个 radial gradient 色斑（柠绿/蓝/琥珀低透明）给"情报台"氛围；
+   grid = 64px 网格线 + radial mask 让中心清晰边缘淡出。
+   unslop-ignore: V2 仪器背景是刻意决策，配合信号发光表达"运转中的仪器"。 */
+.bg-layers {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mesh {
+  position: absolute;
+  inset: 0;
+  opacity: var(--mesh-opacity);
+  transition: opacity 0.4s var(--ease-out);
+  background:
+    radial-gradient(900px 600px at 85% -5%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    radial-gradient(700px 500px at 5% 30%, rgba(60, 90, 200, 0.10), transparent 60%),
+    radial-gradient(600px 600px at 50% 105%, color-mix(in srgb, var(--amber) 10%, transparent), transparent 60%);
+}
+.grid-bg {
+  position: absolute;
+  inset: 0;
+  opacity: var(--grid-opacity);
+  transition: opacity 0.4s var(--ease-out);
+  background:
+    linear-gradient(color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 90%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 90%);
+}
+[data-theme="light"] .grid-bg {
+  background:
+    linear-gradient(rgba(15, 17, 21, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 17, 21, 0.04) 1px, transparent 1px);
 }
 
 /* ── 动效 ──────────────────────────────────────────────────────────────── */
@@ -477,6 +557,7 @@ body {
   background: var(--accent);
   color: var(--on-accent);
   border-color: var(--accent);
+  box-shadow: var(--glow-sm); /* unslop-ignore: cite hover 是"可追溯"信号激活点 */
 }
 
 /* ── 无障碍：尊重 reduced-motion ────────────────────────────────────────

@@ -216,12 +216,21 @@ function onStreamClick(_e: MouseEvent) {
 // 工具调用（从 blocks 派生 → 传给 EvidencePanel，仅兼容签名）
 const toolCalls = computed<ToolBlock[]>(() => toolBlocksOf(run.blocks.value));
 
-// conv-head meta
-const sourceCount = computed(() => {
-  // 运行中来源数（来自 toolCalls found 之和的粗略估计无意义；右栏会显示真实数）
-  return null;
+// ─── 遥测数据（传给 AppTopbar TelemetryStrip） ─────────────────────────────
+// 来源数：从本轮 toolCalls 的 found 之和估算（右栏 EvidencePanel 拉取真实 RunItem 后会独立显示）
+const sourceCount = computed<number | null>(() => {
+  const found = toolCalls.value.reduce((sum, t) => sum + (t.found ?? 0), 0);
+  return found > 0 ? found : null;
 });
-void sourceCount;
+// 词元估算：从 blocks 文本长度粗估（运行中才有意义）
+const tokenCount = computed<string | null>(() => {
+  if (run.status.value !== "running" && run.status.value !== "completed") return null;
+  const chars = run.blocks.value
+    .filter((b) => b.kind === "text" || b.kind === "thinking")
+    .reduce((s, b) => s + (b.kind === "text" || b.kind === "thinking" ? b.text.length : 0), 0);
+  if (!chars) return null;
+  return (chars / 4).toFixed(1) + "k";
+});
 
 watch(() => run.report, () => autoStickToBottom());
 watch(() => run.status, () => autoStickToBottom());
@@ -274,6 +283,8 @@ watch(
       :current-conv="currentConv"
       :status="run.status.value"
       :elapsed="run.elapsed.value"
+      :source-count="sourceCount"
+      :token-count="tokenCount"
       @abort="run.abort()" />
 
     <div class="panes">
@@ -286,9 +297,9 @@ watch(
 
       <main class="col-mid">
         <div class="conv-head" v-if="currentConv && currentConv.id !== 'new'">
-          <div class="eb">Deep Lens · 工作台</div>
+          <div class="eb">深度视角 · 工作台</div>
           <h1>{{ currentConv.title }}</h1>
-          <p class="lede" v-if="currentConv.title !== '新洞察'">关于该主题的多源交叉洞察，附完整证据链。</p>
+          <p class="lede" v-if="currentConv.title !== '新洞察'">关于该主题的多源交叉洞察，附完整证据链。每一条结论可下钻到原始来源。</p>
           <div class="meta">
             <span>{{ messages.length }} 轮对话</span>
             <span v-if="run.lens.value">视角 · {{ run.lens.value }}</span>
@@ -353,44 +364,66 @@ watch(
 <style>
 .shell {
   display: grid;
-  grid-template-rows: 56px 1fr;
+  grid-template-rows: 64px 1fr;
   height: 100vh;
 }
 .panes {
   display: grid;
-  grid-template-columns: 262px 1fr 340px;
+  grid-template-columns: 300px 1fr 340px;
   min-height: 0;
 }
+@media (max-width: 1280px) {
+  .panes { grid-template-columns: 280px 1fr 320px; }
+}
 @media (max-width: 1180px) {
-  .panes { grid-template-columns: 240px 1fr; }
+  .panes { grid-template-columns: 260px 1fr; }
   .col-right { display: none !important; }
+}
+@media (max-width: 768px) {
+  .panes { grid-template-columns: 1fr; }
+  .col-left { display: none !important; }
 }
 
 .col-mid {
   display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 30%, transparent);
 }
 .conv-head {
-  padding: 22px 44px 18px; border-bottom: 1px solid var(--border);
-  background: var(--surface); flex: none;
+  padding: 22px 44px 16px; border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 30%, transparent); flex: none;
 }
 .conv-head .eb {
   font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600;
   color: var(--accent-text); letter-spacing: 0.14em; text-transform: uppercase;
   display: inline-flex; align-items: center; gap: 7px;
+  margin-bottom: 8px;
 }
+/* eyebrow 前的柠绿短线 + glow-sm（信号锚点） */
 .conv-head .eb::before {
   content: ""; width: 14px; height: 1.5px; background: var(--accent); display: inline-block;
+  box-shadow: var(--glow-sm);
 }
-.conv-head h1 { font-size: 28px; font-weight: 700; margin: 7px 0 4px; letter-spacing: -0.015em; color: var(--text); text-wrap: balance; }
-.conv-head .lede { font-size: 13.5px; color: var(--text-2); max-width: 60ch; margin: 0; text-wrap: pretty; }
+.conv-head h1 {
+  font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.025em;
+  line-height: 1.15; color: var(--text); text-wrap: balance;
+}
+/* 标题里的 <em> = 柠绿 italic 编辑式强调（V2 新增，对齐原型 conv-title em） */
+.conv-head h1 em {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.conv-head .lede {
+  margin: 8px 0 0; color: var(--text-2); font-size: 13.5px; max-width: 68ch;
+  text-wrap: pretty;
+}
 .conv-head .meta {
-  margin-top: 14px; display: flex; gap: 14px; align-items: center;
-  font-family: var(--mono); font-size: 11px; color: var(--text-3); font-weight: 500;
+  display: flex; align-items: center; gap: 10px; margin-top: 12px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--text-4); letter-spacing: 0.04em;
 }
 .conv-head .meta > span + span::before {
   content: ""; display: inline-block; width: 3px; height: 3px; border-radius: 50%;
-  background: var(--text-4); margin-right: 14px; vertical-align: middle;
+  background: var(--text-4); margin-right: 10px; vertical-align: middle;
 }
 
 .stream-wrap {
@@ -413,7 +446,7 @@ watch(
   border-radius: 50%;
   background: var(--surface);
   color: var(--accent);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--glow-sm);
   cursor: pointer;
   transition: background var(--t-fast, .15s), color var(--t-fast, .15s), border-color var(--t-fast, .15s);
   z-index: 10;

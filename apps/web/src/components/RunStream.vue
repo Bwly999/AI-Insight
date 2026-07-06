@@ -50,14 +50,14 @@ const isLive = computed(() => props.status === "running" || props.status === "aw
 
 <style scoped>
 .turn.ai { display: flex; gap: 13px; }
-/* unslop-ignore: AI 头像 accent-soft tint（与 MessageList 统一 agent 身份） */
+/* unslop-ignore: AI 头像 accent-soft tint（与 MessageList 统一 agent 身份）+ glow-sm 信号 */
 .ai-ava {
   width: 30px; height: 30px; border-radius: var(--r-sm); flex: none;
   background: var(--accent-soft); color: var(--accent);
   display: grid; place-items: center;
   position: relative;
   border: 1px solid var(--accent-line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--glow-sm);
 }
 /* 运行态：avatar 外圈一圈翠绿脉冲（仪器“工作中”信号） */
 .live-ring {
