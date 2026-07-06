@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI-Insight · Chrome Redesigns v2 — 3 Bold Sets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&family=Fraunces:ital,opsz,wght,SOFT,WONK@1,144,300,100,0&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   公共页面骨架 + Set 切换器（不属于任何一套设计）
+   ═══════════════════════════════════════════════════════════════════ */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  background:#0a0b0f;color:#fff;-webkit-font-smoothing:antialiased;
+}
+.page{min-height:100vh}
+
+/* 顶部切换条 */
+.switcher{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1000;
+  display:flex;gap:4px;padding:5px;border-radius:999px;
+  background:rgba(20,22,28,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 12px 40px rgba(0,0,0,.45);
+}
+.sw-btn{
+  border:none;background:transparent;color:#9aa0ad;cursor:pointer;
+  padding:9px 18px;border-radius:999px;font-family:"JetBrains Mono",monospace;
+  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  transition:all .25s cubic-bezier(.2,.7,.2,1);white-space:nowrap;
+}
+.sw-btn:hover{color:#eceef3}
+.sw-btn.on{background:#eceef3;color:#0a0b0f}
+.sw-sep{width:1px;background:rgba(255,255,255,.08);margin:6px 2px}
+
+/* set 容器 */
+.set{display:none;min-height:100vh}
+.set.on{display:block}
+
+/* 每个 set 内部：header 在顶部全宽，下面是 sidebar+content 两栏 */
+.screen{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.stage{flex:1;display:grid;grid-template-columns:auto 1fr;overflow:hidden}
+.content-ph{
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.18);font-family:"JetBrains Mono",monospace;font-size:12px;
+  letter-spacing:.2em;text-transform:uppercase;
+  background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.02),transparent 60%);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SET 1 · MISSION CONTROL
+   战术深色 · 遥测(1)+面包屑(3) / 索引卡
+   字体：Inter + JetBrains Mono · 配色：#0A0E14 bg / #4DD8FF cyan / #FFB547 amber
+   ═══════════════════════════════════════════════════════════════════ */
+.mc{--bg:#0A0E14;--bg2:#0E141C;--panel:#121925;--panel2:#161E2C;--line:#1E2A3C;--line2:#2A3A52;
+  --txt:#E6EDF5;--txt2:#A8B5C8;--txt3:#6B7A92;--txt4:#475670;
+  --cyan:#4DD8FF;--cyan-d:#1FA8D8;--cyan-soft:rgba(77,216,255,.12);--cyan-line:rgba(77,216,255,.35);
+  --amber:#FFB547;--amber-soft:rgba(255,181,71,.12);
+  --green:#3FE08A;--green-soft:rgba(63,224,138,.12);
+  --rose:#FF6B7A;--rose-soft:rgba(255,107,122,.12);
+  --mono:"JetBrains Mono",monospace;--sans:"Inter","PingFang SC",sans-serif;
+  background:var(--bg);color:var(--txt);font-family:var(--sans);}
+.mc *{box-sizing:border-box}
+
+/* 背景：极淡网格 + 角落 glow（战术屏感） */
+.mc .screen{position:relative}
+.mc .screen::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(800px 500px at 85% -10%,rgba(77,216,255,.06),transparent 60%),
+    radial-gradient(600px 400px at 0% 100%,rgba(255,181,71,.04),transparent 60%),
+    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:auto,auto,48px 48px,48px 48px;
+}
+
+/* ── MC Header ── */
+.mc .hdr{
+  position:relative;z-index:2;height:64px;display:grid;
+  grid-template-columns:auto 1fr auto;align-items:center;gap:0;
+  background:rgba(14,20,28,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+}
+.mc .hdr::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan-line) 20%,var(--cyan-line) 80%,transparent);opacity:.5}
+.mc .brand{display:flex;align-items:center;gap:11px;padding:0 18px;height:100%;border-right:1px solid var(--line)}
+.mc .mark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan-d));color:#06121a;
+  font-family:var(--mono);font-weight:700;font-size:15px;
+  box-shadow:0 0 18px rgba(77,216,255,.4),inset 0 1px 0 rgba(255,255,255,.3)}
+.mc .bn{font-size:15px;font-weight:700;letter-spacing:-.015em;line-height:1}
+.mc .bn b{color:var(--cyan);font-weight:700}
+.mc .bs{font-family:var(--mono);font-size:9px;color:var(--txt4);font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;margin-top:3px;display:flex;align-items:center;gap:5px}
+.mc .bs::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* 遥测模块（核心签名 #1） */
+.mc .tel{justify-self:center;display:inline-flex;height:42px;border:1px solid var(--line);
+  border-radius:10px;background:var(--panel);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.mc .cell{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 16px;min-width:96px;border-right:1px solid var(--line);position:relative}
+.mc .cell:last-child{border-right:none}
+.mc .cell.live{background:linear-gradient(180deg,rgba(63,224,138,.08),transparent)}
+.mc .ck{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--txt4)}
+.mc .cv{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--txt);line-height:1;font-feature-settings:"zero"}
+.mc .cv.run{color:var(--green)}
+.mc .cv.amber{color:var(--amber)}
+.mc .cell.live .ck{color:var(--green)}
+.mc .cell.live::before{content:"";position:absolute;left:8px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+@keyframes mc-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.mc .cell.live::before{animation:mc-pulse 1.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.mc .cell.live::before{animation:none}}
+
+/* 面包屑（核心签名 #3） */
+.mc .crumb-wrap{display:flex;align-items:center;gap:0;padding:0 16px 0 18px;height:100%}
+.mc .crumb{display:flex;align-items:center;gap:0;font-size:13px}
+.mc .cr{padding:5px 9px;border-radius:6px;color:var(--txt3);cursor:pointer;transition:.18s;font-family:var(--sans)}
+.mc .cr:hover{background:var(--panel);color:var(--txt2)}
+.mc .cr.cur{color:var(--txt);font-weight:600}
+.mc .cr.cur::after{content:"";display:block;height:2px;background:var(--cyan);margin-top:3px;border-radius:1px;box-shadow:0 0 6px var(--cyan)}
+.mc .csep{color:var(--txt4);font-family:var(--mono);font-size:11px;padding:0 1px}
+
+/* 右侧操作 */
+.mc .ops{display:flex;align-items:center;gap:10px;padding:0 18px;height:100%;border-left:1px solid var(--line)}
+.mc .abort{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:7px;
+  border:1px solid rgba(255,107,122,.35);background:var(--rose-soft);color:var(--rose);
+  font-size:12px;font-weight:600;cursor:pointer;transition:.18s;font-family:var(--sans)}
+.mc .abort:hover{background:rgba(255,107,122,.2);border-color:var(--rose)}
+.mc .abort .d{width:7px;height:7px;border-radius:50%;background:var(--rose);box-shadow:0 0 6px var(--rose)}
+.mc .tools{display:inline-flex;gap:1px;padding:3px;border-radius:8px;background:var(--panel);border:1px solid var(--line)}
+.mc .tb{width:28px;height:28px;border:none;background:transparent;border-radius:5px;display:grid;place-items:center;color:var(--txt2);cursor:pointer;transition:.18s;font-size:13px}
+.mc .tb:hover{background:var(--panel2);color:var(--cyan)}
+
+/* ── MC Sidebar (Index Card) ── */
+.mc .sb{width:320px;background:rgba(14,20,28,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
+.mc .sb-tool{padding:14px 14px;border-bottom:1px solid var(--line)}
+.mc .sb-new{width:100%;height:40px;border:none;border-radius:9px;cursor:pointer;transition:.2s;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan-d));color:#06121a;
+  font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.01em;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 0 20px rgba(77,216,255,.3),inset 0 1px 0 rgba(255,255,255,.3)}
+.mc .sb-new:hover{box-shadow:0 0 28px rgba(77,216,255,.5),inset 0 1px 0 rgba(255,255,255,.3);transform:translateY(-1px)}
+@media(prefers-reduced-motion:reduce){.mc .sb-new:hover{transform:none}}
+.mc .sb-new .kbd{margin-left:auto;font-family:var(--mono);font-size:10px;background:rgba(6,18,26,.3);border-radius:4px;padding:2px 6px;font-weight:700}
+.mc .sb-search{margin-top:9px;display:flex;align-items:center;gap:8px;padding:0 11px;height:34px;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--txt3);transition:.18s}
+.mc .sb-search:focus-within{border-color:var(--cyan-line);box-shadow:0 0 0 3px var(--cyan-soft)}
+.mc .sb-search input{flex:1;min-width:0;border:none;background:none;font-family:var(--sans);font-size:12.5px;color:var(--txt);outline:none}
+.mc .sb-search input::placeholder{color:var(--txt3)}
+
+.mc .sb-list{flex:1;overflow-y:auto;padding:12px}
+.mc .sb-list::-webkit-scrollbar{width:8px}.mc .sb-list::-webkit-scrollbar-track{background:transparent}
+.mc .sb-list::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+.mc .bk{display:flex;align-items:center;gap:10px;padding:8px 4px 10px}
+.mc .bk .l{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--txt4)}
+.mc .bk .ln{flex:1;height:1px;background:var(--line)}
+.mc .bk .ct{font-family:var(--mono);font-size:10px;color:var(--txt3);font-feature-settings:"zero"}
+
+/* 索引卡（核心签名） */
+.mc .card{display:block;width:100%;text-align:left;margin-bottom:8px;cursor:pointer;transition:.2s;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;position:relative}
+.mc .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:.2s}
+.mc .card:hover{border-color:var(--line2);background:var(--panel2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+@media(prefers-reduced-motion:reduce){.mc .card:hover{transform:none}}
+.mc .card.active{border-color:var(--cyan-line);background:linear-gradient(180deg,rgba(77,216,255,.07),rgba(77,216,255,.02))}
+.mc .card.active::before{background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.mc .card-hd{padding:11px 13px 7px}
+.mc .card-t{font-size:13.5px;font-weight:600;color:var(--txt);line-height:1.35;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mc .card.active .card-t{color:var(--cyan)}
+.mc .card-ft{display:flex;align-items:center;gap:0;padding:7px 13px 9px;border-top:1px dashed var(--line)}
+.mc .card.active .card-ft{border-top-color:var(--cyan-line)}
+.mc .meta{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--txt3);letter-spacing:.02em;padding-right:10px;border-right:1px solid var(--line);margin-right:10px}
+.mc .meta:last-of-type{border-right:none}
+.mc .meta .ic{font-size:11px}
+.mc .meta.acc{color:var(--cyan)}
+.mc .card-time{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt3)}
+
+.mc .sb-bot{border-top:1px solid var(--line);padding:8px;display:flex;gap:6px}
+.mc .nav{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:8px;
+  font-size:12.5px;color:var(--txt2);cursor:pointer;transition:.18s;border:1px solid transparent;background:transparent;font-family:var(--sans)}
+.mc .nav:hover{background:var(--panel);color:var(--cyan);border-color:var(--line)}
+.mc .nav .ct{font-family:var(--mono);font-size:10px;color:var(--txt4)}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   SET 2 · AURORA GLASS
+   极光流动背景 + 玻璃拟态浮卡 · 柔和高端 · 梦幻
+   字体：Manrope + Space Grotesk · 配色：深紫底 + 紫/青/粉极光
+   ═══════════════════════════════════════════════════════════════════ */
+.au{--bg:#0B0814;--glass:rgba(255,255,255,.06);--glass-2:rgba(255,255,255,.09);--glass-brd:rgba(255,255,255,.12);
+  --glass-brd-2:rgba(255,255,255,.2);--txt:#F4F1FF;--txt2:#C8C2E0;--txt3:#9089AD;--txt4:#635B7E;
+  --violet:#A78BFA;--violet-d:#7C5CFF;--pink:#F472B6;--cyan:#22D3EE;--mint:#34D399;
+  --accent:#A78BFA;--accent-glow:rgba(167,139,250,.5);
+  --mono:"JetBrains Mono",monospace;--sans:"Manrope","PingFang SC",sans-serif;--disp:"Space Grotesk",sans-serif;
+  background:var(--bg);color:var(--txt);font-family:var(--sans);position:relative;overflow:hidden}
+.au *{box-sizing:border-box}
+
+/* 极光背景（核心签名） */
+.au .screen{position:relative}
+.au .aurora{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.au .aurora::before,.au .aurora::after{content:"";position:absolute;border-radius:50%;filter:blur(80px);opacity:.55}
+.au .aurora::before{
+  width:70vw;height:70vw;top:-25vw;right:-15vw;
+  background:radial-gradient(circle,#7C5CFF 0%,#A78BFA 35%,transparent 65%);
+  animation:au-float 18s ease-in-out infinite;
+}
+.au .aurora::after{
+  width:55vw;height:55vw;bottom:-20vw;left:-10vw;
+  background:radial-gradient(circle,#22D3EE 0%,#34D399 40%,transparent 70%);
+  animation:au-float 22s ease-in-out infinite reverse;
+}
+.au .aurora-mid{position:absolute;width:45vw;height:45vw;top:30%;left:35%;border-radius:50%;filter:blur(90px);opacity:.35;
+  background:radial-gradient(circle,#F472B6 0%,transparent 65%);animation:au-float 26s ease-in-out infinite}
+@keyframes au-float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(6vw,-4vw) scale(1.1)}66%{transform:translate(-4vw,5vw) scale(.95)}}
+@media(prefers-reduced-motion:reduce){.au .aurora::before,.au .aurora::after,.au .aurora-mid{animation:none}}
+
+/* 噪点叠加 */
+.au .screen::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E")}
+
+/* ── AU Header (glass floating bar) ── */
+.au .hdr{position:relative;z-index:5;height:68px;margin:14px 16px 0;border-radius:18px;
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:0;
+  background:rgba(20,16,32,.55);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-brd);box-shadow:0 12px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.1)}
+.au .brand{display:flex;align-items:center;gap:12px;padding:0 20px;height:100%}
+.au .mark{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#A78BFA,#F472B6);color:#fff;
+  font-family:var(--disp);font-weight:700;font-size:16px;
+  box-shadow:0 6px 20px rgba(167,139,250,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+.au .bn{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.au .bn b{background:linear-gradient(135deg,#C4B5FD,#F472B6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.au .bs{font-size:10.5px;color:var(--txt3);margin-top:3px;letter-spacing:.04em}
+
+/* 遥测（玻璃内嵌胶囊） */
+.au .tel{justify-self:center;display:inline-flex;align-items:center;gap:0;height:38px;padding:0 4px;
+  border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--glass-brd)}
+.au .cell{display:inline-flex;align-items:center;gap:7px;padding:0 14px;height:30px;font-family:var(--mono);font-size:11.5px;color:var(--txt2);font-weight:500;position:relative}
+.au .cell+.cell{border-left:1px solid var(--glass-brd)}
+.au .cell .k{font-size:9.5px;color:var(--txt4);letter-spacing:.1em;text-transform:uppercase}
+.au .cell .v{color:var(--txt);font-weight:600;font-feature-settings:"zero"}
+.au .cell.live .v{color:#34D399}
+.au .cell .dt{width:7px;height:7px;border-radius:50%;background:#34D399;box-shadow:0 0 8px #34D399;animation:mc-pulse 1.6s infinite}
+@media(prefers-reduced-motion:reduce){.au .cell .dt{animation:none}}
+
+/* 面包屑 */
+.au .crumb-wrap{padding:0 18px;height:100%;display:flex;align-items:center;justify-content:center}
+.au .crumb{display:flex;align-items:center;gap:2px;font-size:13px}
+.au .cr{padding:6px 10px;border-radius:8px;color:var(--txt3);cursor:pointer;transition:.2s;font-family:var(--sans)}
+.au .cr:hover{background:var(--glass);color:var(--txt2)}
+.au .cr.cur{color:var(--txt);font-weight:600;background:var(--glass-2)}
+.au .csep{color:var(--txt4);font-size:11px;padding:0 2px}
+
+.au .ops{display:flex;align-items:center;gap:10px;padding:0 18px;height:100%}
+.au .abort{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 14px;border-radius:999px;cursor:pointer;transition:.2s;
+  background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.3);color:#F9A8D4;font-size:12.5px;font-weight:600;font-family:var(--sans)}
+.au .abort:hover{background:rgba(244,114,182,.2);border-color:#F472B6;color:#F472B6}
+.au .tools{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--glass-brd)}
+.au .tb{width:30px;height:30px;border:none;background:transparent;border-radius:999px;display:grid;place-items:center;color:var(--txt2);cursor:pointer;transition:.2s;font-size:13px}
+.au .tb:hover{background:var(--glass-2);color:#C4B5FD}
+
+/* ── AU Sidebar (glass floating panel) ── */
+.au .stage{padding:14px 0 14px 16px;gap:14px}
+.au .sb{width:330px;border-radius:20px;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2;
+  background:rgba(20,16,32,.45);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-brd);box-shadow:0 16px 48px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08)}
+.au .sb-tool{padding:16px;border-bottom:1px solid var(--glass-brd)}
+.au .sb-new{width:100%;height:42px;border:none;border-radius:12px;cursor:pointer;transition:.25s;
+  background:linear-gradient(135deg,#A78BFA,#F472B6);color:#fff;
+  font-family:var(--sans);font-size:13.5px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;gap:9px;letter-spacing:.01em;
+  box-shadow:0 8px 24px rgba(167,139,250,.4),inset 0 1px 0 rgba(255,255,255,.3)}
+.au .sb-new:hover{box-shadow:0 12px 32px rgba(167,139,250,.55),inset 0 1px 0 rgba(255,255,255,.3);transform:translateY(-1px)}
+@media(prefers-reduced-motion:reduce){.au .sb-new:hover{transform:none}}
+.au .sb-search{margin-top:10px;display:flex;align-items:center;gap:9px;padding:0 13px;height:36px;
+  background:rgba(255,255,255,.04);border:1px solid var(--glass-brd);border-radius:12px;color:var(--txt3);transition:.2s}
+.au .sb-search:focus-within{border-color:rgba(167,139,250,.4);box-shadow:0 0 0 3px rgba(167,139,250,.15)}
+.au .sb-search input{flex:1;min-width:0;border:none;background:none;font-family:var(--sans);font-size:13px;color:var(--txt);outline:none}
+.au .sb-search input::placeholder{color:var(--txt3)}
+
+.au .sb-list{flex:1;overflow-y:auto;padding:12px}
+.au .sb-list::-webkit-scrollbar{width:8px}.au .sb-list::-webkit-scrollbar-track{background:transparent}
+.au .sb-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+.au .bk{display:flex;align-items:center;gap:10px;padding:10px 6px 10px}
+.au .bk .l{font-family:var(--disp);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--txt3);text-transform:uppercase}
+.au .bk .ln{flex:1;height:1px;background:var(--glass-brd)}
+.au .bk .ct{font-family:var(--mono);font-size:10px;color:var(--txt3)}
+
+/* 玻璃索引卡 */
+.au .card{display:block;width:100%;text-align:left;margin-bottom:10px;cursor:pointer;transition:.25s;
+  border:1px solid var(--glass-brd);border-radius:14px;background:rgba(255,255,255,.04);overflow:hidden;position:relative;backdrop-filter:blur(8px)}
+.au .card:hover{background:rgba(255,255,255,.07);border-color:var(--glass-brd-2);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.3)}
+@media(prefers-reduced-motion:reduce){.au .card:hover{transform:none}}
+.au .card.active{background:linear-gradient(135deg,rgba(167,139,250,.18),rgba(244,114,182,.1));border-color:rgba(167,139,250,.4);box-shadow:0 8px 28px rgba(167,139,250,.25)}
+.au .card.active::before{content:"";position:absolute;inset:0;border-radius:14px;padding:1px;
+  background:linear-gradient(135deg,rgba(167,139,250,.6),rgba(244,114,182,.3));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.au .card-hd{padding:13px 15px 8px}
+.au .card-t{font-family:var(--disp);font-size:14px;font-weight:600;color:var(--txt);line-height:1.35;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.au .card.active .card-t{background:linear-gradient(135deg,#E9D5FF,#FBCFE8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.au .card-ft{display:flex;align-items:center;gap:0;padding:8px 15px 11px;border-top:1px solid rgba(255,255,255,.06)}
+.au .card.active .card-ft{border-top-color:rgba(167,139,250,.2)}
+.au .meta{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:500;color:var(--txt3);padding-right:11px;border-right:1px solid rgba(255,255,255,.08);margin-right:11px}
+.au .meta:last-of-type{border-right:none}
+.au .meta .ic{font-size:11px}
+.au .meta.acc{color:#C4B5FD}
+.au .card-time{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt3)}
+
+.au .sb-bot{border-top:1px solid var(--glass-brd);padding:10px;display:flex;gap:8px}
+.au .nav{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;
+  font-size:12.5px;color:var(--txt2);cursor:pointer;transition:.2s;border:1px solid transparent;background:transparent;font-family:var(--sans)}
+.au .nav:hover{background:rgba(255,255,255,.06);color:#C4B5FD;border-color:var(--glass-brd)}
+.au .nav .ct{font-family:var(--mono);font-size:10px;color:var(--txt4)}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   SET 3 · SPECTRA  (精确复刻 prototype/ai-for-insight.html V2)
+   #08090C bg + #D4FF3F lime · 三层背景 · blur(18px) 玻璃 · 霓虹发光
+   字体：Manrope(body) + Syne(display) + Fraunces italic(强调) + JetBrains Mono(数据)
+   ═══════════════════════════════════════════════════════════════════ */
+.sp{--bg:#08090C;--bg-2:#0E1014;--panel:#111319;--line:#1F232C;--line-2:#2A2F3A;
+  --txt:#ECEEF3;--txt-dim:#9AA0AD;--txt-faint:#5A6070;
+  --lime:#D4FF3F;--lime-d:#A8CC2A;--amber:#FFB347;--red:#FF5C5C;
+  --mono:"JetBrains Mono",monospace;--sans:"Manrope",system-ui,sans-serif;--disp:"Syne",sans-serif;
+  background:var(--bg);color:var(--txt);font-family:var(--sans);position:relative;overflow:hidden}
+.sp *{box-sizing:border-box}
+
+/* 三层固定背景（mesh + grid + noise）—— Spectra 核心签名 */
+.sp .screen{position:relative}
+.sp .mesh,.sp .grid-bg,.sp .noise{position:absolute;inset:0;pointer-events:none;z-index:0}
+.sp .mesh{
+  background:
+    radial-gradient(900px 600px at 80% 0%,rgba(212,255,63,.10),transparent 60%),
+    radial-gradient(700px 500px at 10% 30%,rgba(60,90,200,.10),transparent 60%),
+    radial-gradient(600px 600px at 50% 100%,rgba(255,179,71,.06),transparent 60%);
+}
+.sp .grid-bg{
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 90%);
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 90%);
+}
+.sp .noise{opacity:.4;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ── SP Header (glass blur(18px) + lime glow) ── */
+.sp .hdr{position:relative;z-index:5;height:64px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:0;
+  background:rgba(8,9,12,.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line)}
+.sp .brand{display:flex;align-items:center;gap:12px;padding:0 20px;height:100%}
+.sp .mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--lime),var(--lime-d));color:#0A0A0B;
+  font-size:14px;font-weight:700;box-shadow:0 0 24px rgba(212,255,63,.35)}
+.sp .bn{font-family:var(--disp);font-size:17px;font-weight:700;letter-spacing:-.025em;line-height:1}
+.sp .bn b{color:var(--lime)}
+.sp .bn .tag{font-family:var(--mono);font-size:9px;color:var(--txt-faint);font-weight:600;letter-spacing:.16em;margin-left:8px;text-transform:uppercase}
+
+/* 遥测（mono 数据层） */
+.sp .tel{justify-self:center;display:inline-flex;align-items:stretch;height:40px;border:1px solid var(--line);border-radius:10px;background:rgba(17,19,25,.7);overflow:hidden;backdrop-filter:blur(8px)}
+.sp .cell{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 15px;min-width:90px;border-right:1px solid var(--line);position:relative}
+.sp .cell:last-child{border-right:none}
+.sp .cell.live{background:linear-gradient(180deg,rgba(212,255,63,.06),transparent)}
+.sp .ck{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-faint)}
+.sp .cv{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--txt);line-height:1;font-feature-settings:"zero"}
+.sp .cv.lime{color:var(--lime)}
+.sp .cv.amber{color:var(--amber)}
+.sp .cell.live .ck{color:var(--lime)}
+.sp .cell.live::before{content:"";position:absolute;left:7px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime);animation:mc-pulse 1.8s infinite}
+@media(prefers-reduced-motion:reduce){.sp .cell.live::before{animation:none}}
+
+/* 面包屑（带 Fraunces 斜体当前项） */
+.sp .crumb-wrap{padding:0 16px;height:100%;display:flex;align-items:center}
+.sp .crumb{display:flex;align-items:center;gap:0;font-size:13px}
+.sp .cr{padding:5px 9px;border-radius:6px;color:var(--txt-faint);cursor:pointer;transition:.2s;font-family:var(--sans);position:relative}
+.sp .cr:hover{color:var(--txt-dim)}
+.sp .cr.cur{color:var(--lime)}
+.sp .cr.cur .ct-txt{font-family:"Fraunces",serif;font-style:italic;font-weight:300;font-variation-settings:"opsz" 144,"SOFT" 100;font-size:14px}
+.sp .cr.cur::after{content:"";position:absolute;left:9px;right:9px;bottom:1px;height:1px;background:var(--lime);box-shadow:0 0 6px var(--lime)}
+.sp .csep{color:var(--txt-faint);font-family:var(--mono);font-size:11px;padding:0 1px}
+
+.sp .ops{display:flex;align-items:center;gap:10px;padding:0 20px;height:100%}
+.sp .abort{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:8px;cursor:pointer;transition:.2s;
+  background:rgba(255,92,92,.08);border:1px solid rgba(255,92,92,.3);color:var(--red);
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em}
+.sp .abort:hover{background:rgba(255,92,92,.15);border-color:var(--red);box-shadow:0 0 16px rgba(255,92,92,.3)}
+.sp .tools{display:inline-flex;gap:2px;padding:3px;border-radius:8px;background:rgba(17,19,25,.6);border:1px solid var(--line)}
+.sp .tb{width:28px;height:28px;border:none;background:transparent;border-radius:5px;display:grid;place-items:center;color:var(--txt-dim);cursor:pointer;transition:.2s;font-size:13px}
+.sp .tb:hover{background:var(--line);color:var(--lime)}
+
+/* ── SP Sidebar ── */
+.sp .sb{width:330px;background:rgba(14,16,20,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
+.sp .sb-tool{padding:16px;border-bottom:1px solid var(--line)}
+.sp .sb-new{width:100%;height:40px;border:none;border-radius:10px;cursor:pointer;transition:.25s;
+  background:linear-gradient(135deg,rgba(212,255,63,.12),rgba(212,255,63,.02));color:var(--lime);
+  border:1px solid rgba(212,255,63,.25);
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden}
+.sp .sb-new::before{content:"";position:absolute;inset:0;background:radial-gradient(400px circle at 50% 0%,rgba(212,255,63,.15),transparent 60%);opacity:0;transition:.3s}
+.sp .sb-new:hover{border-color:var(--lime);box-shadow:0 0 24px rgba(212,255,63,.3);transform:translateY(-1px)}
+.sp .sb-new:hover::before{opacity:1}
+@media(prefers-reduced-motion:reduce){.sp .sb-new:hover{transform:none}}
+.sp .sb-new .kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+.sp .sb-search{margin-top:10px;display:flex;align-items:center;gap:8px;padding:0 12px;height:36px;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--txt-faint);transition:.2s}
+.sp .sb-search:focus-within{border-color:rgba(212,255,63,.3);box-shadow:0 0 0 3px rgba(212,255,63,.08)}
+.sp .sb-search input{flex:1;min-width:0;border:none;background:none;font-family:var(--sans);font-size:13px;color:var(--txt);outline:none}
+.sp .sb-search input::placeholder{color:var(--txt-faint)}
+
+.sp .sb-list{flex:1;overflow-y:auto;padding:12px}
+.sp .sb-list::-webkit-scrollbar{width:8px}.sp .sb-list::-webkit-scrollbar-track{background:transparent}
+.sp .sb-list::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:4px}
+.sp .bk{display:flex;align-items:center;gap:10px;padding:10px 4px 10px}
+.sp .bk .l{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-faint)}
+.sp .bk .ln{flex:1;height:1px;background:var(--line)}
+.sp .bk .ct{font-family:var(--mono);font-size:10px;color:var(--txt-faint);font-feature-settings:"zero"}
+
+/* 鼠标跟随光晕卡（Spectra 核心签名） */
+.sp .card{display:block;width:100%;text-align:left;margin-bottom:8px;cursor:pointer;transition:.25s;
+  border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(160deg,var(--panel),var(--bg-2));overflow:hidden;position:relative}
+.sp .card::before{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;opacity:0;transition:.3s;
+  background:radial-gradient(400px circle at var(--mx,50%) var(--my,0%),rgba(212,255,63,.08),transparent 50%)}
+.sp .card:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.sp .card:hover::before{opacity:1}
+@media(prefers-reduced-motion:reduce){.sp .card:hover{transform:none}}
+.sp .card.active{border-color:rgba(212,255,63,.3);background:linear-gradient(160deg,rgba(212,255,63,.05),var(--bg-2));box-shadow:0 0 24px rgba(212,255,63,.08)}
+.sp .card.active::before{opacity:1}
+.sp .card-hd{padding:12px 14px 7px;position:relative}
+.sp .card-t{font-family:var(--disp);font-size:14px;font-weight:600;color:var(--txt);line-height:1.35;letter-spacing:-.015em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sp .card.active .card-t{color:var(--lime)}
+.sp .card.active .card-t em{font-family:"Fraunces",serif;font-style:italic;font-weight:300;font-variation-settings:"opsz" 144,"SOFT" 100;color:var(--lime)}
+.sp .card-ft{display:flex;align-items:center;gap:0;padding:7px 14px 10px;border-top:1px solid var(--line)}
+.sp .card.active .card-ft{border-top-color:rgba(212,255,63,.15)}
+.sp .meta{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.04em;color:var(--txt-dim);padding-right:11px;border-right:1px solid var(--line);margin-right:11px}
+.sp .meta:last-of-type{border-right:none}
+.sp .meta .ic{font-size:11px}
+.sp .meta.acc{color:var(--lime)}
+.sp .card-time{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-faint);font-feature-settings:"zero"}
+
+.sp .sb-bot{border-top:1px solid var(--line);padding:10px;display:flex;gap:6px}
+.sp .nav{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--txt-dim);cursor:pointer;transition:.2s;border:1px solid transparent;background:transparent}
+.sp .nav:hover{background:var(--panel);color:var(--lime);border-color:var(--line)}
+.sp .nav .ct{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+</style>
+</head>
+<body>
+
+<!-- ═══ 切换器 ═══ -->
+<div class="switcher" role="tablist">
+  <button class="sw-btn on" data-set="mc" onclick="showSet('mc',this)">01 · Mission Control</button>
+  <div class="sw-sep"></div>
+  <button class="sw-btn" data-set="au" onclick="showSet('au',this)">02 · Aurora Glass</button>
+  <div class="sw-sep"></div>
+  <button class="sw-btn" data-set="sp" onclick="showSet('sp',this)">03 · Spectra</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- SET 1 · MISSION CONTROL                                         -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="set mc on" id="set-mc">
+  <div class="screen">
+    <!-- Header：遥测(1) + 面包屑(3) -->
+    <header class="hdr">
+      <div class="brand">
+        <div class="mark">A</div>
+        <div>
+          <div class="bn">AI-<b>Insight</b></div>
+          <div class="bs">Online · v0.4</div>
+        </div>
+      </div>
+
+      <!-- 遥测模块（核心 #1） -->
+      <div class="tel" aria-label="运行遥测">
+        <div class="cell live">
+          <span class="ck">Status</span>
+          <span class="cv run">RUNNING</span>
+        </div>
+        <div class="cell">
+          <span class="ck">Elapsed</span>
+          <span class="cv">00:42</span>
+        </div>
+        <div class="cell">
+          <span class="ck">Sources</span>
+          <span class="cv">14 / 18</span>
+        </div>
+        <div class="cell">
+          <span class="ck">Tokens</span>
+          <span class="cv">8.2k</span>
+        </div>
+      </div>
+
+      <!-- 面包屑（核心 #3）放在右侧 ops 前 -->
+      <div class="crumb-wrap">
+        <nav class="crumb">
+          <span class="cr">Workbench</span>
+          <span class="csep">›</span>
+          <span class="cr">会话</span>
+          <span class="csep">›</span>
+          <span class="cr cur">Q3 SaaS 续约率驱动因子</span>
+        </nav>
+        <div class="ops" style="margin-left:16px;padding:0 0 0 16px;border-left:1px solid var(--line);height:100%;display:flex;align-items:center;gap:10px">
+          <button class="abort"><span class="d"></span>ABORT <span style="font-family:var(--mono);opacity:.7">ESC</span></button>
+          <div class="tools">
+            <button class="tb" title="主题">◐</button>
+            <button class="tb" title="导出">⤓</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <!-- Sidebar · 索引卡（无数据源区分，改用 cites/msg/duration） -->
+      <aside class="sb">
+        <div class="sb-tool">
+          <button class="sb-new">＋ 新对话<span class="kbd">⌘N</span></button>
+          <label class="sb-search">
+            <span style="font-size:13px">⌕</span>
+            <input type="text" placeholder="搜索会话" />
+          </label>
+        </div>
+
+        <div class="sb-list">
+          <div class="bk"><span class="l">Today</span><span class="ln"></span><span class="ct">02</span></div>
+
+          <button class="card active">
+            <div class="card-hd"><div class="card-t">Q3 SaaS 续约率驱动因子分析</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>8</span>
+              <span class="meta"><span class="ic">◷</span>4m</span>
+              <span class="meta"><span class="ic">⤵</span>14 src</span>
+              <span class="card-time">12 min</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">欧洲储能政策月度追踪</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>12</span>
+              <span class="meta"><span class="ic">◷</span>7m</span>
+              <span class="meta"><span class="ic">⤵</span>22 src</span>
+              <span class="card-time">2 hr</span>
+            </div>
+          </button>
+
+          <div class="bk"><span class="l">This Week</span><span class="ln"></span><span class="ct">03</span></div>
+
+          <button class="card">
+            <div class="card-hd"><div class="card-t">GLP-1 减肥药竞品管线对比</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>23</span>
+              <span class="meta"><span class="ic">◷</span>11m</span>
+              <span class="meta"><span class="ic">⤵</span>31 src</span>
+              <span class="card-time">2 d</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">台积电资本开支指引解读</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>6</span>
+              <span class="meta"><span class="ic">◷</span>3m</span>
+              <span class="meta"><span class="ic">⤵</span>9 src</span>
+              <span class="card-time">3 d</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">日央行政策利率路径推演</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>9</span>
+              <span class="meta"><span class="ic">◷</span>5m</span>
+              <span class="meta"><span class="ic">⤵</span>16 src</span>
+              <span class="card-time">5 d</span>
+            </div>
+          </button>
+
+          <div class="bk"><span class="l">Earlier</span><span class="ln"></span><span class="ct">02</span></div>
+
+          <button class="card">
+            <div class="card-hd"><div class="card-t">半导体设备国产化进度</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>17</span>
+              <span class="meta"><span class="ic">◷</span>8m</span>
+              <span class="meta"><span class="ic">⤵</span>24 src</span>
+              <span class="card-time">06.28</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">储能逆变器出货排名</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>11</span>
+              <span class="meta"><span class="ic">◷</span>6m</span>
+              <span class="meta"><span class="ic">⤵</span>18 src</span>
+              <span class="card-time">06.22</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="sb-bot">
+          <button class="nav"><span>Books</span> 报告<span class="ct">12</span></button>
+          <button class="nav"><span>◷</span> 定时<span class="ct">04</span></button>
+        </div>
+      </aside>
+
+      <div class="content-ph">Mission Control · Content Area</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- SET 2 · AURORA GLASS                                           -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="set au" id="set-au">
+  <div class="screen">
+    <div class="aurora"><div class="aurora-mid"></div></div>
+
+    <!-- Header：玻璃浮条 -->
+    <header class="hdr">
+      <div class="brand">
+        <div class="mark">◈</div>
+        <div>
+          <div class="bn">AI-<b>Insight</b></div>
+          <div class="bs">Research Workbench</div>
+        </div>
+      </div>
+
+      <!-- 遥测胶囊 -->
+      <div class="tel" aria-label="运行遥测">
+        <div class="cell live"><span class="dt"></span><span class="v">Running</span></div>
+        <div class="cell"><span class="k">T+</span><span class="v">00:42</span></div>
+        <div class="cell"><span class="k">Sources</span><span class="v">14</span></div>
+        <div class="cell"><span class="k">Tokens</span><span class="v">8.2k</span></div>
+      </div>
+
+      <!-- 面包屑 -->
+      <div class="crumb-wrap">
+        <nav class="crumb">
+          <span class="cr">Workbench</span>
+          <span class="csep">/</span>
+          <span class="cr">会话</span>
+          <span class="csep">/</span>
+          <span class="cr cur">Q3 SaaS 续约率</span>
+        </nav>
+        <div class="ops" style="margin-left:16px;padding:0 0 0 16px;border-left:1px solid var(--glass-brd);height:100%;display:flex;align-items:center;gap:10px">
+          <button class="abort">⏹ 中止</button>
+          <div class="tools">
+            <button class="tb" title="主题">◐</button>
+            <button class="tb" title="导出">⤓</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <!-- Sidebar · 玻璃索引卡 -->
+      <aside class="sb">
+        <div class="sb-tool">
+          <button class="sb-new">✦ 新对话</button>
+          <label class="sb-search">
+            <span style="font-size:13px">⌕</span>
+            <input type="text" placeholder="搜索会话" />
+          </label>
+        </div>
+
+        <div class="sb-list">
+          <div class="bk"><span class="l">Today</span><span class="ln"></span><span class="ct">02</span></div>
+
+          <button class="card active">
+            <div class="card-hd"><div class="card-t">Q3 SaaS 续约率驱动因子分析</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>8 cites</span>
+              <span class="meta"><span class="ic">◷</span>4m</span>
+              <span class="card-time">12 min</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">欧洲储能政策月度追踪</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>12 cites</span>
+              <span class="meta"><span class="ic">◷</span>7m</span>
+              <span class="card-time">2 hr</span>
+            </div>
+          </button>
+
+          <div class="bk"><span class="l">This Week</span><span class="ln"></span><span class="ct">03</span></div>
+
+          <button class="card">
+            <div class="card-hd"><div class="card-t">GLP-1 减肥药竞品管线对比</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>23 cites</span>
+              <span class="meta"><span class="ic">◷</span>11m</span>
+              <span class="card-time">2 d</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">台积电资本开支指引解读</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>6 cites</span>
+              <span class="meta"><span class="ic">◷</span>3m</span>
+              <span class="card-time">3 d</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">日央行政策利率路径推演</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>9 cites</span>
+              <span class="meta"><span class="ic">◷</span>5m</span>
+              <span class="card-time">5 d</span>
+            </div>
+          </button>
+
+          <div class="bk"><span class="l">Earlier</span><span class="ln"></span><span class="ct">02</span></div>
+
+          <button class="card">
+            <div class="card-hd"><div class="card-t">半导体设备国产化进度</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>17 cites</span>
+              <span class="meta"><span class="ic">◷</span>8m</span>
+              <span class="card-time">06.28</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">储能逆变器出货排名</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>11 cites</span>
+              <span class="meta"><span class="ic">◷</span>6m</span>
+              <span class="card-time">06.22</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="sb-bot">
+          <button class="nav"><span>Books</span> 报告<span class="ct">12</span></button>
+          <button class="nav"><span>◷</span> 定时<span class="ct">04</span></button>
+        </div>
+      </aside>
+
+      <div class="content-ph">Aurora Glass · Content Area</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- SET 3 · SPECTRA                                                -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="set sp" id="set-sp">
+  <div class="screen">
+    <div class="mesh"></div><div class="grid-bg"></div><div class="noise"></div>
+
+    <!-- Header -->
+    <header class="hdr">
+      <div class="brand">
+        <div class="mark">◆</div>
+        <div>
+          <div class="bn">AI<b>·</b>Insight<span class="tag">/ Insight Engine</span></div>
+        </div>
+      </div>
+
+      <!-- 遥测（mono 数据层） -->
+      <div class="tel" aria-label="遥测">
+        <div class="cell live">
+          <span class="ck">Status</span>
+          <span class="cv lime">ANALYZING</span>
+        </div>
+        <div class="cell">
+          <span class="ck">Elapsed</span>
+          <span class="cv">00:42</span>
+        </div>
+        <div class="cell">
+          <span class="ck">Sources</span>
+          <span class="cv">14/18</span>
+        </div>
+        <div class="cell">
+          <span class="ck">Tokens</span>
+          <span class="cv">8.2k</span>
+        </div>
+      </div>
+
+      <!-- 面包屑（当前项 Fraunces 斜体） -->
+      <div class="crumb-wrap">
+        <nav class="crumb">
+          <span class="cr">Workbench</span>
+          <span class="csep">/</span>
+          <span class="cr">会话</span>
+          <span class="csep">/</span>
+          <span class="cr cur"><span class="ct-txt">Q3 SaaS 续约率</span></span>
+        </nav>
+        <div class="ops" style="margin-left:16px;padding:0 0 0 16px;border-left:1px solid var(--line);height:100%;display:flex;align-items:center;gap:10px">
+          <button class="abort">⏹ ABORT</button>
+          <div class="tools">
+            <button class="tb" title="主题">◐</button>
+            <button class="tb" title="导出">⤓</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="stage">
+      <!-- Sidebar · 鼠标跟随光晕卡 -->
+      <aside class="sb">
+        <div class="sb-tool">
+          <button class="sb-new">＋ NEW INSIGHT<span class="kbd">⌘N</span></button>
+          <label class="sb-search">
+            <span style="font-size:13px">⌕</span>
+            <input type="text" placeholder="Search conversations" />
+          </label>
+        </div>
+
+        <div class="sb-list">
+          <div class="bk"><span class="l">Today</span><span class="ln"></span><span class="ct">02</span></div>
+
+          <button class="card active">
+            <div class="card-hd"><div class="card-t">Q3 SaaS <em>续约率</em>驱动因子分析</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>8</span>
+              <span class="meta"><span class="ic">◷</span>4m</span>
+              <span class="meta"><span class="ic">⤵</span>14</span>
+              <span class="card-time">12M</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">欧洲储能政策月度追踪</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>12</span>
+              <span class="meta"><span class="ic">◷</span>7m</span>
+              <span class="meta"><span class="ic">⤵</span>22</span>
+              <span class="card-time">2H</span>
+            </div>
+          </button>
+
+          <div class="bk"><span class="l">This Week</span><span class="ln"></span><span class="ct">03</span></div>
+
+          <button class="card">
+            <div class="card-hd"><div class="card-t">GLP-1 减肥药竞品管线对比</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>23</span>
+              <span class="meta"><span class="ic">◷</span>11m</span>
+              <span class="meta"><span class="ic">⤵</span>31</span>
+              <span class="card-time">2D</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">台积电资本开支指引解读</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>6</span>
+              <span class="meta"><span class="ic">◷</span>3m</span>
+              <span class="meta"><span class="ic">⤵</span>9</span>
+              <span class="card-time">3D</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">日央行政策利率路径推演</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>9</span>
+              <span class="meta"><span class="ic">◷</span>5m</span>
+              <span class="meta"><span class="ic">⤵</span>16</span>
+              <span class="card-time">5D</span>
+            </div>
+          </button>
+
+          <div class="bk"><span class="l">Earlier</span><span class="ln"></span><span class="ct">02</span></div>
+
+          <button class="card">
+            <div class="card-hd"><div class="card-t">半导体设备国产化进度</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>17</span>
+              <span class="meta"><span class="ic">◷</span>8m</span>
+              <span class="meta"><span class="ic">⤵</span>24</span>
+              <span class="card-time">06.28</span>
+            </div>
+          </button>
+          <button class="card">
+            <div class="card-hd"><div class="card-t">储能逆变器出货排名</div></div>
+            <div class="card-ft">
+              <span class="meta acc"><span class="ic">①</span>11</span>
+              <span class="meta"><span class="ic">◷</span>6m</span>
+              <span class="meta"><span class="ic">⤵</span>18</span>
+              <span class="card-time">06.22</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="sb-bot">
+          <button class="nav"><span>▤</span> Reports<span class="ct">12</span></button>
+          <button class="nav"><span>◷</span> Schedules<span class="ct">04</span></button>
+        </div>
+      </aside>
+
+      <div class="content-ph">Spectra · Insight Engine · Content Area</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // set 切换
+  function showSet(id, btn){
+    document.querySelectorAll('.set').forEach(s=>s.classList.remove('on'));
+    document.querySelectorAll('.sw-btn').forEach(b=>b.classList.remove('on'));
+    document.getElementById('set-'+id).classList.add('on');
+    btn.classList.add('on');
+    // 切到 spectra 时绑定鼠标跟随
+    if(id==='sp') bindCardGlow();
+  }
+
+  // Spectra 卡片鼠标跟随光晕（::before 通过 --mx/--my 驱动）
+  function bindCardGlow(){
+    if(bindCardGlow._done) return;
+    bindCardGlow._done = true;
+    document.querySelectorAll('.sp .card').forEach(c=>{
+      c.addEventListener('mousemove',e=>{
+        const r=c.getBoundingClientRect();
+        c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');
+        c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%');
+      });
+    });
+  }
+  // 初始就在 spectra 上绑一次（如果首屏是 spectra，但默认是 mc，故延迟）
+</script>
+</body>
+</html>

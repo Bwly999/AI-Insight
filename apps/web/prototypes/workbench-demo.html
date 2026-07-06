@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI-Insight · 工作台 Demo · Spectra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&family=Fraunces:ital,opsz,wght,SOFT@1,144,300,100&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   SPECTRA 工作台 · 双主题
+   深色（默认）= prototype/ai-for-insight.html V2 原色
+   浅色 = 保留 lime 作 accent，文字深翠绿保证 ≥4.5:1
+   字体：Manrope(英文) / Noto Sans SC(中文) / Syne(display) / Fraunces italic(强调) / JetBrains Mono(数据)
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --rhythm:8px;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --sans:"Manrope","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --disp:"Syne","Noto Sans SC",sans-serif;
+  --frau:"Fraunces","Noto Serif SC",Georgia,serif;
+}
+/* ── 深色（Spectra 原色） ── */
+[data-theme="dark"]{
+  --bg:#08090C; --bg-2:#0E1014; --panel:#111319; --panel-2:#161922;
+  --line:#1F232C; --line-2:#2A2F3A;
+  --txt:#ECEEF3; --txt-dim:#9AA0AD; --txt-faint:#5A6070;
+  --lime:#D4FF3F; --lime-d:#A8CC2A; --lime-soft:rgba(212,255,63,.10); --lime-line:rgba(212,255,63,.30);
+  --amber:#FFB347; --amber-soft:rgba(255,179,71,.10);
+  --red:#FF5C5C; --red-soft:rgba(255,92,92,.10);
+  --blue:#7FB4FF; --blue-soft:rgba(127,180,255,.10);
+  --mesh-opacity:1; --grid-opacity:1;
+  --glow-sm:0 0 12px rgba(212,255,63,.3);
+  --glow-md:0 0 24px rgba(212,255,63,.35);
+  --glow-lg:0 0 32px rgba(212,255,63,.45);
+  --shadow:0 8px 30px rgba(0,0,0,.4);
+  --on-lime:#0A0A0B;
+}
+/* ── 浅色（lime 作 accent，文字深翠绿） ── */
+[data-theme="light"]{
+  --bg:#F6F7F9; --bg-2:#EEF0F4; --panel:#FFFFFF; --panel-2:#F4F5F8;
+  --line:#E4E6EC; --line-2:#D1D5DD;
+  --txt:#0F1115; --txt-dim:#4B5563; --txt-faint:#8A92A0;
+  --lime:#5B8C1A; --lime-d:#3F6312; --lime-soft:rgba(91,140,26,.10); --lime-line:rgba(91,140,26,.28);
+  --amber:#B45309; --amber-soft:rgba(180,83,9,.10);
+  --red:#DC2626; --red-soft:rgba(220,38,38,.08);
+  --blue:#2563EB; --blue-soft:rgba(37,99,235,.08);
+  --mesh-opacity:.5; --grid-opacity:.45;
+  --glow-sm:0 0 0 1px rgba(91,140,26,.15);
+  --glow-md:0 4px 16px rgba(91,140,26,.18);
+  --glow-lg:0 8px 24px rgba(91,140,26,.22);
+  --shadow:0 8px 30px rgba(15,17,21,.08);
+  --on-lime:#FFFFFF;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{
+  font-family:var(--sans); background:var(--bg); color:var(--txt);
+  -webkit-font-smoothing:antialiased; font-size:14px; line-height:1.6;
+  transition:background .4s cubic-bezier(.2,.7,.2,1),color .4s cubic-bezier(.2,.7,.2,1);
+}
+button{font-family:inherit}
+::selection{background:var(--lime-soft);color:var(--lime-d)}
+
+/* ═══ 背景层（mesh + grid，无噪点）—— 与 v2 一致的网格背景 ═══ */
+.bg-layers{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh{position:absolute;inset:0;opacity:var(--mesh-opacity);transition:opacity .4s;
+  background:
+    radial-gradient(900px 600px at 85% -5%,rgba(212,255,63,.10),transparent 60%),
+    radial-gradient(700px 500px at 5% 30%,rgba(60,90,200,.10),transparent 60%),
+    radial-gradient(600px 600px at 50% 105%,rgba(255,179,71,.06),transparent 60%);
+}
+[data-theme="light"] .mesh{
+  background:
+    radial-gradient(900px 600px at 85% -5%,rgba(91,140,26,.08),transparent 60%),
+    radial-gradient(700px 500px at 5% 30%,rgba(37,99,235,.05),transparent 60%),
+    radial-gradient(600px 600px at 50% 105%,rgba(180,83,9,.04),transparent 60%);
+}
+.grid-bg{position:absolute;inset:0;opacity:var(--grid-opacity);transition:opacity .4s;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 90%);
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 90%);
+}
+[data-theme="light"] .grid-bg{
+  background:
+    linear-gradient(rgba(15,17,21,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(15,17,21,.04) 1px,transparent 1px);
+}
+
+/* ═══ App shell ═══ */
+.app{position:relative;z-index:1;display:grid;grid-template-rows:64px 1fr;height:100vh}
+.panes{display:grid;grid-template-columns:330px 1fr 340px;min-height:0;overflow:hidden}
+@media(max-width:1280px){.panes{grid-template-columns:300px 1fr 320px}}
+@media(max-width:1080px){.panes{grid-template-columns:260px 1fr}.col-right{display:none!important}}
+@media(max-width:768px){.panes{grid-template-columns:1fr}.col-left{display:none!important}}
+
+/* 滚动条 */
+.scroll{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.scroll::-webkit-scrollbar{width:8px;height:8px}
+.scroll::-webkit-scrollbar-track{background:transparent}
+.scroll::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:4px}
+.scroll::-webkit-scrollbar-thumb:hover{background:var(--txt-faint)}
+
+/* ════════════════════════════════════════════════════════════════════
+   HEADER · 品牌 / 面包屑（中） / 遥测+操作（右）
+   ═══════════════════════════════════════════════════════════════════ */
+.hdr{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:0;
+  background:color-mix(in srgb,var(--bg) 70%,transparent);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+  border-bottom:1px solid var(--line);position:relative;z-index:10;
+}
+.brand{display:flex;align-items:center;gap:12px;padding:0 20px;height:100%;border-right:1px solid var(--line)}
+.mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--lime),var(--lime-d));color:var(--on-lime);
+  font-size:14px;font-weight:700;box-shadow:var(--glow-sm)}
+.bn{font-family:var(--disp);font-size:17px;font-weight:700;letter-spacing:-.025em;line-height:1}
+.bn b{color:var(--lime)}
+.bn .tag{font-family:var(--mono);font-size:9px;color:var(--txt-faint);font-weight:600;letter-spacing:.16em;margin-left:8px}
+
+/* 面包屑（中间） */
+.crumb-wrap{display:flex;align-items:center;height:100%;padding:0 20px;border-right:1px solid var(--line);min-width:0}
+.crumb{display:flex;align-items:center;gap:0;font-size:13px;min-width:0}
+.cr{padding:5px 9px;border-radius:6px;color:var(--txt-faint);cursor:pointer;transition:.2s;position:relative;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.cr:hover{color:var(--txt-dim);background:var(--lime-soft)}
+.cr.cur{color:var(--lime)}
+.cr.cur .ct-txt{font-family:var(--frau);font-style:italic;font-weight:300;font-size:14px}
+.cr.cur::after{content:"";position:absolute;left:9px;right:9px;bottom:1px;height:1px;background:var(--lime);box-shadow:var(--glow-sm)}
+.csep{color:var(--txt-faint);font-family:var(--mono);font-size:11px;padding:0 1px}
+
+/* 右侧：遥测 + 操作 */
+.hdr-right{display:flex;align-items:center;gap:0;padding:0 20px;height:100%}
+
+/* 遥测模块 */
+.tel{display:inline-flex;align-items:stretch;height:40px;
+  border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--panel) 70%,transparent);
+  backdrop-filter:blur(8px);overflow:hidden;margin-right:12px}
+.cell{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 15px;min-width:84px;border-right:1px solid var(--line);position:relative}
+.cell:last-child{border-right:none}
+.cell.live{background:linear-gradient(180deg,var(--lime-soft),transparent)}
+.ck{font-family:var(--sans);font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--txt-faint)}
+.cv{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--txt);line-height:1;font-feature-settings:"zero"}
+.cv.lime{color:var(--lime)}.cv.amber{color:var(--amber)}
+.cell.live .ck{color:var(--lime)}
+.cell.live::before{content:"";position:absolute;left:7px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.cell.live::before{animation:pulse 1.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.cell.live::before{animation:none}}
+
+.abort{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:8px;cursor:pointer;transition:.2s;
+  background:var(--red-soft);border:1px solid color-mix(in srgb,var(--red) 35%,transparent);color:var(--red);
+  font-size:12px;font-weight:600}
+.abort:hover{border-color:var(--red);box-shadow:0 0 16px color-mix(in srgb,var(--red) 30%,transparent)}
+.tools{display:inline-flex;gap:2px;padding:3px;border-radius:8px;background:color-mix(in srgb,var(--panel) 60%,transparent);border:1px solid var(--line);margin-left:10px}
+.tb{width:28px;height:28px;border:none;background:transparent;border-radius:5px;display:grid;place-items:center;color:var(--txt-dim);cursor:pointer;transition:.2s;font-size:13px}
+.tb:hover{background:var(--line);color:var(--lime)}
+
+/* ════════════════════════════════════════════════════════════════════
+   SIDEBAR · 索引卡
+   ═══════════════════════════════════════════════════════════════════ */
+.col-left{background:color-mix(in srgb,var(--bg) 50%,transparent);backdrop-filter:blur(12px);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.sb-tool{padding:16px;border-bottom:1px solid var(--line)}
+.sb-new{width:100%;height:40px;border-radius:10px;cursor:pointer;transition:.25s;
+  background:linear-gradient(135deg,var(--lime-soft),transparent);color:var(--lime);
+  border:1px solid var(--lime-line);
+  font-size:13px;font-weight:600;letter-spacing:.04em;
+  display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden}
+.sb-new::before{content:"";position:absolute;inset:0;background:radial-gradient(400px circle at 50% 0%,var(--lime-soft),transparent 60%);opacity:0;transition:.3s}
+.sb-new:hover{border-color:var(--lime);box-shadow:var(--glow-md);transform:translateY(-1px)}
+.sb-new:hover::before{opacity:1}
+@media(prefers-reduced-motion:reduce){.sb-new:hover{transform:none}}
+.sb-new .kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+.sb-search{margin-top:10px;display:flex;align-items:center;gap:8px;padding:0 12px;height:36px;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--txt-faint);transition:.2s}
+.sb-search:focus-within{border-color:var(--lime-line);box-shadow:0 0 0 3px var(--lime-soft)}
+.sb-search input{flex:1;min-width:0;border:none;background:none;font-family:var(--sans);font-size:13px;color:var(--txt);outline:none}
+.sb-search input::placeholder{color:var(--txt-faint)}
+
+.sb-list{flex:1;padding:12px}
+.bk{display:flex;align-items:center;gap:10px;padding:10px 4px}
+.bk .l{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--txt-faint)}
+.bk .ln{flex:1;height:1px;background:var(--line)}
+.bk .ct{font-family:var(--mono);font-size:10px;color:var(--txt-faint);font-feature-settings:"zero"}
+
+/* 索引卡（鼠标光晕） */
+.card{display:block;width:100%;text-align:left;margin-bottom:8px;cursor:pointer;transition:.25s;
+  border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(160deg,var(--panel),var(--bg-2));overflow:hidden;position:relative}
+.card::before{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;opacity:0;transition:.3s;
+  background:radial-gradient(400px circle at var(--mx,50%) var(--my,0%),var(--lime-soft),transparent 50%)}
+.card:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.card:hover::before{opacity:1}
+@media(prefers-reduced-motion:reduce){.card:hover{transform:none}}
+.card.active{border-color:var(--lime-line);background:linear-gradient(160deg,var(--lime-soft),var(--bg-2));box-shadow:var(--glow-sm)}
+.card.active::before{opacity:1}
+.card-hd{padding:12px 14px 7px;position:relative}
+.card-t{font-family:var(--disp);font-size:14px;font-weight:600;color:var(--txt);line-height:1.35;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card.active .card-t{color:var(--lime)}
+.card.active .card-t em{font-family:var(--frau);font-style:italic;font-weight:300;color:var(--lime)}
+.card-ft{display:flex;align-items:center;gap:0;padding:7px 14px 10px;border-top:1px solid var(--line)}
+.card.active .card-ft{border-top-color:var(--lime-line)}
+.meta{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--txt-dim);padding-right:11px;border-right:1px solid var(--line);margin-right:11px}
+.meta:last-of-type{border-right:none}
+.meta .ic{font-size:11px}
+.meta.acc{color:var(--lime)}
+.card-time{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-faint);font-feature-settings:"zero"}
+
+.sb-bot{border-top:1px solid var(--line);padding:10px;display:flex;gap:6px}
+.nav{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;
+  font-size:12.5px;font-weight:500;
+  color:var(--txt-dim);cursor:pointer;transition:.2s;border:1px solid transparent;background:transparent}
+.nav:hover{background:var(--panel);color:var(--lime);border-color:var(--line)}
+.nav .ct{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+
+/* ════════════════════════════════════════════════════════════════════
+   CONTENT · 中栏
+   ═══════════════════════════════════════════════════════════════════ */
+.col-mid{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.conv-head{padding:22px 44px 16px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,transparent)}
+.eb{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--lime);display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.eb::before{content:"";width:14px;height:1.5px;background:var(--lime);box-shadow:var(--glow-sm)}
+.conv-title{font-family:var(--disp);font-size:26px;font-weight:700;letter-spacing:-.025em;line-height:1.15;margin:0;color:var(--txt)}
+.conv-title em{font-family:var(--frau);font-style:italic;font-weight:300;color:var(--lime)}
+.conv-lede{margin:8px 0 0;color:var(--txt-dim);font-size:13.5px;max-width:68ch}
+.conv-meta{display:flex;align-items:center;gap:10px;margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--txt-faint);letter-spacing:.04em}
+.conv-meta .dt{width:3px;height:3px;border-radius:50%;background:var(--txt-faint)}
+
+/* stream */
+.stream-wrap{flex:1;position:relative;min-height:0}
+.stream{height:100%;padding:24px 44px 24px}
+.turn{display:flex;gap:13px;margin-bottom:24px;max-width:880px}
+.turn.user{justify-content:flex-end}
+.b-user{max-width:74%;background:var(--panel-2);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:12px 14px}
+.u-eb{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.u-who{font-size:11px;font-weight:700;color:var(--txt-dim)}
+.u-t{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+.u-text{font-size:14px;color:var(--txt);line-height:1.55}
+
+.ai-ava{width:30px;height:30px;border-radius:8px;background:var(--lime-soft);color:var(--lime);
+  border:1px solid var(--lime-line);display:grid;place-items:center;flex:none;font-size:13px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.ai-ava.live{position:relative}
+.ai-ava.live .live-ring{position:absolute;inset:-3px;border:1.5px solid var(--lime);border-radius:11px;opacity:.5;animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{transform:scale(.9);opacity:.6}100%{transform:scale(1.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.ai-ava.live .live-ring{animation:none}}
+.ai-body{flex:1;min-width:0}
+.ai-eb{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.ai-name{font-size:12.5px;font-weight:700;color:var(--txt)}
+.ai-dot{width:2.5px;height:2.5px;border-radius:50%;background:var(--txt-faint)}
+.ai-role{font-size:10px;font-weight:600;color:var(--lime);background:var(--lime-soft);
+  border:1px solid var(--lime-line);border-radius:5px;padding:2px 6px;letter-spacing:.04em}
+
+/* 思考块 */
+.think{border:1px solid var(--line);border-left:2px solid var(--line-2);border-radius:12px;margin-bottom:12px;overflow:hidden;background:color-mix(in srgb,var(--panel) 50%,transparent)}
+.think.open{border-left-color:var(--lime-line)}
+.think-head{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;user-select:none}
+.th-ic{color:var(--lime)}
+.th-label{font-size:12px;font-weight:600;color:var(--txt-dim)}
+.th-spark{flex:1;height:2px;border-radius:1px;background:linear-gradient(90deg,transparent,var(--lime),transparent);background-size:200% 100%;animation:spark 2.4s linear infinite}
+@keyframes spark{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.th-spark{animation:none}}
+.th-right{display:flex;align-items:center;gap:8px}
+.th-dur{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--panel-2);color:var(--txt-dim)}
+.think-body{padding:0 14px 13px;font-size:13px;color:var(--txt-dim);line-height:1.65;display:none}
+.think.open .think-body{display:block}
+
+/* 工具块（终端日志风格） */
+.tool{border:1px solid var(--line);border-left:2px solid var(--lime);border-radius:12px;margin-bottom:12px;overflow:hidden;background:var(--panel)}
+.tool-head{display:flex;align-items:center;gap:9px;padding:10px 14px;cursor:pointer;user-select:none}
+.tool-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--txt)}
+.tool-args{font-family:var(--mono);font-size:11px;color:var(--txt-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.tool-status{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--lime-soft);color:var(--lime);border:1px solid var(--lime-line)}
+.chev{transition:transform .2s;color:var(--txt-faint)}
+.tool-head:hover .chev,.think-head:hover .chev{color:var(--txt-dim)}
+.open>.tool-head .chev,.think.open>.think-head .chev{transform:rotate(180deg)}
+.tool-body{padding:0 14px 12px;max-height:0;overflow:hidden;transition:max-height .3s ease}
+.tool.open .tool-body{max-height:340px;overflow-y:auto}
+
+/* 终端日志 */
+.terminal{font-family:var(--mono);font-size:12px;line-height:1.7;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--txt-dim)}
+.terminal .ln{white-space:pre-wrap;word-break:break-all}
+.terminal .mut{color:var(--txt-faint)}
+.terminal .ok{color:var(--lime)}
+.terminal .warn{color:var(--amber)}
+.terminal .key{color:var(--blue)}
+.terminal .cursor{display:inline-block;width:7px;height:13px;background:var(--lime);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.terminal .cursor{animation:none}}
+
+/* 文本块 / markdown */
+.md{font-size:14.5px;line-height:1.75;color:var(--txt);max-width:68ch;margin-bottom:12px}
+.md p{margin:.5em 0}
+.md strong{font-weight:600;color:var(--txt)}
+.md em{font-style:italic;color:var(--txt-dim)}
+.md a{color:var(--lime);border-bottom:1px solid var(--lime-line);text-decoration:none}
+.md code{font-family:var(--mono);font-size:12.5px;background:var(--panel-2);color:var(--lime);padding:1px 5px;border-radius:4px}
+/* 引用标记 */
+.cite{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--lime);
+  background:var(--lime-soft);padding:1px 5px;border-radius:5px;margin:0 2px;vertical-align:super;line-height:1.5;
+  cursor:pointer;border:1px solid var(--lime-line);transition:.15s}
+.cite:hover{background:var(--lime);color:var(--on-lime);box-shadow:var(--glow-sm)}
+
+/* 报告卡 */
+.report-card{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px;background:linear-gradient(160deg,var(--panel),var(--bg-2));max-width:560px}
+.rc-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--lime-soft)}
+.rc-eb{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--lime);display:flex;align-items:center;gap:6px}
+.rc-draft{font-family:var(--mono);font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--amber-soft);color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent)}
+.rc-body{padding:18px 20px}
+.rc-title{font-family:var(--frau);font-style:italic;font-weight:300;font-size:22px;line-height:1.2;color:var(--txt);margin:0 0 6px;letter-spacing:-.01em}
+.rc-sub{font-family:var(--frau);font-style:italic;font-weight:300;font-size:13px;color:var(--txt-dim);margin:0 0 14px}
+.rc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.rc-stat{background:var(--panel-2);padding:11px 13px}
+.rc-sn{font-family:var(--frau);font-style:italic;font-weight:300;font-size:20px;color:var(--lime);line-height:1}
+.rc-sl{font-size:10px;font-weight:600;color:var(--txt-faint);margin-top:5px}
+.rc-actions{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line)}
+.rc-open{flex:1;font-size:12px;font-weight:600;color:var(--lime);cursor:pointer;background:none;border:none;display:flex;align-items:center;justify-content:space-between}
+.rc-dl{font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 11px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-dim);cursor:pointer;transition:.2s}
+.rc-dl:hover{border-color:var(--lime-line);color:var(--lime)}
+
+/* writing 指示器 */
+.writing{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--txt-dim);padding:4px 0}
+.wd{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:var(--glow-sm);animation:wd-blink 1.2s ease-in-out infinite}
+@keyframes wd-blink{0%,100%{opacity:.3}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.wd{animation:none}}
+
+/* ── Composer ── */
+.composer-wrap{position:sticky;bottom:0;padding:14px 44px 20px;background:linear-gradient(180deg,transparent 0%,var(--bg) 55%);z-index:5}
+.composer{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);transition:.2s}
+.composer:focus-within{border-color:var(--lime-line);box-shadow:var(--shadow),0 0 0 3px var(--lime-soft)}
+.composer textarea{width:100%;border:none;background:none;color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.6;resize:none;outline:none;min-height:42px}
+.composer textarea::placeholder{color:var(--txt-faint)}
+.cm-foot{display:flex;align-items:center;gap:11px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.composer:focus-within .cm-foot{border-top-color:var(--lime-line)}
+.time-chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);font-size:12px;color:var(--txt-dim);cursor:pointer;transition:.2s}
+.time-chip:hover{border-color:var(--lime-line);color:var(--lime)}
+.ctx-ring{width:15px;height:15px;border-radius:50%;flex:none;background:conic-gradient(var(--lime) 0 41%,var(--line-2) 41% 100%);position:relative}
+.ctx-ring::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--panel)}
+.cm-meta{font-family:var(--mono);font-size:11px;color:var(--txt-faint);letter-spacing:.04em}
+.send-btn{margin-left:auto;width:36px;height:36px;border-radius:9px;border:none;background:var(--lime);color:var(--on-lime);cursor:pointer;display:grid;place-items:center;font-size:16px;transition:.2s;box-shadow:var(--glow-sm)}
+.send-btn:hover{box-shadow:var(--glow-md);transform:translateY(-1px)}
+@media(prefers-reduced-motion:reduce){.send-btn:hover{transform:none}}
+
+/* ════════════════════════════════════════════════════════════════════
+   RIGHT PANEL · 引用来源 + 引用增长图 + 引用关系图谱
+   ═══════════════════════════════════════════════════════════════════ */
+.col-right{background:color-mix(in srgb,var(--bg) 50%,transparent);backdrop-filter:blur(12px);
+  border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.r-head{padding:20px 20px 14px;border-bottom:1px solid var(--line)}
+.r-eb{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--txt-faint)}
+.r-title{font-family:var(--disp);font-size:17px;font-weight:700;letter-spacing:-.012em;margin:6px 0 4px;color:var(--txt)}
+.r-count{font-family:var(--mono);font-size:11px;color:var(--txt-dim);font-feature-settings:"zero"}
+
+/* 引用增长折线图（上） */
+.r-growth{padding:16px 16px;border-bottom:1px solid var(--line)}
+.rg-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.rg-label{font-size:11px;font-weight:600;color:var(--txt-faint);letter-spacing:.04em}
+.rg-num{font-family:var(--disp);font-size:30px;font-weight:700;color:var(--lime);line-height:1;letter-spacing:-.02em;font-feature-settings:"zero"}
+.rg-num .delta{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--lime);margin-left:8px;padding:2px 6px;border-radius:5px;background:var(--lime-soft);border:1px solid var(--lime-line)}
+.rg-svg{width:100%;height:56px;display:block}
+.rg-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+.rg-foot .up{color:var(--lime)}
+
+/* 引用关系图谱（下） */
+.r-relations{padding:14px 16px;border-bottom:1px solid var(--line)}
+.rr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.rr-label{font-size:11px;font-weight:600;color:var(--txt-faint);letter-spacing:.04em}
+.rr-count{font-family:var(--mono);font-size:10px;color:var(--lime)}
+.rr-svg{width:100%;height:140px;display:block;background:var(--bg-2);border:1px solid var(--line);border-radius:10px}
+.rr-legend{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap}
+.rr-lg{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--txt-dim)}
+.rr-lg i{display:inline-block;width:14px;height:2px;border-radius:1px}
+
+/* 来源列表 */
+.r-list{flex:1;padding:12px 16px 20px}
+.source{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:10px;cursor:pointer;transition:.2s;position:relative}
+.source:hover{border-color:var(--lime-line);box-shadow:var(--shadow)}
+.s-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.s-idx{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--lime);background:var(--lime-soft);border:1px solid var(--lime-line);border-radius:5px;width:20px;height:20px;display:grid;place-items:center;flex:none}
+.s-src{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--txt-dim);letter-spacing:.04em}
+.s-src .dt{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.s-title{font-size:13px;font-weight:600;color:var(--txt);line-height:1.4;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.source:hover .s-title{color:var(--lime)}
+.s-sum{font-size:11.5px;color:var(--txt-dim);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:7px}
+.s-foot{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+.s-domain{color:var(--lime);display:inline-flex;align-items:center;gap:3px}
+
+/* dot 颜色 */
+.dt-search{background:#7FB4FF}.dt-rss{background:#C084FC}.dt-crawl{background:var(--amber)}
+</style>
+</head>
+<body>
+
+<!-- 背景层（mesh + 网格，无噪点） -->
+<div class="bg-layers">
+  <div class="mesh"></div>
+  <div class="grid-bg"></div>
+</div>
+
+<div class="app">
+
+  <!-- ═══ HEADER：品牌 / 面包屑（中） / 遥测+操作（右） ═══ -->
+  <header class="hdr">
+    <div class="brand">
+      <div class="mark">◆</div>
+      <div class="bn">AI<b>·</b>洞察<span class="tag">/ 洞察引擎</span></div>
+    </div>
+
+    <!-- 面包屑（中间） -->
+    <div class="crumb-wrap">
+      <nav class="crumb">
+        <span class="cr">工作台</span>
+        <span class="csep">/</span>
+        <span class="cr">会话</span>
+        <span class="csep">/</span>
+        <span class="cr cur"><span class="ct-txt">Q3 SaaS 续约率</span></span>
+      </nav>
+    </div>
+
+    <!-- 右侧：遥测 + 操作 -->
+    <div class="hdr-right">
+      <div class="tel" aria-label="运行遥测">
+        <div class="cell live">
+          <span class="ck">状态</span>
+          <span class="cv lime">分析中</span>
+        </div>
+        <div class="cell">
+          <span class="ck">耗时</span>
+          <span class="cv" id="elapsed">00:42</span>
+        </div>
+        <div class="cell">
+          <span class="ck">来源</span>
+          <span class="cv">14<span style="color:var(--txt-faint)">/18</span></span>
+        </div>
+        <div class="cell">
+          <span class="ck">词元</span>
+          <span class="cv">8.2k</span>
+        </div>
+      </div>
+      <button class="abort">⏹ 中止</button>
+      <div class="tools">
+        <button class="tb" id="themeBtn" title="切换主题 (⌘J)">◐</button>
+        <button class="tb" title="导出">⤓</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="panes">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="col-left">
+      <div class="sb-tool">
+        <button class="sb-new">＋ 新对话<span class="kbd">⌘N</span></button>
+        <label class="sb-search">
+          <span style="font-size:13px">⌕</span>
+          <input type="text" placeholder="搜索会话" />
+        </label>
+      </div>
+
+      <div class="sb-list scroll">
+        <div class="bk"><span class="l">今天</span><span class="ln"></span><span class="ct">02</span></div>
+        <button class="card active">
+          <div class="card-hd"><div class="card-t">Q3 SaaS <em>续约率</em>驱动因子分析</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>8</span>
+            <span class="meta"><span class="ic">◷</span>4分</span>
+            <span class="meta"><span class="ic">⤵</span>14</span>
+            <span class="card-time">12分钟前</span>
+          </div>
+        </button>
+        <button class="card">
+          <div class="card-hd"><div class="card-t">欧洲储能政策月度追踪</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>12</span>
+            <span class="meta"><span class="ic">◷</span>7分</span>
+            <span class="meta"><span class="ic">⤵</span>22</span>
+            <span class="card-time">2小时前</span>
+          </div>
+        </button>
+
+        <div class="bk"><span class="l">本周</span><span class="ln"></span><span class="ct">03</span></div>
+        <button class="card">
+          <div class="card-hd"><div class="card-t">GLP-1 减肥药竞品管线对比</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>23</span>
+            <span class="meta"><span class="ic">◷</span>11分</span>
+            <span class="meta"><span class="ic">⤵</span>31</span>
+            <span class="card-time">2天前</span>
+          </div>
+        </button>
+        <button class="card">
+          <div class="card-hd"><div class="card-t">台积电资本开支指引解读</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>6</span>
+            <span class="meta"><span class="ic">◷</span>3分</span>
+            <span class="meta"><span class="ic">⤵</span>9</span>
+            <span class="card-time">3天前</span>
+          </div>
+        </button>
+        <button class="card">
+          <div class="card-hd"><div class="card-t">日央行政策利率路径推演</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>9</span>
+            <span class="meta"><span class="ic">◷</span>5分</span>
+            <span class="meta"><span class="ic">⤵</span>16</span>
+            <span class="card-time">5天前</span>
+          </div>
+        </button>
+
+        <div class="bk"><span class="l">更早</span><span class="ln"></span><span class="ct">02</span></div>
+        <button class="card">
+          <div class="card-hd"><div class="card-t">半导体设备国产化进度</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>17</span>
+            <span class="meta"><span class="ic">◷</span>8分</span>
+            <span class="meta"><span class="ic">⤵</span>24</span>
+            <span class="card-time">6月28日</span>
+          </div>
+        </button>
+        <button class="card">
+          <div class="card-hd"><div class="card-t">储能逆变器出货排名</div></div>
+          <div class="card-ft">
+            <span class="meta acc"><span class="ic">①</span>11</span>
+            <span class="meta"><span class="ic">◷</span>6分</span>
+            <span class="meta"><span class="ic">⤵</span>18</span>
+            <span class="card-time">6月22日</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="sb-bot">
+        <button class="nav"><span>▤</span> 我的报告<span class="ct">12</span></button>
+        <button class="nav"><span>◷</span> 我的定时<span class="ct">04</span></button>
+      </div>
+    </aside>
+
+    <!-- ═══ CONTENT ═══ -->
+    <main class="col-mid">
+      <div class="conv-head">
+        <div class="eb">深度视角 · 工作台</div>
+        <h1 class="conv-title">Q3 SaaS <em>续约率</em>驱动因子分析</h1>
+        <p class="conv-lede">关于该主题的多源交叉洞察，附完整证据链。每一条结论可下钻到原始来源。</p>
+        <div class="conv-meta">
+          <span>3 轮对话</span><span class="dt"></span>
+          <span>视角 · 深度</span><span class="dt"></span>
+          <span>07/06 14:22</span>
+        </div>
+      </div>
+
+      <div class="stream-wrap">
+        <div class="stream scroll" id="stream">
+
+          <!-- 用户消息 -->
+          <div class="turn user">
+            <div class="b-user">
+              <div class="u-eb"><span class="u-who">你</span><span class="u-t">14:21</span></div>
+              <div class="u-text">帮我分析 Q3 美国 SaaS 行业的续约率驱动因子，重点看头部厂商的差异。</div>
+            </div>
+          </div>
+
+          <!-- AI 回复 -->
+          <div class="turn">
+            <div class="ai-ava"><span>◆</span></div>
+            <div class="ai-body">
+              <div class="ai-eb">
+                <span class="ai-name">AI·洞察</span>
+                <span class="ai-dot"></span>
+                <span class="ai-role">深度视角</span>
+              </div>
+
+              <!-- 思考块 -->
+              <div class="think open">
+                <div class="think-head" onclick="this.parentElement.classList.toggle('open')">
+                  <span class="th-ic">◈</span>
+                  <span class="th-label">思考过程</span>
+                  <span class="th-spark"></span>
+                  <span class="th-right">
+                    <span class="th-dur">◷ 2.3秒</span>
+                    <span class="chev">▾</span>
+                  </span>
+                </div>
+                <div class="think-body">
+                  拆解续约率需要从三个维度切入：①产品粘性（DAU/MAU、功能采纳深度）；②商业结构（年签占比、提价幅度）；③客户分层（中小企业 vs 中端市场 vs 大型企业 的流失差异）。头部厂商的差异主要体现在中端市场的争夺上——这是净美元留存率拉开差距的关键带。
+                </div>
+              </div>
+
+              <!-- 工具块（终端日志风格） -->
+              <div class="tool open">
+                <div class="tool-head" onclick="this.parentElement.classList.toggle('open')">
+                  <span style="color:var(--lime)">⌕</span>
+                  <span class="tool-name">搜索</span>
+                  <span class="tool-args">"SaaS 净美元留存率 Q3 2026 基准"</span>
+                  <span class="tool-status">√ 14 条 · 3.2秒</span>
+                  <span class="chev">▾</span>
+                </div>
+                <div class="tool-body">
+                  <div class="terminal">
+                    <div class="ln"><span class="mut">[规划]</span> 拆解为 4 子任务：留存率 / 流失 / 增购 / 分层</div>
+                    <div class="ln"><span class="key">[采集]</span> 并发采集 14 个信号源 · 英文为主</div>
+                    <div class="ln"><span class="mut">[图谱]</span> 构建证据节点 312 · 关系边 847</div>
+                    <div class="ln"><span class="warn">[假说]</span> 假说 H1 提价驱动 / H2 粘性驱动 / H3 结构驱动</div>
+                    <div class="ln"><span class="ok">[投票]</span> H2 置信 0.91 · H1 部分成立 · H3 局部成立</div>
+                    <div class="ln"><span class="ok">[输出]</span> → 粘性深度是头部厂商留存率领先的主因<span class="cursor"></span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 文本块 -->
+              <div class="md">
+                <p>Q3 美国 SaaS 行业的<strong>净美元留存率</strong>中位数维持在 <strong>108%</strong>，但头部厂商（如 Datadog、Snowflake）已拉开到 <strong>120%+</strong>。差距主要由三个因子驱动：</p>
+                <p>① <strong>产品粘性深度</strong>——头部厂商的功能采纳率达 47%，行业中位数仅 23%<span class="cite">1</span>。这是留存率领先的最强单一解释变量<span class="cite">2</span>。</p>
+                <p>② <strong>中端市场争夺</strong>——年 ARR 在 $50k–$500k 区间的客户，头部厂商的客户留存率达 94%，行业中位数仅 81%<span class="cite">3</span>。</p>
+                <p>③ <strong>提价权分化</strong>——只有产品粘性进入前四分位的厂商，才能在不损失客户的前提下实现 &gt;5% 的价格提升<span class="cite">4</span>。</p>
+              </div>
+
+              <!-- 报告卡 -->
+              <div class="report-card">
+                <div class="rc-top">
+                  <span class="rc-eb">▤ 分析报告</span>
+                  <span class="rc-draft">草稿</span>
+                  <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-faint)">14:23</span>
+                </div>
+                <div class="rc-body">
+                  <h3 class="rc-title">Q3 SaaS 续约率：粘性深度决定留存上限</h3>
+                  <p class="rc-sub">— 一份关于头部厂商差异来源的可追溯分析</p>
+                  <div class="rc-stats">
+                    <div class="rc-stat"><div class="rc-sn">8</div><div class="rc-sl">章节</div></div>
+                    <div class="rc-stat"><div class="rc-sn">2,140</div><div class="rc-sl">字数</div></div>
+                    <div class="rc-stat"><div class="rc-sn">14</div><div class="rc-sl">引用</div></div>
+                  </div>
+                </div>
+                <div class="rc-actions">
+                  <button class="rc-open">点击查阅完整报告 <span>→</span></button>
+                  <button class="rc-dl">⤓ 下载</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 实时运行中 -->
+          <div class="turn">
+            <div class="ai-ava live"><span>◆</span><span class="live-ring"></span></div>
+            <div class="ai-body">
+              <div class="ai-eb">
+                <span class="ai-name">AI·洞察</span>
+                <span class="ai-dot"></span>
+                <span class="ai-role">深度视角</span>
+              </div>
+              <div class="think open">
+                <div class="think-head" onclick="this.parentElement.classList.toggle('open')">
+                  <span class="th-ic">◈</span>
+                  <span class="th-label">思考过程</span>
+                  <span class="th-spark"></span>
+                  <span class="th-right">
+                    <span class="th-dur">◷ 5.1秒</span>
+                    <span class="chev">▾</span>
+                  </span>
+                </div>
+                <div class="think-body">
+                  正在交叉验证中端市场区间的流失数据，对比 S-1 招股书与季度财报披露口径的差异……
+                </div>
+              </div>
+              <div class="writing"><span class="wd"></span> 正在生成</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Composer -->
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea rows="2" placeholder="继续追问，或补充新线索…   (⌘K 聚焦 · ⌘↵ 发送)"></textarea>
+          <div class="cm-foot">
+            <button class="time-chip"><span>◷</span> 一周 <span>▾</span></button>
+            <span class="ctx-ring" title="上下文 41%"></span>
+            <span class="cm-meta">深度 · 上下文 41%</span>
+            <button class="send-btn" title="发送 (⌘↵)">↑</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ═══ RIGHT PANEL ═══ -->
+    <aside class="col-right scroll">
+      <div class="r-head">
+        <div class="r-eb">数据源</div>
+        <div class="r-title">引用来源</div>
+        <div class="r-count">14 条 · 来自 3 类来源</div>
+      </div>
+
+      <!-- 引用增长折线图（上） -->
+      <div class="r-growth">
+        <div class="rg-top">
+          <div>
+            <div class="rg-label">引用总数</div>
+            <div class="rg-num">14<span class="delta">↑ +6</span></div>
+          </div>
+        </div>
+        <svg class="rg-svg" viewBox="0 0 280 56" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="growFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--lime)" stop-opacity=".25"/>
+              <stop offset="100%" stop-color="var(--lime)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon id="growArea" fill="url(#growFill)" points=""/>
+          <polyline id="growLine" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points=""/>
+          <circle id="growDot" r="3" fill="var(--lime)" stroke="var(--bg)" stroke-width="1.5"/>
+        </svg>
+        <div class="rg-foot">
+          <span>近 7 次轮次</span>
+          <span class="up">持续增长 ↗</span>
+        </div>
+      </div>
+
+      <!-- 引用关系图谱（下） -->
+      <div class="r-relations">
+        <div class="rr-head">
+          <span class="rr-label">引用关系图谱</span>
+          <span class="rr-count">312 节点 · 847 关系</span>
+        </div>
+        <svg class="rr-svg" viewBox="0 0 280 140" id="relGraph" aria-hidden="true"></svg>
+        <div class="rr-legend">
+          <span class="rr-lg"><i style="background:var(--lime)"></i>采纳（支持结论）</span>
+          <span class="rr-lg"><i style="background:var(--blue)"></i>相交（相关互补）</span>
+          <span class="rr-lg"><i style="background:var(--red)"></i>对立（矛盾）</span>
+        </div>
+      </div>
+
+      <!-- 来源列表 -->
+      <div class="r-list">
+        <div class="source">
+          <div class="s-top">
+            <span class="s-idx">1</span>
+            <span class="s-src"><span class="dt dt-search"></span>搜索 · OpenView Partners</span>
+          </div>
+          <div class="s-title">2026 SaaS 基准报告：留存率与功能采纳</div>
+          <div class="s-sum">对 240 家 SaaS 公司的留存率与功能采纳率做四分位分析，头部厂商采纳率达 47%。</div>
+          <div class="s-foot"><span>2026.06</span><span class="s-domain">openviewpartners.com ↗</span></div>
+        </div>
+
+        <div class="source">
+          <div class="s-top">
+            <span class="s-idx">2</span>
+            <span class="s-src"><span class="dt dt-rss"></span>RSS · SaaStr</span>
+          </div>
+          <div class="s-title">为什么 2026 年产品粘性胜过定价权</div>
+          <div class="s-sum">论证粘性深度是留存率领先的最强单一解释变量，R² 达 0.68。</div>
+          <div class="s-foot"><span>2026.05</span><span class="s-domain">saastr.com ↗</span></div>
+        </div>
+
+        <div class="source">
+          <div class="s-top">
+            <span class="s-idx">3</span>
+            <span class="s-src"><span class="dt dt-crawl"></span>爬虫 · SEC EDGAR</span>
+          </div>
+          <div class="s-title">Datadog 2026 三季度 10-Q 报告</div>
+          <div class="s-sum">季度财报披露中端市场客户留存率 94%，净美元留存率 122%。</div>
+          <div class="s-foot"><span>2026.05</span><span class="s-domain">sec.gov ↗</span></div>
+        </div>
+
+        <div class="source">
+          <div class="s-top">
+            <span class="s-idx">4</span>
+            <span class="s-src"><span class="dt dt-search"></span>搜索 · ChartMogul</span>
+          </div>
+          <div class="s-title">2026 SaaS 流失与留存基准报告</div>
+          <div class="s-sum">覆盖 2,500 家 SaaS 公司的流失数据，提价权与粘性四分位强相关。</div>
+          <div class="s-foot"><span>2026.04</span><span class="s-domain">chartmogul.com ↗</span></div>
+        </div>
+
+        <div class="source">
+          <div class="s-top">
+            <span class="s-idx">5</span>
+            <span class="s-src"><span class="dt dt-rss"></span>RSS · Bessemer 云指数</span>
+          </div>
+          <div class="s-title">2026 云行业现状：中端市场是战场</div>
+          <div class="s-sum">ARR $50k–$500k 区间成为头部厂商留存率拉开差距的关键带。</div>
+          <div class="s-foot"><span>2026.06</span><span class="s-domain">bessemervp.com ↗</span></div>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+</div>
+
+<script>
+/* ═══ 主题切换 ═══ */
+const themeBtn = document.getElementById('themeBtn');
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  themeBtn.textContent = t==='dark' ? '◐' : '◑';
+  // 切换后重绘依赖 CSS 变量的 SVG（关系图谱）
+  drawRelations();
+}
+themeBtn.addEventListener('click',()=>setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='j'){e.preventDefault();themeBtn.click();}
+});
+
+/* ═══ 卡片鼠标跟随光晕 ═══ */
+document.querySelectorAll('.card').forEach(c=>{
+  c.addEventListener('mousemove',e=>{
+    const r=c.getBoundingClientRect();
+    c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');
+    c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%');
+  });
+});
+
+/* ═══ 引用增长折线图（单调上升） ═══ */
+function drawGrowth(){
+  const W=280,H=56,N=7;
+  // 近 7 轮引用数：单调上升 3→14
+  const vals=[3,5,6,8,9,12,14];
+  const max=Math.max(...vals),min=Math.min(...vals),range=(max-min)||1;
+  const step=W/(N-1);
+  const coords=vals.map((v,i)=>{
+    const x=i*step;
+    const y=H-((v-min)/range)*(H-10)-5;
+    return [x,y];
+  });
+  const line=document.getElementById('growLine');
+  const area=document.getElementById('growArea');
+  const dot=document.getElementById('growDot');
+  if(!line) return;
+  const pts=coords.map(c=>c[0].toFixed(1)+','+c[1].toFixed(1));
+  line.setAttribute('points',pts.join(' '));
+  area.setAttribute('points','0,'+H+' '+pts.join(' ')+' '+W+','+H);
+  const last=coords[coords.length-1];
+  dot.setAttribute('cx',last[0]);
+  dot.setAttribute('cy',last[1]);
+}
+drawGrowth();
+
+/* ═══ 引用关系图谱（采纳 / 相交 / 对立） ═══ */
+function drawRelations(){
+  const svg=document.getElementById('relGraph');if(!svg) return;
+  const W=280,H=140;
+  // 读取当前主题色（保证切换后颜色正确）
+  const cs=getComputedStyle(document.documentElement);
+  const lime=cs.getPropertyValue('--lime').trim();
+  const blue=cs.getPropertyValue('--blue').trim();
+  const red=cs.getPropertyValue('--red').trim();
+  const limeSoft=cs.getPropertyValue('--lime-soft').trim();
+  const limeLine=cs.getPropertyValue('--lime-line').trim();
+  const txtFaint=cs.getPropertyValue('--txt-faint').trim();
+  const txt=cs.getPropertyValue('--txt').trim();
+
+  // 节点：中心结论 + 5 个引用（对应来源 1-5）
+  const cx=W/2, cy=H/2;
+  const nodes=[
+    {id:0, x:cx, y:cy, r:9, kind:'conclusion', label:'结论'},
+    {id:1, x:55, y:35, r:11, label:'1'},
+    {id:2, x:225,y:32, r:11, label:'2'},
+    {id:3, x:240,y:95, r:11, label:'3'},
+    {id:4, x:160,y:115,r:11, label:'4'},
+    {id:5, x:45, y:100,r:11, label:'5'},
+  ];
+
+  // 关系边：type = adopt(采纳/lime) | cross(相交/blue) | oppose(对立/red)
+  const edges=[
+    {a:1,b:0,type:'adopt'}, // 1→结论 采纳
+    {a:2,b:0,type:'adopt'}, // 2→结论 采纳
+    {a:3,b:0,type:'adopt'}, // 3→结论 采纳
+    {a:4,b:0,type:'adopt'}, // 4→结论 采纳
+    {a:5,b:0,type:'adopt'}, // 5→结论 采纳
+    {a:1,b:4,type:'cross'}, // 1-4 相交（都讲 benchmark）
+    {a:2,b:5,type:'cross'}, // 2-5 相交（都讲市场/粘性）
+    {a:3,b:4,type:'oppose'},// 3-4 对立（Datadog 高留存 vs 行业平均低留存）
+  ];
+
+  const colorOf={adopt:lime,cross:blue,oppose:red};
+  const dashOf={adopt:null,cross:'4 3',oppose:'5 3'};
+  const widthOf={adopt:1.8,cross:1.4,oppose:1.6};
+
+  const getNode=id=>nodes.find(n=>n.id===id);
+
+  let svgHtml='';
+
+  // 先画边（在节点下层）
+  edges.forEach(e=>{
+    const A=getNode(e.a),B=getNode(e.b);
+    const c=colorOf[e.type];
+    const w=widthOf[e.type];
+    const dash=dashOf[e.type];
+    // 对立边用波浪感：画一条略弯的 path（二次贝塞尔，偏移中点）
+    if(e.type==='oppose'){
+      const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+      const dx=B.x-A.x, dy=B.y-A.y;
+      const len=Math.hypot(dx,dy)||1;
+      // 垂直方向偏移
+      const ox=-dy/len*14, oy=dx/len*14;
+      svgHtml+=`<path d="M${A.x},${A.y} Q${mx+ox},${my+oy} ${B.x},${B.y}" fill="none" stroke="${c}" stroke-width="${w}" stroke-dasharray="${dash}" opacity=".75"/>`;
+    }else{
+      svgHtml+=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${c}" stroke-width="${w}" ${dash?`stroke-dasharray="${dash}"`:''} opacity=".7"/>`;
+    }
+    // 采纳边上加流动粒子（沿边移动的小圆点）
+    if(e.type==='adopt'){
+      svgHtml+=`<circle r="1.8" fill="${c}"><animateMotion dur="${2+Math.random()*1}s" repeatCount="indefinite" path="M${A.x},${A.y} L${B.x},${B.y}"/><animate attributeName="opacity" values="0;1;0" dur="${2+Math.random()*1}s" repeatCount="indefinite"/></circle>`;
+    }
+  });
+
+  // 再画节点
+  nodes.forEach(n=>{
+    if(n.kind==='conclusion'){
+      // 结论节点：菱形 + 光晕
+      svgHtml+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r+5}" fill="${limeSoft}"/>`;
+      svgHtml+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${lime}"><animate attributeName="r" values="${n.r};${n.r+2};${n.r}" dur="2.4s" repeatCount="indefinite"/></circle>`;
+      svgHtml+=`<text x="${n.x}" y="${n.y+3}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#0A0A0B">★</text>`;
+    }else{
+      // 引用节点：圆形 + 编号
+      svgHtml+=`<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="var(--panel)" stroke="${limeLine}" stroke-width="1.5"/>`;
+      svgHtml+=`<text x="${n.x}" y="${n.y+4}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="${lime}">${n.label}</text>`;
+    }
+  });
+
+  svg.innerHTML=svgHtml;
+}
+drawRelations();
+
+/* ═══ 终端日志追加 ═══ */
+(function(){
+  const term=document.querySelector('.terminal');if(!term) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const tail=[
+    {t:'[扫描]',c:'mut',txt:'深度遍历证据子图 G₃ · 节点 312'},
+    {t:'[假说]',c:'warn',txt:'生成假说 H4：客户成功投入差异'},
+    {t:'[投票]',c:'ok',txt:'H4 置信 0.78 · 标记为可追踪'},
+    {t:'[输出]',c:'ok',txt:'→ 客户成功团队规模与留存率正相关。'},
+  ];
+  let i=0;
+  setInterval(()=>{
+    const item=tail[i%tail.length];
+    const prevCur=term.querySelector('.cursor');if(prevCur) prevCur.remove();
+    const div=document.createElement('div');
+    div.className='ln';
+    div.innerHTML=`<span class="${item.c}">${item.t}</span> ${item.txt} <span class="cursor"></span>`;
+    term.appendChild(div);
+    while(term.children.length>10) term.removeChild(term.firstChild);
+    term.scrollTop=term.scrollHeight;
+    i++;
+  },3200);
+})();
+
+/* ═══ 遥测耗时计时 ═══ */
+(function(){
+  const el=document.getElementById('elapsed');if(!el) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let s=42;
+  setInterval(()=>{s++;const m=String(Math.floor(s/60)).padStart(2,'0');const ss=String(s%60).padStart(2,'0');el.textContent=`${m}:${ss}`;},1000);
+})();
+
+/* ═══ 引用标记点击反馈 ═══ */
+document.querySelectorAll('.cite').forEach(c=>{
+  c.addEventListener('click',()=>{
+    c.style.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:300,easing:'cubic-bezier(.2,.7,.2,1)'});
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI For 洞察 · Insight Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,200..800&family=JetBrains+Mono:wght@300..700&family=Syne:wght@400..800&family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   GLOBAL RESET & SHARED
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Newsreader", Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+:root {
+  --rhythm: 8px;
+}
+
+/* ============================================================
+   THEME SWITCHER (floating, top-right)
+   ============================================================ */
+.switcher {
+  position: fixed;
+  top: 20px; right: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 100px;
+  background: rgba(20,18,14,0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+  font-family: "JetBrains Mono", monospace;
+}
+.switcher .lbl {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.45);
+  padding: 0 10px 0 8px;
+  text-transform: uppercase;
+}
+.switcher button {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  padding: 7px 14px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all .35s cubic-bezier(.2,.8,.2,1);
+  font-weight: 500;
+}
+.switcher button.active {
+  background: #D4FF3F;
+  color: #0A0A0B;
+  font-weight: 600;
+}
+.switcher button:not(.active):hover { color: #fff; }
+
+/* show only active version */
+.version { display: none; }
+.version.active { display: block; }
+
+/* ============================================================
+   ============  VERSION 1 · ATELIER (Editorial)  ============
+   ============================================================ */
+.v1 {
+  --paper: #EFE7D6;
+  --paper-2: #E7DDC8;
+  --ink: #1C1813;
+  --ink-soft: #4A4338;
+  --ink-faint: #8A7F6E;
+  --rule: #C8BCA1;
+  --accent: #9F2B1E;     /* oxblood */
+  --accent-2: #B5512A;   /* burnt sienna */
+  --gold: #A8843A;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.55;
+  position: relative;
+  min-height: 100vh;
+}
+/* paper grain */
+.v1::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(160,130,80,0.06) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(120,90,50,0.05) 0%, transparent 45%);
+  z-index: 1;
+  mix-blend-mode: multiply;
+}
+.v1::after {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  z-index: 2;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.05 0 0 0 0.4 0'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.5'/></svg>");
+  mix-blend-mode: multiply;
+}
+.v1 > * { position: relative; z-index: 3; }
+
+.v1 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 56px; }
+
+/* --- Masthead --- */
+.v1 .mast {
+  border-bottom: 1.5px solid var(--ink);
+  padding: 22px 0 16px;
+}
+.v1 .mast-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+}
+.v1 .mast-meta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.v1 .mast-meta.r { text-align: right; }
+.v1 .mast-meta span { color: var(--accent); font-weight: 600; }
+.v1 .mast-title {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.v1 .mast-title em { font-style: italic; font-weight: 400; color: var(--accent); }
+
+.v1 .sub-nav {
+  display: flex; gap: 0; justify-content: center;
+  border-top: 1px solid var(--rule);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.v1 .sub-nav a {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 2px 18px;
+  border-right: 1px solid var(--rule);
+  transition: color .25s;
+}
+.v1 .sub-nav a:last-child { border-right: none; }
+.v1 .sub-nav a:hover { color: var(--accent); }
+
+/* --- Hero --- */
+.v1 .hero {
+  padding: 70px 0 50px;
+  border-bottom: 1px solid var(--rule);
+}
+.v1 .kicker {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 28px;
+  display: flex; align-items: center; gap: 14px;
+}
+.v1 .kicker::before {
+  content: ""; width: 38px; height: 1px; background: var(--accent);
+}
+.v1 .hero h1 {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 350;
+  font-size: clamp(58px, 9.5vw, 148px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin-bottom: 36px;
+}
+.v1 .hero h1 .it {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--accent);
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+}
+.v1 .hero h1 .small {
+  display: inline-block;
+  font-size: 0.42em;
+  vertical-align: super;
+  color: var(--ink-faint);
+  font-weight: 400;
+  margin-left: 0.1em;
+}
+.v1 .lede-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 60px;
+  align-items: start;
+  margin-top: 18px;
+}
+.v1 .lede {
+  font-size: 21px;
+  line-height: 1.5;
+  color: var(--ink);
+  font-weight: 350;
+}
+.v1 .lede .dc {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144;
+  font-weight: 600;
+  font-size: 78px;
+  line-height: 0.78;
+  float: left;
+  margin: 6px 12px -4px 0;
+  color: var(--accent);
+}
+.v1 .lede b { font-weight: 600; border-bottom: 1.5px solid var(--gold); padding-bottom: 1px; }
+
+.v1 .hero-side {
+  border-left: 1px solid var(--rule);
+  padding-left: 40px;
+}
+.v1 .hero-side .lbl {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 14px;
+}
+.v1 .hero-side p {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+.v1 .hero-side .sig {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink);
+  margin-top: 18px;
+}
+
+/* --- Section header (numbered) --- */
+.v1 .sec-head {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 28px;
+  align-items: baseline;
+  padding: 64px 0 8px;
+}
+.v1 .sec-num {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--accent);
+}
+.v1 .sec-title {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144, "SOFT" 20;
+  font-weight: 400;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.v1 .sec-meta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: right;
+}
+.v1 .rule { border: none; border-top: 1px solid var(--rule); margin: 0 0 36px; }
+
+/* --- Capabilities (3-col with marginalia) --- */
+.v1 .caps {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  margin-bottom: 30px;
+}
+.v1 .cap {
+  padding: 0 32px;
+  border-right: 1px solid var(--rule);
+}
+.v1 .cap:first-child { padding-left: 0; }
+.v1 .cap:last-child { border-right: none; padding-right: 0; }
+.v1 .cap .ix {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.v1 .cap h3 {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 60;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+.v1 .cap h3 em { color: var(--accent); font-style: italic; font-weight: 400;}
+.v1 .cap p {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.v1 .cap .marg {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faint);
+  border-top: 1px dotted var(--rule);
+  margin-top: 18px;
+  padding-top: 12px;
+}
+
+/* --- Pull quote --- */
+.v1 .pull {
+  margin: 70px 0;
+  padding: 50px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  text-align: center;
+  position: relative;
+}
+.v1 .pull q {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144, "SOFT" 60, "WONK" 1;
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(30px, 4.2vw, 56px);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  quotes: "“" "”";
+}
+.v1 .pull q::before, .v1 .pull q::after { color: var(--accent); }
+.v1 .pull .attr {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 26px;
+}
+
+/* --- Workflow as numbered list (editorial) --- */
+.v1 .flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 80px;
+  margin-top: 10px;
+}
+.v1 .step {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 24px;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--rule);
+  transition: background .3s, padding .3s;
+}
+.v1 .step:hover { background: rgba(159,43,30,0.04); padding-left: 12px; }
+.v1 .step .n {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 44px;
+  line-height: 0.9;
+  color: var(--accent-2);
+}
+.v1 .step h4 {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 60;
+  font-weight: 500;
+  font-size: 23px;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+.v1 .step p { font-size: 16px; color: var(--ink-soft); line-height: 1.5; }
+
+/* --- Stats --- */
+.v1 .stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--ink);
+  margin: 60px 0;
+}
+.v1 .stat {
+  padding: 34px 26px;
+  border-right: 1px solid var(--rule);
+}
+.v1 .stat:last-child { border-right: none; }
+.v1 .stat .num {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144;
+  font-weight: 300;
+  font-size: 64px;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+.v1 .stat .num sup { font-size: 0.4em; color: var(--ink); font-weight: 400; vertical-align: super;}
+.v1 .stat .lab {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 12px;
+}
+
+/* --- Demo card (insight report mock) --- */
+.v1 .demo {
+  margin: 30px 0 70px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  padding: 40px 44px;
+  position: relative;
+  box-shadow: 8px 8px 0 var(--ink);
+}
+.v1 .demo .tag {
+  position: absolute; top: -13px; left: 32px;
+  background: var(--accent); color: var(--paper);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 5px 14px;
+}
+.v1 .demo .d-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid var(--rule); padding-bottom: 16px; margin-bottom: 22px;
+}
+.v1 .demo .d-head h4 {
+  font-family: "Fraunces", serif; font-weight: 500; font-size: 26px; letter-spacing: -0.01em;
+}
+.v1 .demo .d-head .id {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.15em;
+  color: var(--ink-faint); text-transform: uppercase;
+}
+.v1 .demo .finding {
+  display: grid; grid-template-columns: 28px 1fr auto; gap: 18px;
+  padding: 14px 0; border-bottom: 1px dotted var(--rule); align-items: baseline;
+}
+.v1 .demo .finding:last-child { border-bottom: none; }
+.v1 .demo .finding .b { color: var(--accent); font-family:"Fraunces",serif; font-weight:600; font-size:18px;}
+.v1 .demo .finding .t { font-size: 17px; color: var(--ink); }
+.v1 .demo .finding .t em { color: var(--accent-2); font-style: italic; font-weight: 500;}
+.v1 .demo .finding .c {
+  font-family:"JetBrains Mono",monospace; font-size: 11px;
+  color: var(--ink-faint); letter-spacing: 0.05em;
+}
+.v1 .demo .d-foot {
+  margin-top: 22px; padding-top: 16px; border-top: 1.5px solid var(--ink);
+  font-family: "Fraunces", serif; font-style: italic; font-size: 16px; color: var(--ink-soft);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.v1 .demo .d-foot a {
+  font-family:"JetBrains Mono",monospace; font-style: normal; font-size: 11px;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent);
+  text-decoration: none; border-bottom: 1px solid var(--accent); padding-bottom: 2px;
+}
+
+/* --- Colophon footer --- */
+.v1 .colophon {
+  border-top: 1.5px solid var(--ink);
+  margin-top: 80px; padding: 40px 0 60px;
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px;
+}
+.v1 .colo h5 {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 14px;
+}
+.v1 .colo p { font-size: 15px; line-height: 1.6; color: var(--ink-soft); max-width: 440px;}
+.v1 .colo p em { font-family:"Fraunces",serif; font-style: italic; color: var(--accent);}
+.v1 .colo a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule); }
+.v1 .colo .big {
+  font-family: "Fraunces", serif; font-variation-settings: "opsz"144;
+  font-weight: 400; font-size: 28px; letter-spacing: -0.01em; color: var(--ink);
+}
+
+/* ============================================================
+   ============  VERSION 2 · SPECTRA (Dark Cyber) ============
+   ============================================================ */
+.v2 {
+  --bg: #08090C;
+  --bg-2: #0E1014;
+  --panel: #111319;
+  --line: #1F232C;
+  --line-2: #2A2F3A;
+  --txt: #ECEEF3;
+  --txt-dim: #9AA0AD;
+  --txt-faint: #5A6070;
+  --lime: #D4FF3F;
+  --lime-d: #A8CC2A;
+  --amber: #FFB347;
+  --red: #FF5C5C;
+
+  background: var(--bg);
+  color: var(--txt);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+/* mesh background */
+.v2 .mesh {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 80% 0%, rgba(212,255,63,0.10), transparent 60%),
+    radial-gradient(700px 500px at 10% 30%, rgba(60,90,200,0.10), transparent 60%),
+    radial-gradient(600px 600px at 50% 100%, rgba(255,179,71,0.06), transparent 60%);
+}
+/* grid lines */
+.v2 .grid-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 90%);
+}
+/* noise */
+.v2 .noise {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.06'/></svg>");
+}
+.v2 > *:not(.mesh):not(.grid-bg):not(.noise) { position: relative; z-index: 2; }
+.v2 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+
+/* --- Nav --- */
+.v2 .nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 40px;
+  background: rgba(8,9,12,0.7);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--line);
+}
+.v2 .brand { display: flex; align-items: center; gap: 12px; }
+.v2 .brand .mark {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--lime), var(--lime-d));
+  display: grid; place-items: center; color: #0A0A0B; font-weight: 800;
+  font-family: "Syne", sans-serif; font-size: 16px;
+  box-shadow: 0 0 24px rgba(212,255,63,0.35);
+}
+.v2 .brand .name {
+  font-family: "Syne", sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.01em;
+}
+.v2 .brand .name b { color: var(--lime); font-weight: 700; }
+.v2 .nav-links { display: flex; gap: 30px; }
+.v2 .nav-links a {
+  font-size: 13px; color: var(--txt-dim); text-decoration: none; font-weight: 500;
+  transition: color .25s; position: relative;
+}
+.v2 .nav-links a:hover { color: var(--txt); }
+.v2 .nav-links a::after {
+  content:""; position:absolute; left:0; bottom:-6px; width:0; height:1px; background: var(--lime);
+  transition: width .3s;
+}
+.v2 .nav-links a:hover::after { width: 100%; }
+.v2 .nav-cta {
+  font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: 0.04em;
+  background: var(--lime); color: #0A0A0B; border: none; padding: 10px 18px; border-radius: 8px;
+  font-weight: 600; cursor: pointer; transition: all .25s;
+}
+.v2 .nav-cta:hover { box-shadow: 0 0 28px rgba(212,255,63,0.5); transform: translateY(-1px); }
+
+/* --- Hero --- */
+.v2 .hero { padding: 90px 0 60px; position: relative; }
+.v2 .hero-grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 60px; align-items: center; }
+.v2 .badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 7px 14px; border-radius: 100px;
+  background: rgba(212,255,63,0.08); border: 1px solid rgba(212,255,63,0.25);
+  font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.1em;
+  color: var(--lime); margin-bottom: 30px;
+}
+.v2 .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 10px var(--lime); animation: pulse 1.8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+.v2 .hero h1 {
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  font-size: clamp(48px, 7vw, 104px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  margin-bottom: 28px;
+}
+.v2 .hero h1 .gr {
+  background: linear-gradient(180deg, var(--txt) 0%, #6A7080 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.v2 .hero h1 .li { color: var(--lime); display: block; }
+.v2 .hero h1 .li em {
+  font-family: "Fraunces", serif; font-style: italic; font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 100;
+  color: var(--txt);
+}
+.v2 .hero p.lead {
+  font-size: 18px; line-height: 1.6; color: var(--txt-dim); max-width: 540px; margin-bottom: 36px;
+}
+.v2 .hero p.lead b { color: var(--txt); font-weight: 600; }
+.v2 .hero-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.v2 .btn {
+  font-family: "JetBrains Mono", monospace; font-size: 13px; letter-spacing: 0.04em;
+  padding: 14px 24px; border-radius: 10px; cursor: pointer; border: none; font-weight: 600;
+  transition: all .25s; display: inline-flex; align-items: center; gap: 10px;
+}
+.v2 .btn-pri { background: var(--lime); color: #0A0A0B; }
+.v2 .btn-pri:hover { box-shadow: 0 0 32px rgba(212,255,63,0.45); transform: translateY(-2px); }
+.v2 .btn-ghost { background: transparent; color: var(--txt); border: 1px solid var(--line-2); }
+.v2 .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
+.v2 .btn .arrow { transition: transform .25s; }
+.v2 .btn:hover .arrow { transform: translateX(3px); }
+
+/* hero visual — neural orb */
+.v2 .orb-wrap { position: relative; aspect-ratio: 1/1; max-width: 460px; margin-left: auto; }
+.v2 .orb { position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(212,255,63,0.25), transparent 60%),
+              radial-gradient(circle at 70% 70%, rgba(60,90,200,0.35), transparent 65%);
+  filter: blur(2px); animation: spin 18s linear infinite;
+}
+.v2 .orb-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(212,255,63,0.2); }
+.v2 .orb-ring.r1 { inset: 8%; animation: spin 30s linear infinite reverse; }
+.v2 .orb-ring.r2 { inset: 18%; border-color: rgba(255,255,255,0.08); animation: spin 22s linear infinite; }
+.v2 .orb-ring.r3 { inset: 30%; border-color: rgba(212,255,63,0.12); border-style: dashed; animation: spin 40s linear infinite reverse; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.v2 .orb svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.v2 .orb-core {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 38%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(212,255,63,0.5), rgba(212,255,63,0.05) 70%, transparent);
+  display: grid; place-items: center;
+}
+.v2 .orb-core span {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.2em;
+  color: var(--lime); text-transform: uppercase; text-align: center;
+}
+.v2 .float-tag {
+  position: absolute; font-family: "JetBrains Mono", monospace; font-size: 10px;
+  letter-spacing: 0.1em; color: var(--txt-dim); background: rgba(17,19,25,0.85);
+  border: 1px solid var(--line-2); padding: 6px 10px; border-radius: 6px;
+  backdrop-filter: blur(8px); white-space: nowrap;
+}
+.v2 .float-tag b { color: var(--lime); font-weight: 600; }
+.v2 .ft1 { top: 6%; left: -8%; animation: floaty 4s ease-in-out infinite; }
+.v2 .ft2 { top: 42%; right: -12%; animation: floaty 5s ease-in-out infinite .5s; }
+.v2 .ft3 { bottom: 8%; left: 4%; animation: floaty 4.5s ease-in-out infinite 1s; }
+@keyframes floaty { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+
+/* --- trust strip --- */
+.v2 .trust {
+  display: flex; align-items: center; gap: 40px; flex-wrap: wrap;
+  padding: 28px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  margin-top: 60px;
+}
+.v2 .trust .t-lbl {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.15em;
+  color: var(--txt-faint); text-transform: uppercase;
+}
+.v2 .trust .logos { display: flex; gap: 36px; flex-wrap: wrap; }
+.v2 .trust .logos span {
+  font-family: "Syne", sans-serif; font-weight: 600; font-size: 15px; color: var(--txt-faint);
+  letter-spacing: -0.01em; transition: color .25s;
+}
+.v2 .trust .logos span:hover { color: var(--txt-dim); }
+
+/* --- Section head --- */
+.v2 .sec { padding: 100px 0; position: relative; }
+.v2 .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; margin-bottom: 56px; flex-wrap: wrap;}
+.v2 .sec-head .left { max-width: 620px; }
+.v2 .sec-kicker {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.2em;
+  color: var(--lime); text-transform: uppercase; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.v2 .sec-kicker::before { content:""; width: 28px; height: 1px; background: var(--lime); }
+.v2 .sec-title {
+  font-family: "Syne", sans-serif; font-weight: 700;
+  font-size: clamp(34px, 4.5vw, 56px); line-height: 1.02; letter-spacing: -0.03em;
+}
+.v2 .sec-title em { font-family:"Fraunces",serif; font-style: italic; font-weight: 300; color: var(--lime);}
+.v2 .sec-desc { font-size: 16px; color: var(--txt-dim); max-width: 380px; line-height: 1.6;}
+
+/* --- Bento grid --- */
+.v2 .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+.v2 .card {
+  background: linear-gradient(160deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--line);
+  border-radius: 18px; padding: 28px; position: relative; overflow: hidden;
+  transition: all .35s cubic-bezier(.2,.8,.2,1);
+}
+.v2 .card::before {
+  content:""; position: absolute; inset: 0; border-radius: 18px;
+  background: radial-gradient(400px circle at var(--mx,50%) var(--my,0%), rgba(212,255,63,0.08), transparent 50%);
+  opacity: 0; transition: opacity .35s; pointer-events: none;
+}
+.v2 .card:hover { transform: translateY(-4px); border-color: var(--line-2); }
+.v2 .card:hover::before { opacity: 1; }
+.v2 .card .ic {
+  width: 44px; height: 44px; border-radius: 11px; margin-bottom: 20px;
+  display: grid; place-items: center; background: rgba(212,255,63,0.1);
+  border: 1px solid rgba(212,255,63,0.2); color: var(--lime);
+}
+.v2 .card .ic svg { width: 22px; height: 22px; }
+.v2 .card h3 { font-family: "Syne", sans-serif; font-weight: 600; font-size: 21px; letter-spacing: -0.015em; margin-bottom: 10px; }
+.v2 .card p { font-size: 14.5px; color: var(--txt-dim); line-height: 1.55; }
+.v2 .c-big { grid-column: span 3; grid-row: span 2; }
+.v2 .c-mid { grid-column: span 3; }
+.v2 .c-sm { grid-column: span 2; }
+.v2 .c-tag {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.15em;
+  color: var(--lime); text-transform: uppercase; position: absolute; top: 24px; right: 28px;
+}
+/* big card special */
+.v2 .c-big { padding: 32px; display: flex; flex-direction: column; }
+.v2 .c-big .vis { flex: 1; margin-top: 24px; position: relative; min-height: 200px;
+  border: 1px solid var(--line); border-radius: 12px; background: rgba(0,0,0,0.25); overflow: hidden; }
+
+/* bars chart inside big card */
+.v2 .bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 6px; padding: 20px; }
+.v2 .bars i {
+  flex: 1; background: linear-gradient(180deg, var(--lime), rgba(212,255,63,0.15));
+  border-radius: 4px 4px 0 0; transform-origin: bottom;
+  animation: barIn .9s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes barIn { from { transform: scaleY(0); } to { transform: scaleY(1);} }
+.v2 .c-big .vlab {
+  position: absolute; bottom: 14px; left: 20px;
+  font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--txt-faint); letter-spacing: 0.1em;
+}
+
+/* --- Live scanner panel --- */
+.v2 .scan { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
+.v2 .scan-main {
+  background: linear-gradient(160deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--line); border-radius: 18px; padding: 28px; min-height: 420px;
+  position: relative; overflow: hidden;
+}
+.v2 .scan-side { display: flex; flex-direction: column; gap: 20px; }
+.v2 .scan-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.v2 .scan-head .t { font-family: "Syne", sans-serif; font-weight: 600; font-size: 19px; }
+.v2 .live {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--red); letter-spacing: 0.1em;
+}
+.v2 .live .d { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 1.4s infinite; box-shadow: 0 0 10px var(--red);}
+
+.v2 .terminal {
+  font-family: "JetBrains Mono", monospace; font-size: 13px; line-height: 1.7;
+  background: rgba(0,0,0,0.35); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px; min-height: 300px; color: var(--txt-dim);
+}
+.v2 .terminal .ln { white-space: pre-wrap; word-break: break-word; }
+.v2 .terminal .ln .ok { color: var(--lime); }
+.v2 .terminal .ln .warn { color: var(--amber); }
+.v2 .terminal .ln .mut { color: var(--txt-faint); }
+.v2 .terminal .ln .key { color: #7FB4FF; }
+.v2 .cursor { display: inline-block; width: 8px; height: 15px; background: var(--lime); vertical-align: text-bottom; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.v2 .metric {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+  flex: 1; position: relative; overflow: hidden;
+}
+.v2 .metric .ml { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--txt-faint); text-transform: uppercase; margin-bottom: 10px; }
+.v2 .metric .mv { font-family: "Syne", sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -0.03em; color: var(--txt); }
+.v2 .metric .mv b { color: var(--lime); }
+.v2 .metric .spark { margin-top: 14px; height: 40px; }
+
+/* --- Network section --- */
+.v2 .net-sec { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+.v2 .net-vis {
+  position: relative; aspect-ratio: 1/1; max-width: 540px;
+  border: 1px solid var(--line); border-radius: 20px; background: rgba(0,0,0,0.2); overflow: hidden;
+}
+.v2 .net-vis svg { width: 100%; height: 100%; }
+.v2 .net-info h3 { font-family:"Syne",sans-serif; font-weight:700; font-size: 38px; letter-spacing:-0.025em; margin-bottom: 18px; line-height: 1.05;}
+.v2 .net-info h3 em { font-family:"Fraunces",serif; font-style: italic; font-weight: 300; color: var(--lime);}
+.v2 .net-info p { color: var(--txt-dim); font-size: 16px; line-height: 1.6; margin-bottom: 26px; }
+.v2 .feat-list { display: flex; flex-direction: column; gap: 16px; }
+.v2 .feat-list .f { display: flex; gap: 14px; align-items: flex-start; }
+.v2 .feat-list .f .ck {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+  background: rgba(212,255,63,0.12); border: 1px solid rgba(212,255,63,0.3);
+  display: grid; place-items: center; color: var(--lime); margin-top: 2px;
+}
+.v2 .feat-list .f .ck svg { width: 13px; height: 13px; }
+.v2 .feat-list .f h5 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.v2 .feat-list .f p { font-size: 14px; color: var(--txt-dim); margin: 0; }
+
+/* --- Stats strip --- */
+.v2 .strip {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 40px 0;
+}
+.v2 .strip .s { padding: 38px 30px; border-right: 1px solid var(--line); position: relative; }
+.v2 .strip .s:last-child { border-right: none; }
+.v2 .strip .s .n { font-family: "Syne", sans-serif; font-weight: 700; font-size: 52px; letter-spacing: -0.03em; line-height: 1; color: var(--txt); }
+.v2 .strip .s .n .u { color: var(--lime); font-weight: 700; }
+.v2 .strip .s .l { font-family:"JetBrains Mono",monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--txt-faint); text-transform: uppercase; margin-top: 12px; }
+
+/* --- CTA --- */
+.v2 .cta {
+  margin: 80px 0; padding: 70px 50px; border-radius: 26px; position: relative; overflow: hidden;
+  background: linear-gradient(135deg, rgba(212,255,63,0.12), rgba(212,255,63,0.02));
+  border: 1px solid rgba(212,255,63,0.25);
+  text-align: center;
+}
+.v2 .cta::before {
+  content:""; position: absolute; inset: 0;
+  background: radial-gradient(600px circle at 50% 0%, rgba(212,255,63,0.15), transparent 60%);
+}
+.v2 .cta > * { position: relative; }
+.v2 .cta h2 { font-family:"Syne",sans-serif; font-weight: 700; font-size: clamp(34px,5vw,60px); letter-spacing:-0.03em; line-height: 1; margin-bottom: 20px;}
+.v2 .cta h2 em { font-family:"Fraunces",serif; font-style: italic; font-weight: 300; color: var(--lime);}
+.v2 .cta p { color: var(--txt-dim); font-size: 17px; max-width: 540px; margin: 0 auto 34px; }
+
+/* --- Footer --- */
+.v2 .footer { padding: 50px 0 60px; border-top: 1px solid var(--line); }
+.v2 .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+.v2 .foot-grid h6 { font-family:"JetBrains Mono",monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--txt-faint); text-transform: uppercase; margin-bottom: 16px; }
+.v2 .foot-grid a { display: block; color: var(--txt-dim); text-decoration: none; font-size: 14px; padding: 5px 0; transition: color .25s; }
+.v2 .foot-grid a:hover { color: var(--lime); }
+.v2 .foot-grid .fb p { color: var(--txt-dim); font-size: 14px; line-height: 1.6; max-width: 320px; margin-top: 14px; }
+.v2 .foot-bot { display: flex; justify-content: space-between; align-items: center; margin-top: 50px; padding-top: 24px; border-top: 1px solid var(--line); }
+.v2 .foot-bot p { font-family:"JetBrains Mono",monospace; font-size: 11px; color: var(--txt-faint); letter-spacing: 0.08em; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 980px) {
+  .v1 .wrap, .v2 .wrap { padding: 0 24px; }
+  .v1 .lede-grid, .v2 .hero-grid, .v2 .net-sec, .v2 .scan { grid-template-columns: 1fr; gap: 36px; }
+  .v1 .caps { grid-template-columns: 1fr; gap: 30px; }
+  .v1 .cap { border-right: none; border-bottom: 1px solid var(--rule); padding: 0 0 30px; }
+  .v1 .cap:last-child { border-bottom: none; }
+  .v1 .flow { grid-template-columns: 1fr; gap: 0; }
+  .v1 .stats, .v2 .strip { grid-template-columns: repeat(2,1fr); }
+  .v2 .bento { grid-template-columns: repeat(2,1fr); }
+  .v2 .c-big, .v2 .c-mid, .v2 .c-sm { grid-column: span 2; grid-row: auto; }
+  .v1 .colophon, .v2 .foot-grid { grid-template-columns: 1fr; gap: 30px; }
+  .v1 .hero-side { border-left: none; border-top: 1px solid var(--rule); padding-left: 0; padding-top: 24px; }
+  .v2 .nav-links { display: none; }
+  .v1 .sec-head { grid-template-columns: 1fr; }
+  .v1 .sec-meta { display: none; }
+  .v2 .orb-wrap { margin: 0 auto; }
+}
+@media (max-width: 560px) {
+  .switcher .lbl { display: none; }
+  .v1 .stats, .v2 .strip { grid-template-columns: 1fr; }
+  .v2 .bento { grid-template-columns: 1fr; }
+  .v2 .c-big, .v2 .c-mid, .v2 .c-sm { grid-column: span 1; }
+}
+
+/* entrance animations */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s cubic-bezier(.2,.8,.2,1), transform .9s cubic-bezier(.2,.8,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ FLOATING SWITCHER ============ -->
+<div class="switcher" role="tablist" aria-label="切换设计版本">
+  <span class="lbl">VIEW</span>
+  <button class="active" data-v="v1" id="btnV1">Atelier</button>
+  <button data-v="v2" id="btnV2">Spectra</button>
+</div>
+
+<!-- ====================================================
+     VERSION 1 · ATELIER  (Editorial Insight)
+     ==================================================== -->
+<main class="version v1 active" id="v1">
+  <div class="wrap">
+
+    <!-- Masthead -->
+    <header class="mast">
+      <div class="mast-row">
+        <div class="mast-meta">VOL. <span>04</span> &nbsp;·&nbsp; ISSUE 12 &nbsp;·&nbsp; 周刊</div>
+        <div class="mast-title">The <em>Insight</em> Quarterly</div>
+        <div class="mast-meta r">EST. <span>MMXXVI</span> &nbsp;·&nbsp; 2026.07.06</div>
+      </div>
+      <nav class="sub-nav">
+        <a href="#lead">头条</a>
+        <a href="#caps">能力</a>
+        <a href="#flow">方法</a>
+        <a href="#demo">实证</a>
+        <a href="#colophon">关于</a>
+      </nav>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero" id="lead">
+      <div class="kicker reveal">AI For 洞察 · Insight Agent · 封面专题</div>
+      <h1 class="reveal">
+        在噪声之中，<br>
+        读出<span class="it">未被言说</span>的<span class="small">[01]</span><br>
+        那一层。
+      </h1>
+      <div class="lede-grid">
+        <p class="lede reveal">
+          <span class="dc">洞</span>察不是更多的数据，而是更准的<b>注意</b>。
+          当世界每小时都在自我刷新，真正的稀缺品不再是信息本身，
+          而是那种能把分散的信号缝合为一句话的能力——
+          我们把这种能力，叫做<em style="font-family:'Fraunces',serif;font-style:italic;color:var(--accent)">洞察</em>。
+          AI For 洞察，正是一个为此而生的智能体：它读、它想、它提问，
+          然后只把那句值得你停下来听的话，交到你手上。
+        </p>
+        <aside class="hero-side reveal">
+          <div class="lbl">编者按 / Editor's Note</div>
+          <p>本期我们拆解了一款不喧哗的智能体。它不追求"无所不知"，而是固执地追问"所以呢"。</p>
+          <p>它的答案常常很短——但读完之后，你会发现自己看待问题的方式，已经悄悄改变。</p>
+          <div class="sig">—— 主笔 · 林知微</div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Section I: Capabilities -->
+    <div class="sec-head reveal" id="caps">
+      <div class="sec-num">I.</div>
+      <div>
+        <hr class="rule">
+        <h2 class="sec-title">它如何<em style="font-style:italic;color:var(--accent);font-family:'Fraunces',serif;font-weight:300">看</em>见</h2>
+      </div>
+      <div class="sec-meta">三种核心能力<br>Core Faculties</div>
+    </div>
+
+    <div class="caps">
+      <article class="cap reveal">
+        <div class="ix">— 01 / SIGIL</div>
+        <h3>信号 <em>缝合</em></h3>
+        <p>它同时阅读成百上千份材料——财报、对话、新闻、田野笔记——并在它们彼此矛盾的缝隙里，找到那条被所有人忽略、却把一切串起来的暗线。</p>
+        <div class="marg">"它不是在检索，它是在拼图。"</div>
+      </article>
+      <article class="cap reveal">
+        <div class="ix">— 02 / RATIO</div>
+        <h3>反事实<em>推理</em></h3>
+        <p>每当得出一个结论，它会自动反问："如果不是这样呢？"通过构造对立假设、回溯证据，它给出的不是自信，而是经过审视的、可被反驳的判断。</p>
+        <div class="marg">"怀疑，是洞察的呼吸。"</div>
+      </article>
+      <article class="cap reveal">
+        <div class="ix">— 03 / VOX</div>
+        <h3>克制地<em>表达</em></h3>
+        <p>它知道一句话的价值高于一整页。最终的洞察会被压缩为可被立刻使用的一句结论、三个支撑点、以及一个你该追问的下一步。</p>
+        <div class="marg">"少即是深。"</div>
+      </article>
+    </div>
+
+    <!-- Pull quote -->
+    <div class="pull reveal">
+      <q>真正的洞察，是让你后悔没有早点这样想。</q>
+      <div class="attr">— Atelier Principle №7</div>
+    </div>
+
+    <!-- Section II: Workflow -->
+    <div class="sec-head reveal" id="flow">
+      <div class="sec-num">II.</div>
+      <div>
+        <hr class="rule">
+        <h2 class="sec-title">四步，从<em style="font-style:italic;color:var(--accent);font-family:'Fraunces',serif;font-weight:300">问</em>到答</h2>
+      </div>
+      <div class="sec-meta">工作流 · Workflow<br>01 — 04</div>
+    </div>
+
+    <div class="flow">
+      <div class="step reveal">
+        <div class="n">i</div>
+        <div>
+          <h4>提一个真问题</h4>
+          <p>它先和你一起把模糊的好奇，打磨成一个可以被回答的、有边界的好问题。</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="n">ii</div>
+        <div>
+          <h4>广读 · 细辨</h4>
+          <p>跨语种、跨形态地采集证据，并为每一条标注来源、时效与可信度。</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="n">iii</div>
+        <div>
+          <h4>交叉求证</h4>
+          <p>构造至少三个相互竞争的假说，用证据投票，留下最能解释矛盾的那一个。</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="n">iv</div>
+        <div>
+          <h4>交付一句话</h4>
+          <p>把整段推理浓缩为结论、依据、与一个你应当继续追问的方向。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats reveal">
+      <div class="stat"><div class="num">42<sup>种</sup></div><div class="lab">语种覆盖</div></div>
+      <div class="stat"><div class="num">3.2<sup>亿</sup></div><div class="lab">日处理文档</div></div>
+      <div class="stat"><div class="num">97<sup>%</sup></div><div class="lab">溯源准确率</div></div>
+      <div class="stat"><div class="num">8<sup>秒</sup></div><div class="lab">平均洞察延迟</div></div>
+    </div>
+
+    <!-- Section III: Demo -->
+    <div class="sec-head reveal" id="demo">
+      <div class="sec-num">III.</div>
+      <div>
+        <hr class="rule">
+        <h2 class="sec-title">一份<em style="font-style:italic;color:var(--accent);font-family:'Fraunces',serif;font-weight:300">洞察</em>样本</h2>
+      </div>
+      <div class="sec-meta">实证 · Field Report<br>Case №2026-071</div>
+    </div>
+
+    <div class="demo reveal">
+      <div class="tag">智能体输出 · 实录</div>
+      <div class="d-head">
+        <h4>主题：某新茶饮品牌的"下滑"幻象</h4>
+        <div class="id">CASE / 2026-071 · 已脱敏</div>
+      </div>
+
+      <div class="finding">
+        <div class="b">A.</div>
+        <div class="t">表面营收下滑，但<em>老客复购频次上升 31%</em>——流失的是低质流量，留下的是更健康的基本盘。</div>
+        <div class="c">SIG · 高置信</div>
+      </div>
+      <div class="finding">
+        <div class="b">B.</div>
+        <div class="t">价格投诉集中在<em>两个一线城市</em>，且与竞品促销周期高度同步，非品牌力衰退，而是局部价格战。</div>
+        <div class="c">SIG · 中置信</div>
+      </div>
+      <div class="finding">
+        <div class="b">C.</div>
+        <div class="t">社媒"降温"实为<em>话题从产品转向品牌叙事</em>，情绪 polarity 由中性转正向，是成熟信号而非危机。</div>
+        <div class="c">SIG · 高置信</div>
+      </div>
+      <div class="finding">
+        <div class="b">D.</div>
+        <div class="t">建议下一步：<em>追问三线城市扩张的供应链弹性</em>，这是当前模型无法证伪的唯一风险点。</div>
+        <div class="c">NEXT · 待核验</div>
+      </div>
+
+      <div class="d-foot">
+        <span>结论：所谓"下滑"，更像一次主动的<em style="color:var(--accent)">提质换挡</em>。</span>
+        <a href="#">查看完整推理链 →</a>
+      </div>
+    </div>
+
+    <!-- Colophon -->
+    <footer class="colophon reveal" id="colophon">
+      <div class="colo">
+        <h5>Colophon · 版权页</h5>
+        <p>本刊以 <em>AI For 洞察</em> 智能体为编辑伙伴共同出品。
+        正文采用 Fraunces 与 Newsreader 排印，数据以 JetBrains Mono 标注。
+        我们相信：在算法时代，<em>克制的判断</em>比洪流般的输出更值得被保留。</p>
+      </div>
+      <div class="colo">
+        <h5>栏目</h5>
+        <a href="#lead">封面专题</a><br>
+        <a href="#caps">能力拆解</a><br>
+        <a href="#flow">方法论</a><br>
+        <a href="#demo">实证档案</a>
+      </div>
+      <div class="colo">
+        <h5>订阅</h5>
+        <p class="big">每周一，<br>一句值得停下来的话。</p>
+        <a href="#" style="display:inline-block;margin-top:14px">→ 免费订阅</a>
+      </div>
+    </footer>
+
+  </div>
+</main>
+
+<!-- ====================================================
+     VERSION 2 · SPECTRA  (Dark Intelligence)
+     ==================================================== -->
+<main class="version v2" id="v2">
+  <div class="mesh"></div>
+  <div class="grid-bg"></div>
+  <div class="noise"></div>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="brand">
+      <div class="mark">◆</div>
+      <div class="name">AI<b>·</b>洞察 <span style="color:var(--txt-faint);font-weight:400;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em">/ INSIGHT ENGINE</span></div>
+    </div>
+    <div class="nav-links">
+      <a href="#s2-caps">能力</a>
+      <a href="#s2-scan">实时</a>
+      <a href="#s2-net">网络</a>
+      <a href="#s2-cta">接入</a>
+    </div>
+    <button class="nav-cta">启动 Agent →</button>
+  </nav>
+
+  <div class="wrap">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="badge reveal"><span class="dot"></span> AGENT ONLINE · v4.2 · 2026 BUILD</div>
+          <h1 class="reveal">
+            <span class="gr">把整个世界的</span><br>
+            噪声，<span class="li">炼成 <em>一句</em></span>
+            <span class="li">能用的<em>洞察</em>。</span>
+          </h1>
+          <p class="lead reveal">AI For 洞察 是一个 <b>持续运转的认知智能体</b>。它不间断地阅读、关联、质疑、收敛——在 42 种语言、3.2 亿份文档之上，为你输出经过审视的、可被反驳的判断。</p>
+          <div class="hero-actions reveal">
+            <button class="btn btn-pri">启动洞察 Agent <span class="arrow">→</span></button>
+            <button class="btn btn-ghost">观看 90 秒演示</button>
+          </div>
+        </div>
+
+        <!-- Orb -->
+        <div class="orb-wrap reveal">
+          <div class="orb"></div>
+          <div class="orb-ring r1"></div>
+          <div class="orb-ring r2"></div>
+          <div class="orb-ring r3"></div>
+          <svg viewBox="0 0 400 400" id="netSvgHero" aria-hidden="true"></svg>
+          <div class="orb-core"><span>INSIGHT<br>CORE</span></div>
+          <div class="float-tag ft1">● <b>1,284</b> 信号源</div>
+          <div class="float-tag ft2">置信度 <b>0.94</b></div>
+          <div class="float-tag ft3">延迟 <b>7.8s</b></div>
+        </div>
+      </div>
+
+      <div class="trust">
+        <div class="t-lbl">受信于 ↓</div>
+        <div class="logos">
+          <span>NORDIC CAPITAL</span>
+          <span>Heliós Research</span>
+          <span>承露基金</span>
+          <span>VERIDIAN</span>
+          <span>明远智库</span>
+          <span>Quanta Labs</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bento: Capabilities -->
+    <section class="sec" id="s2-caps">
+      <div class="sec-head reveal">
+        <div class="left">
+          <div class="sec-kicker">CORE FACULTIES · 核心能力</div>
+          <h2 class="sec-title">四块拼成<br>一个 <em>认知体</em>。</h2>
+        </div>
+        <p class="sec-desc">从信号采集到反事实求证，每一层都可观测、可干预、可溯源。</p>
+      </div>
+
+      <div class="bento">
+        <!-- big card -->
+        <div class="card c-big reveal">
+          <div class="c-tag">01 / SIGNAL</div>
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+          </div>
+          <h3>全域信号缝合</h3>
+          <p>跨 42 语种、文档/对话/时序/图像多模态并发采集，实时构建可溯源的证据图谱。每一条结论都能下钻到原始来源。</p>
+          <div class="vis">
+            <div class="bars" id="bars"></div>
+            <div class="vlab">实时吞吐 · docs / sec</div>
+          </div>
+        </div>
+
+        <div class="card c-mid reveal">
+          <div class="c-tag">02 / REASON</div>
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>
+          </div>
+          <h3>反事实推理引擎</h3>
+          <p>自动构造 ≥3 个对立假设，用证据反向投票，剔除"听起来对"的答案，只留下经过审视的判断。</p>
+        </div>
+
+        <div class="card c-sm reveal">
+          <div class="c-tag">03 / TRACE</div>
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4l16 16M4 20L20 4"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <h3>全链路溯源</h3>
+          <p>每个论点附来源、时效与可信度评分，可一键下钻至原文。</p>
+        </div>
+
+        <div class="card c-sm reveal">
+          <div class="c-tag">04 / DELIVER</div>
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </div>
+          <h3>克制交付</h3>
+          <p>结论 + 依据 + 下一步追问，绝不堆砌。</p>
+        </div>
+
+        <div class="card c-sm reveal">
+          <div class="c-tag">05 / LEARN</div>
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <h3>自我校准</h3>
+          <p>记录每一次被你否决的结论，校准置信模型。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Scanner -->
+    <section class="sec" id="s2-scan" style="padding-top:0">
+      <div class="sec-head reveal">
+        <div class="left">
+          <div class="sec-kicker">LIVE · 实时推理舱</div>
+          <h2 class="sec-title">看它 <em>正在</em> 想。</h2>
+        </div>
+        <p class="sec-desc">这是智能体的实时工作台。下面是它处理一个真实问题时的内部日志节选。</p>
+      </div>
+
+      <div class="scan">
+        <div class="scan-main reveal">
+          <div class="scan-head">
+            <div class="t">推理终端 · agent://insight/live</div>
+            <div class="live"><span class="d"></span> LIVE</div>
+          </div>
+          <div class="terminal" id="term">
+            <div class="ln"><span class="mut">[boot]</span> Insight Core v4.2 已就绪 · 模型图谱已加载</div>
+            <div class="ln"><span class="mut">[user]</span> 新茶饮行业，谁在悄悄变好？</div>
+            <div class="ln"><span class="ok">[plan]</span> 拆解为 4 子任务：营收 / 复购 / 口碑 / 供给</div>
+            <div class="ln"><span class="key">[fetch]</span> 并发采集 1,284 信号源 · 42 语种</div>
+            <div class="ln"><span class="mut">[graph]</span> 构建证据节点 8,914 · 边 21,307</div>
+            <div class="ln"><span class="warn">[hypo]</span> 假说 H1 下滑 / H2 提质 / H3 价格战</div>
+            <div class="ln"><span class="ok">[vote]</span> H2 置信 0.94 · H1 被证伪 · H3 局部成立</div>
+            <div class="ln"><span class="ok">[out]</span> → "下滑"实为主动提质换挡。</div>
+            <div class="ln"><span class="mut">[next]</span> 建议追问：三线供应链弹性 <span class="cursor"></span></div>
+          </div>
+        </div>
+
+        <div class="scan-side">
+          <div class="metric reveal">
+            <div class="ml">当前置信度</div>
+            <div class="mv"><b>0.94</b></div>
+            <svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none">
+              <polyline id="spark1" fill="none" stroke="#D4FF3F" stroke-width="2" points=""></polyline>
+              <polyline id="spark1f" fill="rgba(212,255,63,0.12)" stroke="none" points=""></polyline>
+            </svg>
+          </div>
+          <div class="metric reveal">
+            <div class="ml">处理吞吐 · docs/s</div>
+            <div class="mv">12.4<span style="color:var(--txt-faint);font-size:.5em">k</span></div>
+            <svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none">
+              <polyline id="spark2" fill="none" stroke="#FFB347" stroke-width="2" points=""></polyline>
+              <polyline id="spark2f" fill="rgba(255,179,71,0.12)" stroke="none" points=""></polyline>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Network -->
+    <section class="sec" id="s2-net" style="padding-top:0">
+      <div class="net-sec">
+        <div class="net-vis reveal">
+          <svg viewBox="0 0 500 500" id="netSvg" aria-hidden="true"></svg>
+        </div>
+        <div class="net-info reveal">
+          <div class="sec-kicker">KNOWLEDGE GRAPH · 认知图谱</div>
+          <h3>每个洞察，<br>都是<em>一张网</em>。</h3>
+          <p>AI For 洞察 不存储答案，它存储关系。每一次推理都是在一张持续生长的证据图谱上做一次寻路——你能看见它如何从一个事实，走到一个判断。</p>
+          <div class="feat-list">
+            <div class="f"><div class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+              <div><h5>可视化推理路径</h5><p>节点即证据，边即关系，结论即路径。</p></div>
+            </div>
+            <div class="f"><div class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+              <div><h5>人机协同干预</h5><p>可在任意节点注入你的判断，重新收敛。</p></div>
+            </div>
+            <div class="f"><div class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+              <div><h5>持续自我校准</h5><p>反馈回流图谱，下一轮更准。</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats strip -->
+    <div class="strip reveal">
+      <div class="s"><div class="n">42<span class="u">+</span></div><div class="l">语种覆盖</div></div>
+      <div class="s"><div class="n">3.2<span class="u">亿</span></div><div class="l">日处理文档</div></div>
+      <div class="s"><div class="n">97<span class="u">%</span></div><div class="l">溯源准确率</div></div>
+      <div class="s"><div class="n">7.8<span class="u">s</span></div><div class="l">平均洞察延迟</div></div>
+    </div>
+
+    <!-- CTA -->
+    <section class="cta reveal" id="s2-cta">
+      <h2>让噪声，<em>开始</em><br>变得有形状。</h2>
+      <p>免费接入一个始终在线的洞察伙伴。它不会替你做决定，但它会让你的决定，更值得做。</p>
+      <div class="hero-actions" style="justify-content:center">
+        <button class="btn btn-pri">启动洞察 Agent <span class="arrow">→</span></button>
+        <button class="btn btn-ghost">预约 1:1 演示</button>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="foot-grid">
+        <div class="fb">
+          <div class="brand">
+            <div class="mark">◆</div>
+            <div class="name">AI<b>·</b>洞察</div>
+          </div>
+          <p>一个为"更准的注意"而生的认知智能体。在洪流之中，只交付值得停下来的那一句。</p>
+        </div>
+        <div>
+          <h6>产品</h6>
+          <a href="#">洞察 Agent</a>
+          <a href="#">认知图谱</a>
+          <a href="#">API 接入</a>
+          <a href="#">企业版</a>
+        </div>
+        <div>
+          <h6>资源</h6>
+          <a href="#">技术白皮书</a>
+          <a href="#">实证档案</a>
+          <a href="#">更新日志</a>
+          <a href="#">文档</a>
+        </div>
+        <div>
+          <h6>公司</h6>
+          <a href="#">关于</a>
+          <a href="#">招贤</a>
+          <a href="#">联系</a>
+          <a href="#">隐私</a>
+        </div>
+      </div>
+      <div class="foot-bot">
+        <p>© 2026 AI·洞察 · INSIGHT ENGINE · BUILD 4.2.07</p>
+        <p>SYSTEM STATUS: <span style="color:var(--lime)">● ALL GREEN</span></p>
+      </div>
+    </footer>
+
+  </div>
+</main>
+
+<script>
+/* ============================================================
+   THEME SWITCHING
+   ============================================================ */
+const btns = document.querySelectorAll('.switcher button');
+const v1 = document.getElementById('v1');
+const v2 = document.getElementById('v2');
+btns.forEach(b => b.addEventListener('click', () => {
+  const target = b.dataset.v;
+  btns.forEach(x => x.classList.toggle('active', x === b));
+  v1.classList.toggle('active', target === 'v1');
+  v2.classList.toggle('active', target === 'v2');
+  window.scrollTo({top:0, behavior:'smooth'});
+  // re-trigger reveals
+  setTimeout(initReveal, 60);
+}));
+
+/* ============================================================
+   SCROLL REVEAL (IntersectionObserver)
+   ============================================================ */
+function initReveal(){
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach((e,i)=>{
+      if(e.isIntersecting){
+        e.target.style.transitionDelay = (e.target.dataset.delay || 0)+'ms';
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  },{threshold:0.12, rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.reveal').forEach((el,idx)=>{
+    el.classList.remove('in');
+    io.observe(el);
+  });
+}
+initReveal();
+
+/* ============================================================
+   V1 — staggered entrance for hero (no observer needed)
+   ============================================================ */
+document.querySelectorAll('#v1 .hero .reveal').forEach((el,i)=> el.style.transitionDelay = (i*90)+'ms');
+
+/* ============================================================
+   V2 — BARS chart (animated heights)
+   ============================================================ */
+function buildBars(){
+  const bars = document.getElementById('bars');
+  if(!bars) return;
+  bars.innerHTML = '';
+  const n = 28;
+  for(let i=0;i<n;i++){
+    const b = document.createElement('i');
+    // organic-ish heights via sine + noise
+    const h = 20 + Math.abs(Math.sin(i*0.5)) * 60 + Math.random()*20;
+    b.style.height = h + '%';
+    b.style.animationDelay = (i*40)+'ms';
+    bars.appendChild(b);
+  }
+}
+buildBars();
+
+/* ============================================================
+   V2 — SPARKLINES (live updating)
+   ============================================================ */
+function makeSpark(lineId, fillId, color, base, amp){
+  const line = document.getElementById(lineId);
+  const fill = document.getElementById(fillId);
+  if(!line) return;
+  const W = 200, H = 40, N = 40;
+  let pts = [];
+  for(let i=0;i<N;i++) pts.push(base + (Math.random()-0.5)*amp);
+  function render(){
+    const step = W/(N-1);
+    const min = Math.min(...pts), max = Math.max(...pts);
+    const range = (max-min)||1;
+    const coords = pts.map((v,i)=>{
+      const x = i*step;
+      const y = H - ((v-min)/range)*(H-6) - 3;
+      return x.toFixed(1)+','+y.toFixed(1);
+    });
+    line.setAttribute('points', coords.join(' '));
+    fill.setAttribute('points', '0,'+H+' '+coords.join(' ')+' '+W+','+H);
+  }
+  render();
+  setInterval(()=>{
+    pts.shift();
+    pts.push(base + (Math.random()-0.5)*amp);
+    render();
+  }, 900);
+}
+makeSpark('spark1','spark1f','#D4FF3F', 0.9, 0.18);
+makeSpark('spark2','spark2f','#FFB347', 0.6, 0.5);
+
+/* ============================================================
+   V2 — NETWORK GRAPH (SVG nodes + edges)
+   ============================================================ */
+function buildNetwork(svgId, count, linkCount, W, H){
+  const svg = document.getElementById(svgId);
+  if(!svg) return;
+  // node positions (deterministic-ish for stability)
+  const nodes = [];
+  const cx = W/2, cy = H/2;
+  nodes.push({x:cx, y:cy, r:7, c:'#D4FF3F', core:true});
+  for(let i=0;i<count;i++){
+    const ang = (i/count)*Math.PI*2 + Math.random()*0.4;
+    const rad = 60 + Math.random()*((Math.min(W,H)/2)-80);
+    nodes.push({
+      x: cx + Math.cos(ang)*rad,
+      y: cy + Math.sin(ang)*rad,
+      r: 2 + Math.random()*4,
+      c: Math.random()>0.7 ? '#D4FF3F' : (Math.random()>0.6? '#FFB347':'#7FB4FF')
+    });
+  }
+  // edges from core to some nodes, plus random links
+  let edgesHTML = '';
+  for(let i=1;i<nodes.length;i++){
+    if(Math.random()>0.35){
+      const o = nodes[i], c = nodes[0];
+      edgesHTML += `<line x1="${c.x}" y1="${c.y}" x2="${o.x}" y2="${o.y}" stroke="rgba(212,255,63,0.18)" stroke-width="0.6"/>`;
+    }
+  }
+  for(let k=0;k<linkCount;k++){
+    const a = nodes[1+Math.floor(Math.random()*(nodes.length-1))];
+    const b = nodes[1+Math.floor(Math.random()*(nodes.length-1))];
+    if(a!==b) edgesHTML += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>`;
+  }
+  // pulses along a few core edges
+  let pulseHTML = '';
+  for(let i=0;i<5;i++){
+    const idx = 1+Math.floor(Math.random()*(nodes.length-1));
+    const o = nodes[idx], c = nodes[0];
+    pulseHTML += `<circle r="2.5" fill="#D4FF3F">
+      <animateMotion dur="${2+Math.random()*2}s" repeatCount="indefinite" path="M${c.x},${c.y} L${o.x},${o.y}"/>
+      <animate attributeName="opacity" values="0;1;0" dur="${2+Math.random()*2}s" repeatCount="indefinite"/>
+    </circle>`;
+  }
+  // nodes
+  let nodesHTML = '';
+  nodes.forEach((n,i)=>{
+    if(n.core){
+      nodesHTML += `<circle cx="${n.x}" cy="${n.y}" r="${n.r+6}" fill="rgba(212,255,63,0.15)"/>`;
+      nodesHTML += `<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.c}"><animate attributeName="r" values="${n.r};${n.r+2};${n.r}" dur="2.4s" repeatCount="indefinite"/></circle>`;
+    } else {
+      nodesHTML += `<circle cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.c}" opacity="${0.5+Math.random()*0.5}"/>`;
+    }
+  });
+  svg.innerHTML = edgesHTML + pulseHTML + nodesHTML;
+}
+buildNetwork('netSvg', 46, 40, 500, 500);
+buildNetwork('netSvgHero', 22, 18, 400, 400);
+
+/* ============================================================
+   V2 — CARD mouse glow
+   ============================================================ */
+document.querySelectorAll('.v2 .card').forEach(card=>{
+  card.addEventListener('mousemove', e=>{
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX-r.left)+'px');
+    card.style.setProperty('--my', (e.clientY-r.top)+'px');
+  });
+});
+
+/* ============================================================
+   V2 — terminal live append (loop the last line)
+   ============================================================ */
+(function(){
+  const term = document.getElementById('term');
+  if(!term) return;
+  const tail = [
+    {t:'[scan]', c:'mut', txt:'深度遍历证据子图 G₃ · 节点 1,204'},
+    {t:'[hypo]', c:'warn', txt:'生成假说 H4：渠道下沉未饱和'},
+    {t:'[vote]', c:'ok', txt:'H4 置信 0.71 · 标记为可追踪'},
+    {t:'[out]', c:'ok', txt:'→ 三线城市存在 18% 增长冗余。'},
+    {t:'[idle]', c:'mut', txt:'等待下一个问题…'},
+  ];
+  let i = 0;
+  function pushLine(){
+    const item = tail[i % tail.length];
+    const div = document.createElement('div');
+    div.className = 'ln';
+    div.innerHTML = `<span class="${item.c}">${item.t}</span> ${item.txt}`;
+    // remove cursor from previous last line
+    const prevCur = term.querySelector('.ln:last-child .cursor');
+    if(prevCur) prevCur.remove();
+    // add cursor to new
+    div.innerHTML += ' <span class="cursor"></span>';
+    term.appendChild(div);
+    // keep height bounded
+    while(term.children.length > 16) term.removeChild(term.firstChild);
+    term.scrollTop = term.scrollHeight;
+    i++;
+  }
+  setInterval(pushLine, 2600);
+})();
+</script>
+</body>
+</html>

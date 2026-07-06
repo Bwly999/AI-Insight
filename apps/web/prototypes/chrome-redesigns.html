@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI-Insight · Chrome Redesigns — Topbar × Sidebar × 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   Tokens —— 完整复制自 apps/web/src/style.css（双主题，单一来源）
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --sp-0:0;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:48px;--sp-8:64px;
+  --r-xs:5px;--r-sm:8px;--r-md:12px;--r-lg:18px;--r-xl:24px;--r-pill:999px;
+  --fs-xs:11px;--fs-sm:12.5px;--fs-md:14px;--fs-lg:16px;--fs-xl:20px;--fs-2xl:28px;
+  --sans:"Inter","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono","IBM Plex Mono",ui-monospace,monospace;
+  --ease-out:cubic-bezier(.2,.7,.2,1);--t-fast:.13s var(--ease-out);--t-mid:.2s var(--ease-out);
+}
+:root,[data-theme="light"]{
+  --bg:#FAFAFB;--surface:#FFFFFF;--surface-2:#F4F4F6;--surface-3:#EFEFF2;--surface-raised:#FFFFFF;
+  --text:#18181B;--text-2:#3F3F46;--text-3:#71717A;--text-4:#A1A1AA;
+  --border:#E7E7EA;--border-2:#DEDDE1;
+  --accent:#2F855A;--accent-hover:#276749;--accent-soft:#E1EFE5;--accent-text:#235944;--accent-line:#C7E3D0;--on-accent:#FFFFFF;
+  --green:#16A34A;--green-soft:#DCFCE7;--green-line:#BBF7D0;
+  --amber:#C4870E;--amber-soft:#FEF3C7;--amber-line:#FDE68A;
+  --rose:#DC2626;--rose-soft:#FEE2E2;--rose-line:#FECACA;
+  --src-search:#3B7EA1;--src-rss:#9B5DE5;--src-crawl:#C4870E;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+  --ring:0 0 0 3px var(--accent-soft);
+}
+[data-theme="dark"]{
+  --bg:#0E0F13;--surface:#16171D;--surface-2:#1C1E25;--surface-3:#23262F;--surface-raised:#1C1E25;
+  --text:#E5E7EB;--text-2:#CBD1DA;--text-3:#9CA3AF;--text-4:#6B7280;
+  --border:#262830;--border-2:#32363F;
+  --accent:#3DD684;--accent-hover:#4FE595;--accent-soft:rgba(61,214,132,.14);--accent-text:#5EE696;--accent-line:rgba(61,214,132,.32);--on-accent:#06281D;
+  --green:#34D399;--green-soft:rgba(52,211,153,.14);--green-line:rgba(52,211,153,.36);
+  --amber:#FBBF24;--amber-soft:rgba(251,191,36,.14);--amber-line:rgba(251,191,36,.38);
+  --rose:#F87171;--rose-soft:rgba(248,113,113,.14);--rose-line:rgba(248,113,113,.38);
+  --src-search:#5B9EC9;--src-rss:#B47DF5;--src-crawl:#FBBF24;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  --ring:0 0 0 3px var(--accent-soft);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;transition:background-color var(--t-mid),color var(--t-mid)}
+::selection{background:var(--accent-soft);color:var(--accent-text)}
+.mono{font-family:var(--mono);font-feature-settings:"zero","ss01"}
+
+/* ── 页面骨架（仅原型展示用，非方案本身） ─────────────────── */
+.page{max-width:1320px;margin:0 auto;padding:48px 32px 120px}
+.page-head{margin-bottom:48px;border-bottom:1px solid var(--border);padding-bottom:28px}
+.page-kicker{font-family:var(--mono);font-size:var(--fs-xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);margin:0 0 10px}
+.page-title{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:0 0 10px;color:var(--text)}
+.page-sub{margin:0;color:var(--text-3);font-size:15px;max-width:70ch}
+.page-meta{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.theme-switch{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);cursor:pointer;font-size:var(--fs-sm);color:var(--text-2);font-family:var(--sans);transition:var(--t-fast)}
+.theme-switch:hover{border-color:var(--accent);color:var(--accent)}
+.theme-switch .tt{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+
+/* 方案区段 */
+.group{margin-top:64px}
+.group-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.group-title{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0;color:var(--text)}
+.group-title em{font-style:normal;color:var(--accent-text)}
+.group-note{font-family:var(--mono);font-size:var(--fs-xs);letter-spacing:.06em;color:var(--text-3)}
+
+.case{margin-top:28px;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;background:var(--bg)}
+.case-stage{padding:0;background:var(--bg);position:relative}
+.case-meta{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:22px 24px;border-top:1px solid var(--border);background:var(--surface)}
+.cm-label{font-family:var(--mono);font-size:var(--fs-xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-text)}
+.cm-label .n{color:var(--text-4);margin-right:6px}
+.cm-body h4{margin:0 0 10px;font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.005em}
+.cm-body p{margin:0 0 12px;color:var(--text-2);font-size:13.5px;line-height:1.65}
+.cm-body p:last-child{margin:0}
+.cm-body .pts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cm-body .pt{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--text-3);padding:3px 8px;border:1px solid var(--border);border-radius:var(--r-xs);background:var(--surface-2)}
+.cm-body .pt.hi{color:var(--accent-text);border-color:var(--accent-line);background:var(--accent-soft)}
+
+/* 滚动条统一 */
+.scroll::-webkit-scrollbar{width:10px;height:10px}
+.scroll::-webkit-scrollbar-track{background:transparent}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:var(--r-pill);border:2px solid transparent;background-clip:padding-box}
+
+/* ════════════════════════════════════════════════════════════════════
+   通用图标（inline svg，避免依赖）
+   ═══════════════════════════════════════════════════════════════════ */
+.ico{display:inline-flex;vertical-align:middle}
+.ico svg{display:block}
+
+/* 共享：品牌 mark（绿底白字简化） */
+.bm{width:30px;height:30px;border-radius:var(--r-sm);background:var(--accent);display:grid;place-items:center;color:var(--on-accent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.12);font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:-.04em}
+.bm svg{display:block}
+
+/* ════════════════════════════════════════════════════════════════════
+   ▲ TOPBAR · 方向 A — Console 仪器控制台
+   主张：状态升格为中央"遥测模块"。工作台 = 仪器。
+   ═══════════════════════════════════════════════════════════════════ */
+.tA{
+  height:60px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;
+  gap:0;padding:0 18px;background:var(--surface);
+  border-bottom:1px solid var(--border);position:relative;
+}
+/* 仪器底槽：在底边内侧加一条 mono 刻度（tonal，非发光） */
+.tA::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:repeating-linear-gradient(90deg,var(--border) 0 8px,transparent 8px 16px);
+  opacity:.7}
+.tA-left{display:flex;align-items:center;gap:11px;padding-right:18px;border-right:1px solid var(--border);height:100%}
+.tA-name{font-size:15px;font-weight:700;letter-spacing:-.015em;color:var(--text);line-height:1}
+.tA-name span{color:var(--accent)}
+.tA-sub{font-family:var(--mono);font-size:9.5px;color:var(--text-4);font-weight:600;margin-top:3px;letter-spacing:.14em;text-transform:uppercase}
+
+/* 中央遥测模块 —— 核心签名 */
+.tA-tel{
+  justify-self:center;display:inline-flex;align-items:stretch;height:38px;
+  border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);
+  overflow:hidden;box-shadow:var(--shadow-sm);
+}
+.tA-cell{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 14px;min-width:84px;border-right:1px solid var(--border)}
+.tA-cell:last-child{border-right:none}
+.tA-cell.k{background:var(--surface-2)}
+.tA-ck{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)}
+.tA-cv{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--text);line-height:1;font-feature-settings:"zero","ss01"}
+.tA-cv.run{color:var(--green)}
+.tA-cv.amber{color:var(--amber)}
+.tA-cell.live .tA-ck{color:var(--green)}
+.tA-cell.live{position:relative}
+.tA-cell.live::before{content:"";position:absolute;left:6px;top:6px;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 2px var(--green-soft)}/* 状态点，非装饰发光——是仪器"在运行"的信号 */
+@keyframes tpulse{0%,100%{opacity:1}50%{opacity:.5}}
+.tA-cell.live::before{animation:tpulse 1.6s var(--ease-out) infinite}
+@media (prefers-reduced-motion:reduce){.tA-cell.live::before{animation:none}}
+
+.tA-right{display:flex;align-items:center;gap:10px;padding-left:18px;border-left:1px solid var(--border);height:100%}
+.tA-abort{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--rose-line);background:var(--surface);color:var(--rose);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:var(--t-fast)}
+.tA-abort:hover{background:var(--rose-soft);border-color:var(--rose)}
+.tA-abort .dd{width:7px;height:7px;border-radius:50%;background:var(--rose)}
+.tA-tools{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--border)}
+.tA-tb{width:28px;height:28px;border:none;background:transparent;border-radius:var(--r-xs);display:grid;place-items:center;color:var(--text-2);cursor:pointer;transition:var(--t-fast)}
+.tA-tb:hover{background:var(--surface-3);color:var(--accent)}
+
+/* ════════════════════════════════════════════════════════════════════
+   ▲ TOPBAR · 方向 B — Masthead 报头
+   主张：用报头的"结构"（不是朱砂/衬线——register 不混），
+        粗体报名 + 竖线分区 + mono 版次戳 + 双线下沿。
+   ═══════════════════════════════════════════════════════════════════ */
+.tB{
+  min-height:64px;display:flex;align-items:stretch;padding:0;
+  background:var(--surface);border-bottom:1px solid var(--border);position:relative;
+}
+/* 双线 rule：报头标志，仅这里许可（状态指示，不是卡片装饰） */
+.tB::after{content:"";position:absolute;left:18px;right:18px;bottom:-1px;height:3px;
+  border-top:1px solid var(--text);border-bottom:1px solid var(--text);opacity:.85}
+.tB-mast{display:flex;align-items:center;gap:14px;padding:0 20px}
+.tB-namewrap{display:flex;flex-direction:column;gap:2px;line-height:1}
+.tB-name{font-size:19px;font-weight:800;letter-spacing:-.025em;color:var(--text);line-height:1}
+.tB-name span{color:var(--accent);font-weight:800}
+.tB-tag{font-family:var(--mono);font-size:9.5px;color:var(--text-3);letter-spacing:.16em;text-transform:uppercase;font-weight:600}
+
+.tB-div{width:1px;background:var(--border-2);align-self:stretch;margin:14px 0}
+
+.tB-edition{display:flex;flex-direction:column;justify-content:center;gap:3px}
+.tB-ek{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4);font-weight:600}
+.tB-ev{font-family:var(--mono);font-size:12px;color:var(--text-2);font-weight:500}
+.tB-ev .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:1px}
+
+.tB-spacer{flex:1}
+
+.tB-right{display:flex;align-items:center;gap:14px;padding:0 20px}
+.tB-status{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text-2);font-weight:500}
+.tB-status .lv{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border:1px solid var(--green-line);border-radius:var(--r-xs);background:var(--green-soft);color:var(--green);font-weight:600}
+.tB-status .lv::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+.tB-status .tm{color:var(--text-3)}
+.tB-tools{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--border)}
+.tB-tb{width:28px;height:28px;border:none;background:transparent;border-radius:var(--r-xs);display:grid;place-items:center;color:var(--text-2);cursor:pointer;transition:var(--t-fast)}
+.tB-tb:hover{background:var(--surface-3);color:var(--accent)}
+
+/* ════════════════════════════════════════════════════════════════════
+   ▲ TOPBAR · 方向 C — Compact Rail 专业条
+   主张：Linear/Raycast 密度。48px 高、面包屑上下文、kbd 可见、
+        工具按钮无框纯图标。最大化留给内容。
+   ═══════════════════════════════════════════════════════════════════ */
+.tC{
+  height:48px;display:flex;align-items:center;gap:0;padding:0 14px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.tC-brand{display:flex;align-items:center;gap:9px;padding-right:12px}
+.tC-brand .bm{width:24px;height:24px;font-size:12px;border-radius:6px}
+.tC-name{font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.tC-name span{color:var(--accent)}
+
+/* 面包屑：用 / 分隔，mono 元信息 */
+.tC-crumbs{display:flex;align-items:center;gap:0;font-size:13px;color:var(--text-3);padding-left:4px}
+.tC-crumb{padding:4px 8px;border-radius:var(--r-xs);color:var(--text-3);cursor:pointer;transition:var(--t-fast)}
+.tC-crumb:hover{background:var(--surface-2);color:var(--text-2)}
+.tC-crumb.cur{color:var(--text);font-weight:600}
+.tC-sep{color:var(--text-4);font-family:var(--mono);font-size:11px;padding:0 2px;user-select:none}
+
+.tC-spacer{flex:1}
+
+/* 状态：纯文本 + 跳动点（仪器感，非装饰） */
+.tC-status{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text-2);padding:0 10px;height:28px;border-radius:var(--r-xs)}
+.tC-status .sd{width:7px;height:7px;border-radius:50%;background:var(--green);animation:tpulse 1.6s var(--ease-out) infinite}
+@media (prefers-reduced-motion:reduce){.tC-status .sd{animation:none}}
+.tC-status .tm{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+
+.tC-abort{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--r-xs);border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-size:12px;cursor:pointer;transition:var(--t-fast)}
+.tC-abort:hover{color:var(--rose);border-color:var(--rose-line);background:var(--rose-soft)}
+.tC-abort .kbd{font-family:var(--mono);font-size:10px;background:var(--surface-2);border:1px solid var(--border);border-bottom-width:2px;border-radius:var(--r-xs);padding:1px 5px;color:var(--text-3)}
+
+.tC-tools{display:inline-flex;align-items:center;gap:1px;margin-left:8px}
+.tC-tb{width:30px;height:30px;border:none;background:transparent;border-radius:var(--r-xs);display:grid;place-items:center;color:var(--text-3);cursor:pointer;transition:var(--t-fast)}
+.tC-tb:hover{background:var(--surface-2);color:var(--accent)}
+.tC-tb .kbd{font-family:var(--mono);font-size:9px;background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--text-4);margin-left:4px}
+
+/* ════════════════════════════════════════════════════════════════════
+   ◀ SIDEBAR · 方向 A — Ledger 研究账册
+   主张：会话 = 账册条目。§章节 + mono 编号 + 来源 glyph +
+        开口指示（▸→▾）。章节式分隔（双线 + 章号）。
+   ═══════════════════════════════════════════════════════════════════ */
+.sA{
+  width:300px;height:680px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-md);display:flex;flex-direction:column;overflow:hidden;
+}
+.sA-tool{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.sA-new{
+  width:100%;height:38px;border:none;border-radius:var(--r-sm);background:var(--accent);color:var(--on-accent);
+  font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--t-fast);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12);
+}
+.sA-new:hover{background:var(--accent-hover)}
+.sA-new .kbd{margin-left:auto;font-family:var(--mono);font-size:10px;background:rgba(255,255,255,.18);border-radius:var(--r-xs);padding:1px 6px;font-weight:600}
+
+.sA-search{margin-top:9px;display:flex;align-items:center;gap:8px;padding:0 10px;height:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text-3);transition:var(--t-fast)}
+.sA-search:focus-within{border-color:var(--accent);box-shadow:var(--ring)}
+.sA-search input{flex:1;min-width:0;border:none;background:none;font-family:var(--sans);font-size:12.5px;color:var(--text);outline:none}
+.sA-search input::placeholder{color:var(--text-3)}
+
+.sA-list{flex:1;overflow-y:auto;padding:8px 12px 14px}
+/* 章节头：章号 + 双线（账册式，合法——是结构分隔不是卡片装饰） */
+.sA-chap{display:flex;align-items:baseline;gap:8px;padding:14px 4px 8px}
+.sA-chap .num{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent-text);letter-spacing:.1em}
+.sA-chap .lab{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--text-2);letter-spacing:.16em;text-transform:uppercase}
+.sA-chap .ct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-4);font-feature-settings:"zero"}
+.sA-chap::after{
+  content:"";position:absolute;/* not used */
+}
+.sA-chaphr{height:0;border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;margin:0;height:3px;margin-top:-2px;opacity:0}
+.sA-chap-wrap{position:relative}
+.sA-chap-wrap::after{content:"";display:block;height:3px;margin-top:-4px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+
+/* 账册条目 */
+.sA-item{
+  display:grid;grid-template-columns:30px 1fr auto;align-items:start;gap:8px;
+  padding:9px 8px 9px 4px;border-radius:var(--r-sm);cursor:pointer;transition:var(--t-fast);
+  position:relative;border:none;background:transparent;width:100%;text-align:left;
+  border-left:2px solid transparent;
+}
+.sA-item:hover{background:var(--surface-2)}
+.sA-item.active{background:var(--accent-soft);border-left:2px solid var(--accent);padding-left:6px}
+.sA-idx{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--text-4);letter-spacing:.04em;padding-top:3px}
+.sA-item.active .sA-idx{color:var(--accent-text)}
+.sA-body{min-width:0}
+.sA-title{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sA-item.active .sA-title{font-weight:600}
+.sA-meta{display:flex;align-items:center;gap:7px;margin-top:4px}
+.sA-src{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;color:var(--text-3)}
+.sA-src .gd{width:7px;height:7px;border-radius:1px;flex:none}
+.sA-src.search .gd{background:var(--src-search)}
+.sA-src.rss .gd{background:var(--src-rss)}
+.sA-src.crawl .gd{background:var(--src-crawl)}
+.sA-time{font-family:var(--mono);font-size:10px;color:var(--text-4);margin-left:auto}
+.sA-opn{align-self:center;color:var(--text-4);transition:var(--t-fast);font-family:var(--mono);font-size:12px}
+.sA-item:hover .sA-opn{color:var(--accent)}
+.sA-item.active .sA-opn{color:var(--accent)}
+
+.sA-bottom{border-top:1px solid var(--border);padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.sA-nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);font-size:13px;color:var(--text-2);cursor:pointer;transition:var(--t-fast)}
+.sA-nav:hover{background:var(--surface-2);color:var(--accent)}
+.sA-nav .nav-ct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-4)}
+
+/* ════════════════════════════════════════════════════════════════════
+   ◀ SIDEBAR · 方向 B — Index Card 索引卡
+   主张：每条会话 = 一张索引卡。边框 + 内部分区（标题 / 元信息底栏）。
+        来源筛选 chip 在顶部。悬浮 tonal 抬升（不发光）。
+   ═══════════════════════════════════════════════════════════════════ */
+.sB{
+  width:320px;height:680px;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--r-md);display:flex;flex-direction:column;overflow:hidden;
+}
+.sB-tool{padding:14px;border-bottom:1px solid var(--border);background:var(--surface)}
+.sB-new{
+  width:100%;height:38px;border:none;border-radius:var(--r-sm);background:var(--accent);color:var(--on-accent);
+  font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--t-fast);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.12);
+}
+.sB-new:hover{background:var(--accent-hover)}
+
+/* 来源筛选 chip 行（仪器感：让你按数据源切视图） */
+.sB-filters{display:flex;align-items:center;gap:6px;margin-top:10px}
+.sB-flt{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:var(--r-pill);border:1px solid var(--border);background:var(--surface);font-size:11px;color:var(--text-3);cursor:pointer;transition:var(--t-fast);font-family:var(--sans)}
+.sB-flt:hover{border-color:var(--border-2);color:var(--text-2)}
+.sB-flt .gd{width:7px;height:7px;border-radius:50%}
+.sB-flt.search .gd{background:var(--src-search)}
+.sB-flt.rss .gd{background:var(--src-rss)}
+.sB-flt.crawl .gd{background:var(--src-crawl)}
+.sB-flt.all .gd{background:var(--text-4)}
+.sB-flt.on{background:var(--surface-2);border-color:var(--text-4);color:var(--text);font-weight:600}
+
+.sB-list{flex:1;overflow-y:auto;padding:12px 12px 14px}
+.sB-bk{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-4);padding:6px 4px 10px;display:flex;align-items:center;gap:8px}
+.sB-bk .ct{color:var(--text-3);font-weight:600}
+.sB-bk .ln{flex:1;height:1px;background:var(--border)}
+
+/* 索引卡 */
+.sB-card{
+  display:block;padding:0;margin-bottom:8px;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:var(--surface);cursor:pointer;transition:var(--t-fast);overflow:hidden;text-align:left;width:100%;
+}
+.sB-card:hover{border-color:var(--border-2);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+@media (prefers-reduced-motion:reduce){.sB-card:hover{transform:none}}
+.sB-card.active{border-color:var(--accent-line);background:var(--accent-soft);box-shadow:none}
+.sB-card.active:hover{box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sB-card-hd{padding:10px 12px 6px}
+.sB-title{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:-.005em}
+.sB-card.active .sB-title{color:var(--accent-text)}
+.sB-card-ft{display:flex;align-items:center;gap:10px;padding:6px 12px 9px;border-top:1px dashed var(--border)}
+.sB-card.active .sB-card-ft{border-top-color:var(--accent-line)}
+.sB-src{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.05em;color:var(--text-3);text-transform:uppercase}
+.sB-src .gd{width:8px;height:8px;border-radius:2px}
+.sB-src.search .gd{background:var(--src-search)}
+.sB-src.rss .gd{background:var(--src-rss)}
+.sB-src.crawl .gd{background:var(--src-crawl)}
+.sB-cite{font-family:var(--mono);font-size:10px;color:var(--text-4);font-feature-settings:"zero"}
+.sB-time{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-3)}
+
+.sB-bottom{border-top:1px solid var(--border);padding:8px 10px;background:var(--surface);display:flex;gap:6px}
+.sB-nav{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border-radius:var(--r-sm);font-size:12.5px;color:var(--text-2);cursor:pointer;transition:var(--t-fast);border:1px solid transparent}
+.sB-nav:hover{background:var(--surface-2);color:var(--accent);border-color:var(--border)}
+
+/* ════════════════════════════════════════════════════════════════════
+   ◀ SIDEBAR · 方向 C — Compact Rail 编辑器轨
+   主张：VS Code/Linear 最大密度。表格式行：glyph / 标题 / mono 时间。
+        极简分隔。整行 tint + 左线选中。CTA 极小化。
+   ═══════════════════════════════════════════════════════════════════ */
+.sC{
+  width:280px;height:680px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-md);display:flex;flex-direction:column;overflow:hidden;
+}
+.sC-tool{display:flex;align-items:center;gap:6px;padding:10px 10px;border-bottom:1px solid var(--border)}
+.sC-new{
+  flex:1;display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;
+  border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);
+  color:var(--text-2);font-size:12.5px;cursor:pointer;transition:var(--t-fast);font-family:var(--sans);
+}
+.sC-new:hover{border-color:var(--accent);color:var(--accent)}
+.sC-new .pl{width:16px;height:16px;border-radius:var(--r-xs);background:var(--accent);color:var(--on-accent);display:grid;place-items:center;flex:none}
+.sC-new .kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-4)}
+.sC-search-btn{width:30px;height:30px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text-3);display:grid;place-items:center;cursor:pointer;transition:var(--t-fast);flex:none}
+.sC-search-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+/* 表头式 meta 行 */
+.sC-headrow{display:flex;align-items:center;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface-2);gap:8px}
+.sC-headrow .h{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-4)}
+.sC-headrow .h.t{flex:1}
+.sC-headrow .ct{margin-left:auto}
+
+.sC-list{flex:1;overflow-y:auto;padding:2px 6px 10px}
+.sC-bk{display:flex;align-items:center;gap:8px;padding:10px 6px 4px}
+.sC-bk .lab{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-4)}
+.sC-bk .ct{font-family:var(--mono);font-size:9.5px;color:var(--text-4);font-feature-settings:"zero"}
+
+.sC-item{
+  display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:8px;
+  padding:6px 8px;border-radius:var(--r-xs);cursor:pointer;transition:var(--t-fast);
+  border-left:2px solid transparent;background:transparent;border-top:none;border-right:none;border-bottom:none;
+  width:100%;text-align:left;
+}
+.sC-item:hover{background:var(--surface-2)}
+.sC-item.active{background:var(--accent-soft);border-left:2px solid var(--accent)}
+.sC-glyph{width:14px;height:14px;border-radius:2px;flex:none;display:grid;place-items:center}
+.sC-glyph.search{background:var(--src-search)}
+.sC-glyph.rss{background:var(--src-rss)}
+.sC-glyph.crawl{background:var(--src-crawl)}
+.sC-glyph::after{content:"";width:5px;height:5px;background:var(--surface);border-radius:1px}
+.sC-glyph.search::after{background:rgba(255,255,255,.85)}
+[data-theme="dark"] .sC-glyph.search::after{background:rgba(0,0,0,.4)}
+.sC-title{font-size:12.5px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.sC-item.active .sC-title{font-weight:600}
+.sC-time{font-family:var(--mono);font-size:10px;color:var(--text-4);font-feature-settings:"zero"}
+
+.sC-bottom{border-top:1px solid var(--border);padding:6px}
+.sC-nav{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:8px;width:100%;padding:6px 8px;border-radius:var(--r-xs);background:transparent;border:none;color:var(--text-2);font-size:12.5px;cursor:pointer;transition:var(--t-fast);text-align:left;font-family:var(--sans)}
+.sC-nav:hover{background:var(--surface-2);color:var(--accent)}
+.sC-nav .ic{color:var(--text-3)}
+.sC-nav .ct{font-family:var(--mono);font-size:10px;color:var(--text-4)}
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="page-head">
+    <p class="page-kicker">Chrome Redesign · Topbar × 3 · Sidebar × 3</p>
+    <h1 class="page-title">用户端外壳重设计：6 个有主张的方向</h1>
+    <p class="page-sub">针对当前左侧会话栏与顶栏"扁平、无层次、无主张"的问题，给出 6 个差异明显的设计方向。全部在既有 token 系统（翠玉绿工作台 · Inter+Mono · 扁平优先 · 无发光/渐变）内执行，可一键切换浅/深主题对照。</p>
+    <div class="page-meta">
+      <button class="theme-switch" onclick="toggleTheme()"><span class="tt"></span><span id="thLabel">浅色 · 点击切换深色</span></button>
+      <span class="mono" style="font-size:11px;color:var(--text-4);letter-spacing:.06em">token 源：apps/web/src/style.css</span>
+    </div>
+  </header>
+
+  <!-- ════════════ TOPBAR 组 ════════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2 class="group-title">▲ 顶栏 Topbar · <em>3 个方向</em></h2>
+      <span class="group-note">高度 60 / 64 / 48 px · 三种不同的"自信"姿态</span>
+    </div>
+
+    <!-- ▲ A · Console -->
+    <div class="case">
+      <div class="case-stage">
+        <header class="tA">
+          <div class="tA-left">
+            <div class="bm">A</div>
+            <div>
+              <div class="tA-name">AI-<span>Insight</span></div>
+              <div class="tA-sub">Workbench · v0.4</div>
+            </div>
+          </div>
+
+          <div class="tA-tel" aria-label="运行遥测">
+            <div class="tA-cell live">
+              <span class="tA-ck">Status</span>
+              <span class="tA-cv run">RUNNING</span>
+            </div>
+            <div class="tA-cell">
+              <span class="tA-ck">Elapsed</span>
+              <span class="tA-cv">00:42</span>
+            </div>
+            <div class="tA-cell k">
+              <span class="tA-ck">Sources</span>
+              <span class="tA-cv">14 / 18</span>
+            </div>
+            <div class="tA-cell k">
+              <span class="tA-ck">Tokens</span>
+              <span class="tA-cv">8.2k</span>
+            </div>
+          </div>
+
+          <div class="tA-right">
+            <button class="tA-abort"><span class="dd"></span>中止</button>
+            <div class="tA-tools">
+              <button class="tA-tb" title="主题">🌙</button>
+              <button class="tA-tb" title="导出">⤓</button>
+            </div>
+          </div>
+        </header>
+      </div>
+      <div class="case-meta">
+        <div class="cm-label"><span class="n">A</span>Console</div>
+        <div class="cm-body">
+          <h4>仪器控制台 — 把"运行状态"升格为中央遥测模块</h4>
+          <p>核心签名是中央那个 4 格的 mono 遥测条：<b>Status · Elapsed · Sources · Tokens</b>。它直接把"工作台 = 一台仪器"这个产品隐喻可视化——研究员最在意的"它跑到哪了 / 抓了多少源 / 花了多少 token"一眼可见，而不是埋在某个小 pill 里。三栏用 1px 竖线分区，底部加一条 mono 刻度（tonal，不是发光）强化"仪器面板"语义。</p>
+          <div class="pts">
+            <span class="pt hi">中央遥测模块</span>
+            <span class="pt hi">仪器感最强</span>
+            <span class="pt">状态信息升格</span>
+            <span class="pt">60px 高</span>
+            <span class="pt">三段竖线分区</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▲ B · Masthead -->
+    <div class="case">
+      <div class="case-stage">
+        <header class="tB">
+          <div class="tB-mast">
+            <div class="bm">A</div>
+            <div class="tB-namewrap">
+              <div class="tB-name">AI-<span>Insight</span></div>
+              <div class="tB-tag">The Research Desk</div>
+            </div>
+          </div>
+          <div class="tB-div"></div>
+          <div class="tB-edition">
+            <span class="tB-ek">Edition</span>
+            <span class="tB-ev"><span class="dot"></span>Live · 2026.07.06</span>
+          </div>
+
+          <div class="tB-spacer"></div>
+
+          <div class="tB-right">
+            <div class="tB-status">
+              <span class="lv">LIVE</span>
+              <span class="tm">已运行 00:42 · 14 源</span>
+            </div>
+            <div class="tB-tools">
+              <button class="tB-tb" title="主题">🌙</button>
+              <button class="tB-tb" title="导出">⤓</button>
+            </div>
+          </div>
+        </header>
+      </div>
+      <div class="case-meta">
+        <div class="cm-label"><span class="n">B</span>Masthead</div>
+        <div class="cm-body">
+          <h4>报头结构 — 借 editorial 的"分量感"，但严守 register 边界</h4>
+          <p>注意：这不是把朱砂/衬线搬进工作台（DESIGN.md 明令禁止 register 混用）。借的是<b>结构</b>——粗体报名 + 竖线分区 + mono 版次戳 + 双线下沿 rule。强字阶（19px/800）让品牌有"出版物"的分量；版次行（Live · 日期）把每次会话框定成"一期"，呼应产品"产出可交付物"的本质。适合追求"权威感 / 编辑性"的姿态。</p>
+          <div class="pts">
+            <span class="pt hi">报头分量感</span>
+            <span class="pt hi">编辑性权威</span>
+            <span class="pt">强字阶 19/800</span>
+            <span class="pt">双线 rule（结构）</span>
+            <span class="pt">64px 高</span>
+            <span class="pt">无衬线/无朱砂</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▲ C · Compact -->
+    <div class="case">
+      <div class="case-stage">
+        <header class="tC">
+          <div class="tC-brand">
+            <div class="bm">A</div>
+            <div class="tC-name">AI-<span>Insight</span></div>
+          </div>
+
+          <nav class="tC-crumbs" aria-label="上下文">
+            <span class="tC-crumb">工作台</span>
+            <span class="tC-sep">/</span>
+            <span class="tC-crumb">会话</span>
+            <span class="tC-sep">/</span>
+            <span class="tC-crumb cur">Q3 SaaS 续约率驱动因子</span>
+          </nav>
+
+          <div class="tC-spacer"></div>
+
+          <div class="tC-status">
+            <span class="sd"></span>
+            <span>正在分析</span>
+            <span class="tm">00:42</span>
+          </div>
+          <button class="tC-abort">中止 <span class="kbd">Esc</span></button>
+
+          <div class="tC-tools">
+            <button class="tC-tb" title="主题 (⌘J)">🌙 <span class="kbd">⌘J</span></button>
+            <button class="tC-tb" title="导出">⤓</button>
+          </div>
+        </header>
+      </div>
+      <div class="case-meta">
+        <div class="cm-label"><span class="n">C</span>Compact Rail</div>
+        <div class="cm-body">
+          <h4>专业密度条 — Linear / Raycast 风格，把空间还给内容</h4>
+          <p>48px 高（最矮），工具按钮无框纯图标，<b>面包屑</b>把"我在哪"显式标出来（这对多会话研究场景极有用），kbd 提示可见（⌘J / Esc）让专业用户知道有快捷键。状态用极简的跳动点 + mono 时间。这个方向的"主张"是<b>克制即自信</b>——不抢戏，但每个像素都有理由。适合内容为主、chrome 应当退让的场景。</p>
+          <div class="pts">
+            <span class="pt hi">最高密度</span>
+            <span class="pt hi">面包屑上下文</span>
+            <span class="pt">48px 最矮</span>
+            <span class="pt">kbd 可见</span>
+            <span class="pt">无框图标</span>
+            <span class="pt">克制即自信</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════ SIDEBAR 组 ════════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2 class="group-title">◀ 会话栏 Sidebar · <em>3 个方向</em></h2>
+      <span class="group-note">同一份会话数据 · 三种"层次语法"</span>
+    </div>
+
+    <!-- 三个并排对比 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start">
+
+      <!-- ◀ A · Ledger -->
+      <div class="case" style="border:none">
+        <div class="case-stage">
+          <aside class="sA">
+            <div class="sA-tool">
+              <button class="sA-new">
+                <span style="font-size:14px">＋</span> 新对话
+                <span class="kbd">⌘N</span>
+              </button>
+              <label class="sA-search">
+                <span style="font-size:12px">⌕</span>
+                <input type="text" placeholder="搜索会话" />
+              </label>
+            </div>
+
+            <div class="sA-list scroll">
+              <!-- 章节 I -->
+              <div class="sA-chap-wrap">
+                <div class="sA-chap">
+                  <span class="num">§ I</span>
+                  <span class="lab">Today</span>
+                  <span class="ct">02</span>
+                </div>
+              </div>
+
+              <button class="sA-item active">
+                <span class="sA-idx">01</span>
+                <span class="sA-body">
+                  <span class="sA-title">Q3 SaaS 续约率驱动因子</span>
+                  <span class="sA-meta">
+                    <span class="sA-src search"><span class="gd"></span>SEARCH · 8</span>
+                    <span class="sA-time">12 分钟前</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▾</span>
+              </button>
+
+              <button class="sA-item">
+                <span class="sA-idx">02</span>
+                <span class="sA-body">
+                  <span class="sA-title">欧洲储能政策追踪</span>
+                  <span class="sA-meta">
+                    <span class="sA-src rss"><span class="gd"></span>RSS · 12</span>
+                    <span class="sA-time">2 小时前</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▸</span>
+              </button>
+
+              <!-- 章节 II -->
+              <div class="sA-chap-wrap">
+                <div class="sA-chap">
+                  <span class="num">§ II</span>
+                  <span class="lab">This Week</span>
+                  <span class="ct">03</span>
+                </div>
+              </div>
+
+              <button class="sA-item">
+                <span class="sA-idx">03</span>
+                <span class="sA-body">
+                  <span class="sA-title">GLP-1 竞品管线对比</span>
+                  <span class="sA-meta">
+                    <span class="sA-src crawl"><span class="gd"></span>CRAWL · 23</span>
+                    <span class="sA-time">2 天前</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▸</span>
+              </button>
+
+              <button class="sA-item">
+                <span class="sA-idx">04</span>
+                <span class="sA-body">
+                  <span class="sA-title">台积电资本开支指引</span>
+                  <span class="sA-meta">
+                    <span class="sA-src search"><span class="gd"></span>SEARCH · 6</span>
+                    <span class="sA-time">3 天前</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▸</span>
+              </button>
+
+              <button class="sA-item">
+                <span class="sA-idx">05</span>
+                <span class="sA-body">
+                  <span class="sA-title">日央行政策利率路径</span>
+                  <span class="sA-meta">
+                    <span class="sA-src rss"><span class="gd"></span>RSS · 9</span>
+                    <span class="sA-time">5 天前</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▸</span>
+              </button>
+
+              <!-- 章节 III -->
+              <div class="sA-chap-wrap">
+                <div class="sA-chap">
+                  <span class="num">§ III</span>
+                  <span class="lab">Earlier</span>
+                  <span class="ct">02</span>
+                </div>
+              </div>
+
+              <button class="sA-item">
+                <span class="sA-idx">06</span>
+                <span class="sA-body">
+                  <span class="sA-title">半导体设备国产化进度</span>
+                  <span class="sA-meta">
+                    <span class="sA-src crawl"><span class="gd"></span>CRAWL · 17</span>
+                    <span class="sA-time">06.28</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▸</span>
+              </button>
+
+              <button class="sA-item">
+                <span class="sA-idx">07</span>
+                <span class="sA-body">
+                  <span class="sA-title">储能逆变器出货排名</span>
+                  <span class="sA-meta">
+                    <span class="sA-src search"><span class="gd"></span>SEARCH · 11</span>
+                    <span class="sA-time">06.22</span>
+                  </span>
+                </span>
+                <span class="sA-opn">▸</span>
+              </button>
+            </div>
+
+            <div class="sA-bottom">
+              <button class="sA-nav">
+                <span style="font-size:14px">Books</span> 我的报告
+                <span class="nav-ct">12</span>
+              </button>
+              <button class="sA-nav">
+                <span style="font-size:14px">◷</span> 我的定时
+                <span class="nav-ct">04</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+        <div class="case-meta" style="grid-template-columns:1fr;gap:10px">
+          <div class="cm-label"><span class="n">A</span>Ledger · 研究账册</div>
+          <div class="cm-body">
+            <h4>会话 = 账册条目。§章节号 + mono 编号 + 来源 glyph + 开口指示</h4>
+            <p>把每个会话当成"账册"里的一条记录：左侧 mono 编号（01、02…）、来源类型用色块 glyph（search/rss/crawl 各一色，色盲安全）、相对时间右对齐。时间桶升格为<b>章节</b>（§I Today / §II This Week），配双线分隔——这是结构分隔，不是卡片装饰。<b>开口指示 ▸/▾</b> 是仪器感的小细节：选中时展开。最有"研究员在翻账本"的氛围。</p>
+            <div class="pts">
+              <span class="pt hi">章节式分层</span>
+              <span class="pt hi">来源 glyph</span>
+              <span class="pt">mono 编号</span>
+              <span class="pt">开口指示</span>
+              <span class="pt">叙事感最强</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ◀ B · Index Card -->
+      <div class="case" style="border:none">
+        <div class="case-stage">
+          <aside class="sB">
+            <div class="sB-tool">
+              <button class="sB-new">
+                <span style="font-size:14px">＋</span> 新对话
+              </button>
+              <div class="sB-filters" role="tablist" aria-label="按数据源筛选">
+                <button class="sB-flt all on"><span class="gd"></span>全部 · 07</button>
+                <button class="sB-flt search"><span class="gd"></span>Search</button>
+                <button class="sB-flt rss"><span class="gd"></span>RSS</button>
+                <button class="sB-flt crawl"><span class="gd"></span>Crawl</button>
+              </div>
+            </div>
+
+            <div class="sB-list scroll">
+              <div class="sB-bk"><span>Today</span><span class="ln"></span><span class="ct">02</span></div>
+
+              <button class="sB-card active">
+                <div class="sB-card-hd">
+                  <div class="sB-title">Q3 SaaS 续约率驱动因子分析</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src search"><span class="gd"></span>Search</span>
+                  <span class="sB-cite">① 8 cites</span>
+                  <span class="sB-time">12 min</span>
+                </div>
+              </button>
+
+              <button class="sB-card">
+                <div class="sB-card-hd">
+                  <div class="sB-title">欧洲储能政策月度追踪</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src rss"><span class="gd"></span>RSS</span>
+                  <span class="sB-cite">① 12 cites</span>
+                  <span class="sB-time">2 hr</span>
+                </div>
+              </button>
+
+              <div class="sB-bk"><span>This Week</span><span class="ln"></span><span class="ct">03</span></div>
+
+              <button class="sB-card">
+                <div class="sB-card-hd">
+                  <div class="sB-title">GLP-1 减肥药竞品管线对比</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src crawl"><span class="gd"></span>Crawl</span>
+                  <span class="sB-cite">① 23 cites</span>
+                  <span class="sB-time">2 d</span>
+                </div>
+              </button>
+
+              <button class="sB-card">
+                <div class="sB-card-hd">
+                  <div class="sB-title">台积电资本开支指引解读</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src search"><span class="gd"></span>Search</span>
+                  <span class="sB-cite">① 6 cites</span>
+                  <span class="sB-time">3 d</span>
+                </div>
+              </button>
+
+              <button class="sB-card">
+                <div class="sB-card-hd">
+                  <div class="sB-title">日央行政策利率路径推演</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src rss"><span class="gd"></span>RSS</span>
+                  <span class="sB-cite">① 9 cites</span>
+                  <span class="sB-time">5 d</span>
+                </div>
+              </button>
+
+              <div class="sB-bk"><span>Earlier</span><span class="ln"></span><span class="ct">02</span></div>
+
+              <button class="sB-card">
+                <div class="sB-card-hd">
+                  <div class="sB-title">半导体设备国产化进度</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src crawl"><span class="gd"></span>Crawl</span>
+                  <span class="sB-cite">① 17 cites</span>
+                  <span class="sB-time">06.28</span>
+                </div>
+              </button>
+
+              <button class="sB-card">
+                <div class="sB-card-hd">
+                  <div class="sB-title">储能逆变器出货排名</div>
+                </div>
+                <div class="sB-card-ft">
+                  <span class="sB-src search"><span class="gd"></span>Search</span>
+                  <span class="sB-cite">① 11 cites</span>
+                  <span class="sB-time">06.22</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="sB-bottom">
+              <button class="sB-nav"><span style="font-size:14px">Books</span> 报告</button>
+              <button class="sB-nav"><span style="font-size:14px">◷</span> 定时</button>
+            </div>
+          </aside>
+        </div>
+        <div class="case-meta" style="grid-template-columns:1fr;gap:10px">
+          <div class="cm-label"><span class="n">B</span>Index Card · 索引卡</div>
+          <div class="cm-body">
+            <h4>每条会话 = 一张索引卡。边框 + 内部分区 + 来源筛选 chip</h4>
+            <p>每条会话有清晰的边框 + 内部分区（标题区 / 虚线 / 元信息底栏），元信息底栏露出<b>来源类型 + 引用数 + 时间</b>——把"可追溯"这个产品核心价值直接显式化在列表里。顶部新增<b>来源筛选 chip</b>（全部/Search/RSS/Crawl），让研究员按数据源切换视图。悬浮时 tonal 抬升 1px（shadow-sm，不发光）。最有"翻一摞资料卡"的实体感。</p>
+            <div class="pts">
+              <span class="pt hi">卡片化分层</span>
+              <span class="pt hi">引用数外显</span>
+              <span class="pt">来源筛选 chip</span>
+              <span class="pt">虚线分区</span>
+              <span class="pt">实体感最强</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ◀ C · Compact -->
+      <div class="case" style="border:none">
+        <div class="case-stage">
+          <aside class="sC">
+            <div class="sC-tool">
+              <button class="sC-new">
+                <span class="pl" style="font-size:11px;font-weight:700">＋</span>
+                新对话
+                <span class="kbd">⌘N</span>
+              </button>
+              <button class="sC-search-btn" title="搜索">⌕</button>
+            </div>
+
+            <div class="sC-headrow">
+              <span class="h" style="width:18px">#</span>
+              <span class="h t">Title</span>
+              <span class="h ct">Time</span>
+            </div>
+
+            <div class="sC-list scroll">
+              <div class="sC-bk"><span class="lab">Today</span><span class="ct">02</span></div>
+
+              <button class="sC-item active">
+                <span class="sC-glyph search"></span>
+                <span class="sC-title">Q3 SaaS 续约率驱动因子</span>
+                <span class="sC-time">12m</span>
+              </button>
+              <button class="sC-item">
+                <span class="sC-glyph rss"></span>
+                <span class="sC-title">欧洲储能政策追踪</span>
+                <span class="sC-time">2h</span>
+              </button>
+
+              <div class="sC-bk"><span class="lab">This Week</span><span class="ct">03</span></div>
+
+              <button class="sC-item">
+                <span class="sC-glyph crawl"></span>
+                <span class="sC-title">GLP-1 竞品管线对比</span>
+                <span class="sC-time">2d</span>
+              </button>
+              <button class="sC-item">
+                <span class="sC-glyph search"></span>
+                <span class="sC-title">台积电资本开支指引</span>
+                <span class="sC-time">3d</span>
+              </button>
+              <button class="sC-item">
+                <span class="sC-glyph rss"></span>
+                <span class="sC-title">日央行政策利率路径</span>
+                <span class="sC-time">5d</span>
+              </button>
+
+              <div class="sC-bk"><span class="lab">Earlier</span><span class="ct">02</span></div>
+
+              <button class="sC-item">
+                <span class="sC-glyph crawl"></span>
+                <span class="sC-title">半导体设备国产化</span>
+                <span class="sC-time">06.28</span>
+              </button>
+              <button class="sC-item">
+                <span class="sC-glyph search"></span>
+                <span class="sC-title">储能逆变器出货排名</span>
+                <span class="sC-time">06.22</span>
+              </button>
+            </div>
+
+            <div class="sC-bottom">
+              <button class="sC-nav">
+                <span class="ic" style="font-size:13px">Books</span>
+                <span>我的报告</span>
+                <span class="ct">12</span>
+              </button>
+              <button class="sC-nav">
+                <span class="ic" style="font-size:13px">◷</span>
+                <span>我的定时</span>
+                <span class="ct">04</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+        <div class="case-meta" style="grid-template-columns:1fr;gap:10px">
+          <div class="cm-label"><span class="n">C</span>Compact Rail · 编辑器轨</div>
+          <div class="cm-body">
+            <h4>VS Code / Linear 最大密度。表格式行，把视觉噪声压到最低</h4>
+            <p>列表是<b>表格式</b>：表头行（# / Title / Time）+ 每行三列（来源 glyph / 标题 / mono 时间右对齐）。CTA 缩小成内联按钮（不占整行），搜索拆成单独图标按钮。选中态 = 整行 accent-soft tint + 2px 左线（合法的状态指示）。280px 最窄，一屏能看最多会话。这个方向的主张是：<b>给重度用户（几十上百个会话）最高效的扫读</b>。如果用户的痛点是"会话太多找不到"，选这个。</p>
+            <div class="pts">
+              <span class="pt hi">最高扫读效率</span>
+              <span class="pt hi">表格式结构</span>
+              <span class="pt">280px 最窄</span>
+              <span class="pt">表头 meta 行</span>
+              <span class="pt">CTA 内联化</span>
+              <span class="pt">适合重度用户</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════ 取舍说明 ════════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2 class="group-title">§ 取舍 · <em>怎么选</em></h2>
+      <span class="group-note">每个方向都是刻意的，没有"绝对最优"</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px">
+      <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:20px;background:var(--surface)">
+        <div class="cm-label" style="margin-bottom:12px"><span class="n">▲</span>Topbar 推荐</div>
+        <p style="margin:0 0 10px;color:var(--text-2);font-size:13.5px;line-height:1.65"><b style="color:var(--text)">A · Console</b>（仪器感最强，最贴"研究员工作台"隐喻，状态信息升格直接提升产品信任）<br><b style="color:var(--text)">C · Compact</b>（如果内容为主、想让 chrome 退让）</p>
+        <p style="margin:0;color:var(--text-3);font-size:12.5px">B · Masthead 更适合"权威感 / 编辑性"品牌叙事，但若担心双线 rule 太"重"，可作备选。</p>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:20px;background:var(--surface)">
+        <div class="cm-label" style="margin-bottom:12px"><span class="n">◀</span>Sidebar 推荐</div>
+        <p style="margin:0 0 10px;color:var(--text-2);font-size:13.5px;line-height:1.65"><b style="color:var(--text)">B · Index Card</b>（引用数外显最贴"可追溯"产品价值，分层最清晰）<br><b style="color:var(--text)">A · Ledger</b>（如果想要更强的"研究账册"叙事氛围）</p>
+        <p style="margin:0;color:var(--text-3);font-size:12.5px">C · Compact 适合会话量极大（50+）的重度用户；当前规模下信息密度可能偏紧。</p>
+      </div>
+    </div>
+    <p style="margin-top:24px;color:var(--text-3);font-size:12.5px;font-family:var(--mono);letter-spacing:.04em">所有方案 · 双主题已验证 · 翠绿占比 ≤10% · 无发光/渐变/玻璃拟态 · 圆角 ≤12px · 正文对比 ≥4.5:1 · reduced-motion 已尊重</p>
+  </section>
+
+</div>
+
+<script>
+  function toggleTheme(){
+    const html = document.documentElement;
+    const cur = html.getAttribute('data-theme') || 'light';
+    const next = cur === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    document.getElementById('thLabel').textContent = next === 'light' ? '浅色 · 点击切换深色' : '深色 · 点击切换浅色';
+  }
+</script>
+</body>
+</html>
