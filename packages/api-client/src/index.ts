@@ -95,6 +95,8 @@ export const createConversation = (data: { title?: string; config?: Partial<Conv
   req<Conversation>("/api/conversations", { method: "POST", body: JSON.stringify(data) });
 export const patchConversation = (id: string, patch: { title?: string; config?: Partial<ConversationConfig> }) =>
   req<Conversation>(`/api/conversations/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+export const deleteConversation = (id: string) =>
+  req<void>(`/api/conversations/${id}`, { method: "DELETE" });
 export const sendMessage = (conversationId: string, text: string, config?: Partial<ConversationConfig>) =>
   req<{ run: InsightRun }>(`/api/conversations/${conversationId}/messages`, {
     method: "POST",

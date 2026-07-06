@@ -9,7 +9,7 @@ import { useRouter } from "vue-router";
 import {
   type Conversation, type ConversationConfig, type AgentMessage, type TimeRange, type Report, type ReportSummary,
 } from "@ai-insight/shared-types";
-import { listConversations, createConversation, getConversation, sendMessage } from "@ai-insight/api-client";
+import { listConversations, createConversation, getConversation, sendMessage, deleteConversation } from "@ai-insight/api-client";
 import { useInsightRun } from "../composables/useInsightRun.js";
 import { isUxMode } from "../utils";
 import { downloadReportHtml } from "../utils/download";
@@ -183,6 +183,16 @@ function newInsight() {
 function selectConversation(c: Conversation) {
   router.push(`/c/${c.id}`);
 }
+async function removeConversation(c: Conversation) {
+  try {
+    await deleteConversation(c.id);
+    // 删的正是当前会话：跳到新会话页，避免停在已软删的会话上
+    if (currentConv.value?.id === c.id) router.push("/c/new");
+    await loadConversations(); // 重新拉列表（后端已过滤软删项）
+  } catch (e) {
+    console.error("delete conversation failed", e);
+  }
+}
 
 // ─── 报告弹窗 ─────────────────────────────────────────────────────────────
 // 运行中实时报告 与 历史报告复用同一弹窗
@@ -293,6 +303,7 @@ watch(
         :current-conv-id="currentConv?.id ?? null"
         @new-insight="newInsight"
         @select="selectConversation"
+        @remove="removeConversation"
         @go-reports="router.push('/reports')" />
 
       <main class="col-mid">

@@ -10,19 +10,20 @@
  */
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Plus, BookOpen, Clock, Search, X, Telescope, CalendarRange } from "@lucide/vue";
+import { Plus, BookOpen, Clock, Search, X, Telescope, CalendarRange, Trash2 } from "@lucide/vue";
 import {
   LENS_OPTIONS,
   TIME_RANGE_OPTIONS,
   type Conversation,
 } from "@ai-insight/shared-types";
+import ConfirmDialog from "./ConfirmDialog.vue";
 
 const props = defineProps<{
   conversations: Conversation[];
   currentConvId: string | null;
 }>();
 
-const emit = defineEmits<{ newInsight: []; select: [c: Conversation]; goReports: [] }>();
+const emit = defineEmits<{ newInsight: []; select: [c: Conversation]; remove: [c: Conversation]; goReports: [] }>();
 const router = useRouter();
 function goSchedules() {
   router.push("/schedules");
@@ -112,6 +113,41 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
   el.style.setProperty("--mx", ((e.clientX - r.left) / r.width) * 100 + "%");
   el.style.setProperty("--my", ((e.clientY - r.top) / r.height) * 100 + "%");
 }
+
+// ── 删除：Ctrl/Cmd+点击直接删（跳过确认）；普通点击弹 ConfirmDialog ─────────────
+const pendingDelete = ref<Conversation | null>(null);
+function onDeleteClick(e: MouseEvent, c: Conversation) {
+  // 阻止冒泡到卡片本身（避免触发 select）
+  e.stopPropagation();
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) {
+    // Ctrl（Win）/ Cmd（Mac）+ 点击：直接删除，不二次确认
+    emit("remove", c);
+    return;
+  }
+  pendingDelete.value = c;
+}
+function confirmDelete() {
+  if (pendingDelete.value) emit("remove", pendingDelete.value);
+  pendingDelete.value = null;
+}
+function cancelDelete() {
+  pendingDelete.value = null;
+}
+// 卡片键盘可达性：div[role=button] 补 Enter/Space → select
+function onCardKeydown(e: KeyboardEvent, c: Conversation) {
+  if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+    e.preventDefault();
+    emit("select", c);
+  }
+}
+// 平台相关提示文案（Win: Ctrl / Mac: ⌘）。在 script 算好，模板直接引用。
+const delShortcutHint = (() => {
+  if (typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "")) {
+    return "（⌘+点击直接删除）";
+  }
+  return "（Ctrl+点击直接删除）";
+})();
 </script>
 
 <template>
@@ -142,15 +178,29 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
             <span class="bk-line"></span>
             <span class="bk-count">{{ String(b.items.length).padStart(2, "0") }}</span>
           </div>
-          <button
+          <div
             v-for="c in b.items"
             :key="c.id"
             class="card"
             :class="{ active: c.id === currentConvId }"
+            role="button"
+            tabindex="0"
+            :aria-label="`会话：${c.title}`"
             @click="emit('select', c)"
+            @keydown="onCardKeydown($event, c)"
             @mousemove="onCardMove($event, $event.currentTarget as HTMLElement)">
             <div class="card-hd">
               <div class="card-t">{{ c.title }}</div>
+              <!-- 删除按钮：hover 时右上角浮现 rose 危险态 icon button。
+                   Ctrl/Cmd+点击直删；普通点击弹 ConfirmDialog。 -->
+              <button
+                class="del-btn"
+                type="button"
+                :title="`删除会话${delShortcutHint}`"
+                :aria-label="`删除会话：${c.title}`"
+                @click="onDeleteClick($event, c)">
+                <Trash2 :size="13" :stroke-width="2" />
+              </button>
             </div>
             <div class="card-ft">
               <!-- 元信息行：视角（accent）+ 时间窗 + 相对时间。
@@ -165,7 +215,7 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
               </span>
               <span class="card-time">{{ relTime(c.updatedAt) }}</span>
             </div>
-          </button>
+          </div>
         </div>
       </template>
 
@@ -195,6 +245,15 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
         <span class="nav-count">{{ String(schedulesCount).padStart(2, "0") }}</span>
       </button>
     </div>
+
+    <!-- 删除二次确认弹窗（danger 态：rose 语义色 + AlertTriangle 形素冗余） -->
+    <ConfirmDialog
+      :open="!!pendingDelete"
+      title="删除会话"
+      :message="pendingDelete ? `确定删除「${pendingDelete.title}」？该会话的历史记录将一并移除。` : ''"
+      confirm-text="删除"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete" />
   </aside>
 </template>
 
@@ -360,7 +419,8 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
   font-feature-settings: "zero";
 }
 
-/* 索引卡（核心 V2 升级）—— 12px 圆角卡片 + 鼠标光晕 + active glow */
+/* 索引卡（核心 V2 升级）—— 12px 圆角卡片 + 鼠标光晕 + active glow。
+   注：原为 <button>，因内嵌删除按钮（HTML 不允许 button 嵌套 button）改为 <div role=button>。 */
 .card {
   display: block;
   width: 100%;
@@ -374,6 +434,12 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
   overflow: hidden;
   position: relative;
   padding: 0;
+  outline: none;
+}
+/* div[role=button] 丢失了原生 button 的 focus 表现，补 focus-visible ring */
+.card:focus-visible {
+  box-shadow: var(--ring);
+  border-color: var(--accent-line);
 }
 /* 鼠标跟随光晕（radial-gradient at --mx --my）—— reduced-motion 时不绑监听即不出现 */
 .card::before {
@@ -407,6 +473,35 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
   padding: 12px 14px 7px;
   position: relative;
 }
+/* 删除按钮：hover 时右上角浮现；rose 危险态（DESIGN.md icon button 32×32 + Abort rose 语义）。
+   z-index:1 浮于 .card::before 鼠标光晕之上。默认 opacity:0，.card:hover 才显形。 */
+.del-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  cursor: pointer;
+  opacity: 0;
+  transition: var(--t-fast);
+  z-index: 1;
+}
+.card:hover .del-btn,
+.card:focus-within .del-btn {
+  opacity: 1;
+}
+.del-btn:hover {
+  color: var(--rose);
+  border-color: var(--rose-line);
+  background: var(--rose-soft);
+}
 .card-t {
   font-size: 14px;
   font-weight: 600;
@@ -417,6 +512,8 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  /* 留出右上角删除按钮的空间，避免标题末尾被遮挡 */
+  padding-right: 30px;
 }
 .card.active .card-t {
   color: var(--accent-text);
@@ -544,6 +641,7 @@ function onCardMove(e: MouseEvent, el: HTMLElement) {
   .search-clear,
   .card,
   .card::before,
+  .del-btn,
   .nav-link {
     transition: none;
   }
