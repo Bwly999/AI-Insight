@@ -1,50 +1,82 @@
 /**
- * Firecrawl 搜索 — 用 firecrawl SDK。
- * 同时提供内容提取能力（scrapeUrl）给 extract-content 链复用。
+ * Firecrawl 搜索 — 直调 Firecrawl REST API（v1/search）。
+ *
+ * 不用官方 firecrawl SDK：SDK 内部用 axios（自带实例），无法注入本仓库的
+ * undici 局部 dispatcher，导致 firecrawl 出站走直连、绕过管理端代理设置。
+ * 改为经 http.ts 的 postJson 发请求，与 Exa/Arxiv 等引擎一致地走模块级
+ * dispatcher —— 管理端"代理"设置因此对 firecrawl 同样生效。
  *
  * 注意：Firecrawl search 无原生时间过滤，靠结果后过滤（metadata.publishedDate）兜底。
  * 接受注入的 EngineConfig.firecrawlApiKey（不再直读 process.env）。
  */
-import type { DataSourceItem, DataSourceTag } from "@ai-insight/shared-types";
-import FirecrawlApp, { type FirecrawlDocument } from "firecrawl";
+import type { DataSourceItem } from "@ai-insight/shared-types";
+import { postJson } from "../http.js";
 import type { EngineConfig } from "../config.js";
 import type { SearchEngine, SearchInput } from "./duckduckgo.js";
 
-function getFirecrawlClient(apiKey?: string): FirecrawlApp | null {
-  const key = apiKey ?? "";
-  if (!key) return null;
-  return new FirecrawlApp({ apiKey: key });
+/** Firecrawl search 响应里的单条文档。 */
+interface FirecrawlDocument {
+  url?: string;
+  markdown?: string;
+  title?: string;
+  description?: string;
+  metadata?: {
+    title?: string;
+    description?: string;
+    author?: string;
+    publishedDate?: string;
+    [key: string]: unknown;
+  };
+}
+
+interface SearchResponse {
+  success?: boolean;
+  data?: FirecrawlDocument[];
+  warning?: string;
+  error?: string;
 }
 
 export class FirecrawlEngine implements SearchEngine {
   readonly name = "firecrawl";
   readonly label = "Firecrawl";
-  private client: FirecrawlApp | null;
+  private apiKey: string;
 
   constructor(cfg: EngineConfig = {}) {
-    this.client = getFirecrawlClient(cfg.firecrawlApiKey);
+    this.apiKey = cfg.firecrawlApiKey ?? "";
   }
 
   isConfigured(): boolean {
-    return !!this.client;
+    return !!this.apiKey;
   }
 
   async search(input: SearchInput): Promise<DataSourceItem[]> {
-    if (!this.client) return [];
+    if (!this.apiKey) return [];
     const limit = Math.min(input.limit ?? 8, 8);
     // 不带 scrapeOptions：只取 URL/title/description，避免对每条结果抓取正文
     // 耗费 scrape 额度（一次 search ≈ 8 credits）。正文按需由 extract 链抓取。
-    const res = await this.client.search(input.query, {
-      limit,
-    });
-    if (!res.success) {
-      throw new Error(`Firecrawl search failed: ${res.error ?? "unknown"}`);
+    const data = await postJson<SearchResponse>(
+      "https://api.firecrawl.dev/v1/search",
+      {
+        query: input.query,
+        limit,
+        lang: "en",
+        country: "us",
+        scrapeOptions: { formats: [] },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        timeoutMs: 60000,
+      },
+    );
+
+    if (!data.success) {
+      throw new Error(`Firecrawl search failed: ${data.error ?? "unknown"}`);
     }
     const now = new Date().toISOString();
-    const hasUrl = (d: FirecrawlDocument): d is FirecrawlDocument & { url: string } =>
-      !!d.url;
-    return (res.data ?? [])
-      .filter(hasUrl)
+    return (data.data ?? [])
+      .filter((d): d is FirecrawlDocument & { url: string } => !!d.url)
       .map<DataSourceItem>((d) => {
         const url = d.url;
         return {
@@ -52,9 +84,9 @@ export class FirecrawlEngine implements SearchEngine {
           sourceType: "search",
           sourceName: this.label,
           sourceId: url,
-          title: d.metadata?.title || url,
+          title: d.metadata?.title || d.title || url,
           url,
-          summary: d.metadata?.description || undefined,
+          summary: d.metadata?.description || d.description || undefined,
           // search 不再抓正文；content 留空，由 extract 链按需 scrapeUrl 获取。
           content: d.markdown || undefined,
           author: d.metadata?.author,

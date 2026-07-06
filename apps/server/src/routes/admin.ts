@@ -58,7 +58,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
     if (body.proxy !== undefined) {
       repo.setSetting("proxy", body.proxy);
-      configureProxy(body.proxy || null); // 空串 = 清代理，即时生效
+      configureProxy(body.proxy || null); // 数据源代理即时生效（仅作用于搜索/爬虫/RSS；空串=清代理）
     }
     if (body.llm !== undefined) {
       // 不接受 apiKey；仅存 providerName/baseUrl/model

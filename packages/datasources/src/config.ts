@@ -21,7 +21,7 @@ export interface EngineConfig {
   jinaApiKey?: string;
   /** arxiv API 无 key（公开）；保留字段以便未来扩展。 */
   arxivEnabled?: boolean;
-  /** 出站代理 URL（undici 全局 dispatcher）。 */
+  /** 出站代理 URL（数据源局部 dispatcher；DuckDuckGo 等引擎透传）。 */
   proxyUrl?: string;
 }
 

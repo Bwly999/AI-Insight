@@ -1,32 +1,44 @@
 /**
- * 统一 HTTP 客户端 — 全部出站走此出口，代理在出口统一处理（见 ADR-0004）。
+ * 统一 HTTP 客户端 — 数据源出站请求经此模块，代理在出口统一处理（见 ADR-0004）。
  *
- * 代理：启动时若有 PROXY_URL，建 undici ProxyAgent 设为全局 dispatcher，
- * 数据源层不感知代理。本模块封装 fetch，提供 json()/text() 便捷方法，
- * 并内置超时与浏览器 UA。
+ * 代理作用范围（重要）：仅作用于经本模块 rawFetch/fetchJson/fetchText/postJson
+ * 的请求（即数据源：搜索/RSS/爬虫/正文提取）。**不**调用 setGlobalDispatcher——
+ * 这样 LLM 模型请求（openai SDK 用全局 fetch，不经本模块）走直连，不被代理带上。
+ * 管理端"代理"设置因此只影响数据源，符合产品语义（代理是给搜索工具用的）。
  */
-import { ProxyAgent, setGlobalDispatcher, Agent } from "undici";
+import { ProxyAgent, Agent } from "undici";
 
 let proxyConfigured = false;
 let currentProxy: string | null = null;
-/** 当前已创建的全局 dispatcher 引用，供 shutdownHttp 优雅关闭。 */
+/** 当前数据源 dispatcher（模块级，非全局）。rawFetch 默认带它；shutdownHttp 销毁它。 */
 let activeDispatcher: Agent | ProxyAgent | null = null;
 
 /**
- * 配置全局出站代理。传 URL 启用代理；传 null/undefined 则用直连。
- * 幂等：重复调用只更新一次。通常 server 启动时调用一次。
+ * 配置数据源出站代理。传 URL 启用代理；传 null/undefined 则用直连。
+ * 幂等：重复调用只在值变化时重建 dispatcher。
+ * 代理仅作用于经本模块的请求（数据源）；LLM 请求不经此模块，走直连。
  */
 export function configureProxy(proxyUrl?: string | null): void {
   if (proxyUrl === currentProxy) return;
+  // 切换前先销毁旧 dispatcher（释放 keep-alive 连接池）
+  const previous = activeDispatcher;
+  activeDispatcher = null;
+  if (previous) {
+    previous.destroy().catch(() => {
+      /* 忽略：旧 dispatcher 销毁失败不阻断新代理生效 */
+    });
+  }
   currentProxy = proxyUrl ?? null;
-  const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : new Agent();
-  activeDispatcher = dispatcher;
-  setGlobalDispatcher(dispatcher);
+  if (proxyUrl) {
+    activeDispatcher = new ProxyAgent(proxyUrl);
+  } else {
+    activeDispatcher = null;
+  }
   proxyConfigured = true;
 }
 
 /**
- * 优雅关闭全局 dispatcher（释放 keep-alive 连接/定时器）。
+ * 优雅关闭数据源 dispatcher（释放 keep-alive 连接/定时器）。
  * CLI 短命进程退出前调用——否则 process.exit() 强制 teardown 时，
  * undici 残留句柄会在 Windows 触发 libuv 的 UV_HANDLE_CLOSING 断言。
  * 长驻进程（server）无需调用。幂等；未配置过代理时为空操作。
@@ -87,12 +99,15 @@ export async function rawFetch(
     ...(opts.headers ?? {}),
   };
   try {
+    // 调用方显式传 dispatcher（如连通性测试）则用它；否则回落到模块级数据源
+    // dispatcher（configureProxy 设置的代理）。LLM 请求不经此模块，走直连。
+    const dispatcher = opts.dispatcher ?? activeDispatcher;
     const res = await fetch(url, {
       method: opts.method ?? "GET",
       headers,
       body: opts.body,
       signal: controller.signal,
-      ...(opts.dispatcher ? { dispatcher: opts.dispatcher as never } : {}),
+      ...(dispatcher ? { dispatcher: dispatcher as never } : {}),
     });
     if (!res.ok) {
       throw new HttpError(res.status, res.statusText, url);

@@ -1,21 +1,14 @@
 /**
- * 提取引擎测试 — mock fetchText（jina/local）与 firecrawl SDK，
+ * 提取引擎测试 — mock http.ts（fetchText=jina/local, postJson=firecrawl），
  * 验证 jina/firecrawl/local 解析逻辑 + extractContent fallback 链。
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const fetchTextMock = vi.fn();
+const postJsonMock = vi.fn();
 vi.mock("../src/http.js", () => ({
   fetchText: (...args: unknown[]) => fetchTextMock(...args),
-}));
-
-// mock firecrawl SDK
-const scrapeUrlMock = vi.fn();
-vi.mock("firecrawl", () => ({
-  default: class FakeFirecrawlApp {
-    constructor() {}
-    scrapeUrl = (...args: unknown[]) => scrapeUrlMock(...args);
-  },
+  postJson: (...args: unknown[]) => postJsonMock(...args),
 }));
 
 const { JinaExtractor, FirecrawlExtractor, LocalExtractor } = await import("../src/extract/index.js");
@@ -23,7 +16,7 @@ const { extractContent, extractContentWith, buildExtractEngines } = await import
 
 beforeEach(() => {
   fetchTextMock.mockReset();
-  scrapeUrlMock.mockReset();
+  postJsonMock.mockReset();
 });
 
 describe("JinaExtractor: 自托管 URL + 解析", () => {
@@ -81,7 +74,7 @@ describe("JinaExtractor: 自托管 URL + 解析", () => {
   });
 });
 
-describe("FirecrawlExtractor: SDK 调用 + 解析", () => {
+describe("FirecrawlExtractor: 直调 API（postJson）+ 解析", () => {
   it("无 key 时 isConfigured=false", () => {
     expect(new FirecrawlExtractor({}).isConfigured()).toBe(false);
   });
@@ -96,11 +89,10 @@ describe("FirecrawlExtractor: SDK 调用 + 解析", () => {
     ).rejects.toThrow("no API key");
   });
 
-  it("成功时返回 markdown", async () => {
-    scrapeUrlMock.mockResolvedValue({
+  it("成功时返回 markdown（data 下取 markdown/metadata）", async () => {
+    postJsonMock.mockResolvedValue({
       success: true,
-      markdown: "# 提取的正文",
-      metadata: { title: "标题" },
+      data: { markdown: "# 提取的正文", metadata: { title: "标题" } },
     });
     const r = await new FirecrawlExtractor({ firecrawlApiKey: "k" }).extract({
       url: "https://x.com",
@@ -111,14 +103,14 @@ describe("FirecrawlExtractor: SDK 调用 + 解析", () => {
   });
 
   it("success=false 抛错", async () => {
-    scrapeUrlMock.mockResolvedValue({ success: false, error: "blocked" });
+    postJsonMock.mockResolvedValue({ success: false, error: "blocked" });
     await expect(
       new FirecrawlExtractor({ firecrawlApiKey: "k" }).extract({ url: "https://x.com" }),
     ).rejects.toThrow("scrape failed");
   });
 
   it("空 markdown 抛错", async () => {
-    scrapeUrlMock.mockResolvedValue({ success: true, markdown: "" });
+    postJsonMock.mockResolvedValue({ success: true, data: { markdown: "" } });
     await expect(
       new FirecrawlExtractor({ firecrawlApiKey: "k" }).extract({ url: "https://x.com" }),
     ).rejects.toThrow("empty markdown");
@@ -155,12 +147,12 @@ describe("extractContent: fallback 链（jina → firecrawl → local）", () =>
     fetchTextMock.mockResolvedValue(JSON.stringify({ data: { content: "jina ok" } }));
     const r = await extractContent("https://x.com", { firecrawlApiKey: "k" });
     expect(r.engine).toBe("jina");
-    expect(scrapeUrlMock).not.toHaveBeenCalled();
+    expect(postJsonMock).not.toHaveBeenCalled();
   });
 
   it("jina 失败 → firecrawl 成功", async () => {
     fetchTextMock.mockResolvedValue(JSON.stringify({ data: {} })); // jina empty
-    scrapeUrlMock.mockResolvedValue({ success: true, markdown: "fc ok" });
+    postJsonMock.mockResolvedValue({ success: true, data: { markdown: "fc ok" } });
     const r = await extractContent("https://x.com", { firecrawlApiKey: "k" });
     expect(r.engine).toBe("firecrawl");
     expect(r.content).toBe("fc ok");

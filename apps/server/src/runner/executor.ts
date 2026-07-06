@@ -19,6 +19,7 @@ import {
 } from "@ai-insight/agent";
 import { createDefaultEngines, type EngineConfig } from "@ai-insight/datasources";
 import { config } from "../config.js";
+import { getProxyUrl } from "../runtime-config.js";
 import * as repo from "../repo.js";
 import { renderReportHtml, extractStandfirst } from "../report-renderer.js";
 import { resolveAwaiting, rejectPending } from "./pending-inputs.js";
@@ -70,11 +71,15 @@ export function createAgentExecutor(deps: ExecutorDeps): RunExecutor {
 
     // 显式构造 EngineConfig（数据源 key 来自 server env config，见 ADR-0004 / 设计 §4.1）
     // 与 CLI 的 JSON config 永不相交（模型 B：分层真相源）。
+    // proxyUrl：每 run 读最新 settings.proxy（支持管理端热切换）。
+    //   DuckDuckGo 用 needle（不走 http.ts 全局路径），靠 cfg.proxyUrl 透传代理；
+    //   其余引擎经 http.ts，代理由 configureProxy 在模块级 dispatcher 统一生效。
+    const proxyUrl = getProxyUrl();
     const engineConfig: EngineConfig = {
       exaApiKey: config.exaApiKey,
       firecrawlApiKey: config.firecrawlApiKey,
       jinaApiKey: config.jinaApiKey,
-      // jinaUrl / proxyUrl：server 路径不设（代理已在 main.ts 全局 configureProxy）
+      ...(proxyUrl ? { proxyUrl } : {}),
     };
 
     // 取 conversation 的 sessionFile（首条消息时为空，后续运行时恢复历史）。

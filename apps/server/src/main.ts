@@ -28,7 +28,8 @@ async function main() {
   const interrupted = reconcileInterruptedRuns();
   if (interrupted) app_log(`reconciled ${interrupted} interrupted runs`);
 
-  // 2. 代理（全局出站；settings.proxy 优先于 env）
+  // 2. 数据源代理（模块级 dispatcher；仅作用于经 http.ts 的数据源请求，
+  //    不影响 LLM 模型请求；settings.proxy 优先于 env）
   const proxyUrl = getProxyUrl();
   configureProxy(proxyUrl || null);
   if (proxyUrl) app_log(`proxy enabled: ${proxyUrl}`);
