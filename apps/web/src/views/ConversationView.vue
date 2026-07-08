@@ -46,6 +46,9 @@ const messages = ref<AgentMessage[]>([]);
 /** 该对话的历史报告（按 createdAt 升序），用于回放时按时间线归位渲染报告卡。 */
 const historyReports = ref<ReportSummary[]>([]);
 const loading = ref(false);
+/** 惰性创建后置 true，抑制 router.replace 触发的那次 watch loadConversation
+ *  （currentConv 已由 onSend 就地更新，避免覆盖刚插入的临时消息）。 */
+const skipNextWatchLoad = ref(false);
 
 const config = reactive<ConversationConfig>({
   timeRange: "1w",
@@ -65,8 +68,18 @@ async function loadConversation(id: string) {
       };
       return;
     }
-    const c = await createConversation({ title: "新洞察", config: { ...config } });
-    router.replace(`/c/${c.id}`);
+    // 惰性创建：进入 /c/new 时不落库，只设草稿态占位。
+    // 真正落库发生在 onSend 发送首条消息时（避免点"新对话"/打开应用就产生空会话）。
+    currentConv.value = {
+      id: "new",
+      userId: "",
+      title: "新洞察",
+      config: { ...config },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    messages.value = [];
+    historyReports.value = [];
     return;
   }
   loading.value = true;
@@ -96,7 +109,7 @@ async function loadConversation(id: string) {
  */
 async function refreshMessages() {
   const id = currentConv.value?.id;
-  if (!id || id === "ux-conv") return;
+  if (!id || id === "ux-conv" || id === "new") return;
   try {
     const c = await getConversation(id);
     messages.value = c.messages;
@@ -152,6 +165,22 @@ async function onSend(text: string) {
   if (run.status.value === "awaiting_input") {
     run.reply(text);
     return;
+  }
+
+  // 惰性创建：首条消息时才落库，避免点"新对话"/打开应用就产生空会话。
+  // 落库后 router.replace 到真实 id；用 skipNextWatchLoad 抑制由此触发的
+  // watch loadConversation，避免它用 getConversation 拉回的空 messages 覆盖
+  // 紧接着乐观插入的临时 user message（竞态）。
+  if (currentConv.value.id === "new") {
+    try {
+      const c = await createConversation({ title: "新洞察", config: { ...config } });
+      currentConv.value = c;
+      skipNextWatchLoad.value = true;
+      router.replace(`/c/${c.id}`);
+    } catch (e) {
+      console.error("create conversation failed", e);
+      return;
+    }
   }
 
   // 乐观插入临时 user message（Pi 原生 UserMessage 结构）。
@@ -280,6 +309,12 @@ watch(
   () => props.id,
   (id) => {
     if (!id) return;
+    // 惰性创建：onSend 已就地把 currentConv 更新为真实会话，跳过这次重复加载
+    // （否则 getConversation 拉回的空 messages 会覆盖刚乐观插入的临时消息）。
+    if (skipNextWatchLoad.value) {
+      skipNextWatchLoad.value = false;
+      return;
+    }
     userScrolledUp.value = false;
     notAtBottom.value = false;
     loadConversation(id).then(() => autoStickToBottom());
