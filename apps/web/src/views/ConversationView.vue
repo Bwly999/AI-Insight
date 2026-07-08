@@ -171,7 +171,8 @@ async function onSend(text: string) {
   // 落库后 router.replace 到真实 id；用 skipNextWatchLoad 抑制由此触发的
   // watch loadConversation，避免它用 getConversation 拉回的空 messages 覆盖
   // 紧接着乐观插入的临时 user message（竞态）。
-  if (currentConv.value.id === "new") {
+  const wasNew = currentConv.value.id === "new";
+  if (wasNew) {
     try {
       const c = await createConversation({ title: "新洞察", config: { ...config } });
       currentConv.value = c;
@@ -201,6 +202,13 @@ async function onSend(text: string) {
     // lens 不再由前端指定：交给 Agent 自主路由
     const r = await sendMessage(currentConv.value.id, text, { ...config });
     run.subscribe(r.run.id);
+    // 惰性创建的会话此时才出现在侧栏：后端已按首条消息派生真实标题，
+    // 刷新列表直接显示派生标题，并同步 currentConv.title（主区/面包屑不留"新洞察"）。
+    if (wasNew) {
+      await loadConversations();
+      const fresh = await getConversation(currentConv.value.id);
+      if (fresh) currentConv.value = fresh;
+    }
   } catch (e) {
     console.error("send failed", e);
   }
