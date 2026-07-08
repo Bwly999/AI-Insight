@@ -180,7 +180,6 @@ const crumbTitle = computed(() => {
   align-items: center;
   height: 100%;
   padding: 0 20px;
-  border-right: 1px solid var(--border);
   min-width: 0;
 }
 .crumb {
