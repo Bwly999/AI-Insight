@@ -23,7 +23,6 @@ import EvidencePanel from "../components/EvidencePanel.vue";
 import ClarifyCard from "../components/ClarifyCard.vue";
 import Composer from "../components/Composer.vue";
 import ReportModal from "../components/ReportModal.vue";
-import type { ToolBlock } from "../composables/blocks";
 import { toolBlocksOf } from "../composables/blocks";
 
 const props = defineProps<{ id: string }>();
@@ -260,8 +259,15 @@ function onStreamClick(_e: MouseEvent) {
   // 聊天流过程性文字里的 [n] 回退为纯 ①（无链接）；完整引用交互在报告弹窗内。
 }
 
-// 工具调用（从 blocks 派生 → 传给 EvidencePanel，仅兼容签名）
-const toolCalls = computed<ToolBlock[]>(() => toolBlocksOf(run.blocks.value));
+// 工具调用（从本轮 blocks 派生）：仅用于 sourceCount 遥测估算，
+// 右栏 EvidencePanel 不再依赖它（直接拉取 RunItem）。
+const toolCalls = computed(() => toolBlocksOf(run.blocks.value));
+
+// 历史报告的 runId 集合 → 传给 EvidencePanel 聚合拉取历史引用来源。
+// 打开历史对话时无活跃 run，右栏据此展示该对话采集过的全部来源（与实时一致）。
+const historyReportRunIds = computed(() =>
+  historyReports.value.map((r) => r.runId).filter((id): id is string => !!id),
+);
 
 // ─── 遥测数据（传给 AppTopbar TelemetryStrip） ─────────────────────────────
 // 来源数：从本轮 toolCalls 的 found 之和估算（右栏 EvidencePanel 拉取真实 RunItem 后会独立显示）
@@ -408,7 +414,7 @@ watch(
           @update:time-range="(v: TimeRange) => (config.timeRange = v)" />
       </main>
 
-      <EvidencePanel :tool-calls="toolCalls" :run-id="run.runId.value" :run-status="run.status.value" />
+      <EvidencePanel :run-id="run.runId.value" :run-status="run.status.value" :report-run-ids="historyReportRunIds" />
     </div>
 
     <ReportModal :report="modalReport" @close="closeReportModal" />
